@@ -5,3 +5,7 @@
 開發方針：SpecKit
 
 組員：jacky0407、EricC430
+
+## 協作規章
+
+專案管理、GitHub 版本管理及 Claude + Spec Kit 開發流程請參閱[協作規章](docs/PROJECT_WORKFLOW.md)。

@@ -1,0 +1,33 @@
+/期末專題說明.pdf
+/期末專題說明.md
+/project_proposal_draft.md
+
+# 本機 Claude 設定與個人指示
+.claude/settings.local.json
+CLAUDE.local.md
+
+# 機敏資料（OAuth、金鑰、token）
+.env
+.env.*
+!.env.example
+client_secret*.json
+credentials*.json
+token*.json
+*.pem
+*.key
+
+# Python / 測試
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# 工具與編輯器
+plantuml.jar
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
