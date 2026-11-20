@@ -25,7 +25,7 @@
 1. 從 GitHub Issue 確認需求、範圍及驗收條件。
 2. 在 Claude Code 中使用已安裝在 `.claude/skills/` 的 Spec Kit skill（v1.2.1，skill 名稱為連字號格式），依序執行：`/speckit-constitution`（全專案一次）→ 每個子功能依序 `/speckit-specify` → `/speckit-clarify` → `/speckit-plan` → `/speckit-tasks` → `/speckit-analyze` → `/speckit-implement` → `/speckit-converge`。若 Spec Kit 版本升級造成命令不同，以環境提供者為準，並更新本文件。
 3. 先檢查 Spec Kit 產生的規格與計畫是否符合 Issue；有歧義時先釐清，不直接讓 Claude 猜測需求。
-4. 確認計畫後，再依任務使用 `/speckit.implement` 或 skill 提供的實作流程。實作期間遵守本文件的分支、提交及測試規則。
+4. 確認計畫後，再依任務使用 `/speckit-implement` 或 skill 提供的實作流程。實作期間遵守本文件的分支、提交及測試規則。
 5. 完成後由組員檢視差異、執行適用的測試或檢查，並核對 Issue 的驗收條件；在 PR 描述中簡述使用 Claude／Spec Kit 的範圍，以及已執行的驗證。
 6. Spec Kit 產生的規格與計畫若納入版本控制，應一併提交並在 PR 中說明；不得提交金鑰、個人資料或其他機密內容至 Claude 對話、Issue、PR 或 Git 儲存庫。
 
