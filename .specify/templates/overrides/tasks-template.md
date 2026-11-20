@@ -13,6 +13,8 @@ description: "Task list template for feature implementation"
 
 **Diagrams**: REQUIRED（專案覆寫，憲章 v1.0.0 原則 II）。實作前確認 `./diagrams/[###-feature-name]-*.puml` 與 PNG 存在；實作後必須有「程式碼與圖表一致性驗證」任務。
 
+**Architecture**: REQUIRED（憲章技術限制 4，NON-NEGOTIABLE）。核心業務邏輯（解析、判定、順位）放在不依賴網路、框架與系統時鐘的純函式模組，時間由呼叫端傳入；Google、API、畫面放在外層轉接層，相依只能由外層指向核心。核心模組的任務與轉接層任務分開列出。
+
 **Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story.
 
 ## Format: `[ID] [P?] [Story] Description`
@@ -162,6 +164,10 @@ Examples of foundational tasks (adjust based on your project):
 - [ ] TXXX 程式碼與圖表一致性驗證：逐一比對 `diagrams/[###-feature-name]-*.puml` 的組件、類別、時序與實作；有差異時先更新圖表並重新轉出 PNG（憲章原則 II）
 - [ ] TXXX 執行全部自動化測試，記錄指令與結果數字（通過／失敗／略過數）（憲章原則 VI）
 - [ ] TXXX 非實作者依驗收條件人工驗證，記錄日期、操作與結果（憲章原則 VI）
+- [ ] TXXX （涉及 Google 的子功能）真實路徑驗證：以真實 Google 試算表、兩份版面不同的學習單各完成一次匯入與寫回；採明確標記、需手動啟動的整合測試或人工步驟，記錄結果，憑證只放本機（憲章原則 VI）
+- [ ] TXXX （涉及 Guided Notes 的子功能）以至少兩份版面不同的學習單（起始列欄不同、工作表名稱不同、單題與題組混合）執行匯入／寫回測試（憲章原則 III）
+- [ ] TXXX （涉及即時同步的子功能）效能驗證：老師加上 N 組學生同時連線，狀態變更 2 秒內反映到所有畫面（N 依 001 plan；憲章技術限制 4）
+- [ ] TXXX 檢查日誌：使用 `logging`（INFO、stdout），無 `print` 日誌，未記錄 token／授權碼／client secret（憲章技術限制 3）
 
 ---
 

@@ -104,6 +104,7 @@
 
 - What happens when [boundary condition]?
 - How does system handle [error scenario]?
+- 輸入驗證失敗時（憲章原則 V）：[哪些輸入、拒絕後不產生部分結果或狀態變更、錯誤訊息如何讓使用者修正且不暴露內部細節]
 
 ## Requirements *(mandatory)*
 
@@ -143,6 +144,7 @@
 - **SC-002**: [Measurable metric, e.g., "System handles 1000 concurrent users without degradation"]
 - **SC-003**: [User satisfaction metric, e.g., "90% of users successfully complete primary task on first attempt"]
 - **SC-004**: [Business metric, e.g., "Reduce support tickets related to [X] by 50%"]
+- **SC-00X**（涉及即時同步時，憲章技術限制 4）：老師加上 [N] 組學生同時連線時，狀態變更在 2 秒內反映到所有畫面（N 依 001 plan；組數上限待 alignment Q-07，不得自訂）
 
 ## Assumptions
 
