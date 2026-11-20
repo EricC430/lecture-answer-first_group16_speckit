@@ -1,0 +1,2 @@
+# OpenSpec 組規格為跨組行為基準，須與來源逐位元一致，不做換行轉換
+docs/openspec-reference/**/spec.md -text
