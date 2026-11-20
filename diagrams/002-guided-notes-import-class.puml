@@ -1,0 +1,120 @@
+@startuml 002-guided-notes-import-class
+!pragma layout smetana
+skinparam defaultFontName "Microsoft JhengHei"
+skinparam classAttributeIconSize 0
+title 002 Guided Notes 匯入 — 類別圖
+
+package "核心（純資料與純函式）" {
+  class SheetSnapshot <<資料>> {
+    spreadsheetId
+    sheetId
+    sheetName
+    cells : 儲存格值（列, 欄）
+    merges : 合併範圍清單
+  }
+
+  class MergeRange <<資料>> {
+    firstRow
+    firstCol
+    lastRow
+    lastCol
+  }
+
+  class CellRef <<資料>> {
+    row
+    col
+  }
+
+  class GuidedNotesParser <<純函式>> {
+    +parse(snapshot) : ParseResult
+  }
+
+  class ParseResult <<資料>> {
+    +ok : 是否成功
+    questions : Question 清單
+    sourceMapping : 來源映射
+    structure : StructureSnapshot
+    headerDetectedBy : 文字／結構
+    issues : ValidationIssue 清單
+  }
+
+  class Question <<資料>> {
+    number : 正整數
+    blankCount : 空格數
+    isGroup : 是否題組
+  }
+
+  class Blank <<資料>> {
+    questionNumber
+    subIndex : 子編號（單題為空）
+    target : CellRef（答案格左上角）
+  }
+
+  class StructureSnapshot <<資料>> {
+    headerPosition
+    merges
+    questionNumbers
+    answerCells
+  }
+
+  class ValidationIssue <<資料>> {
+    kind : 缺表頭／表頭歧義／跳號／非相鄰重複／
+    非數字題號／子編號缺漏／孤立子空格／缺答案格／重疊
+    at : CellRef
+    hint : 修正建議
+  }
+}
+
+package "應用層" {
+  class ImportService {
+    +selectSource(spreadsheetId, sheetId)
+    +import(requester, source) : ImportOutcome
+  }
+
+  class ImportOutcome <<資料>> {
+    status : 成功／被拒絕
+    preview : ImportPreview
+    issues : ValidationIssue 清單
+  }
+
+  class ImportPreview <<資料>> {
+    questionNumbers
+    blanksPerQuestion
+    totalQuestions
+    totalBlanks
+    headerByStructure : 是否以結構判定表頭
+  }
+}
+
+package "外層轉接層" {
+  interface SheetsReader {
+    +read(source) : SheetSnapshot
+  }
+  interface AuthGateway {
+    +ensureAuthorized(teacher)
+  }
+  interface ActivityGateway {
+    +stage() : 階段
+    +isTeacher(requester) : bool
+    +replaceQuestions(result)
+  }
+}
+
+SheetSnapshot "1" o-- "*" MergeRange
+GuidedNotesParser ..> SheetSnapshot : 讀取
+GuidedNotesParser ..> ParseResult : 產生
+ParseResult "1" *-- "*" Question
+ParseResult "1" *-- "*" Blank
+ParseResult "1" *-- "0..1" StructureSnapshot
+ParseResult "1" *-- "*" ValidationIssue
+Question "1" o-- "1..*" Blank
+Blank --> CellRef
+ValidationIssue --> CellRef
+
+ImportService ..> GuidedNotesParser
+ImportService ..> SheetsReader
+ImportService ..> AuthGateway
+ImportService ..> ActivityGateway
+ImportService ..> ImportOutcome
+ImportOutcome --> ImportPreview
+@enduml
