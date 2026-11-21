@@ -6,10 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 軟體工程期末專題（NCU SE6005）第 16 組 SpecKit 小組的「Vibe Coding 課堂搶答系統」：老師匯入 Google Sheets 格式的 Guided Notes，各組學生搶答，最後把搶答成功的答案寫回原學習單。組員：jacky0407、EricC430。
 
-**憲章 v1.0.0 已完成**（`.specify/memory/constitution.md`，2026-11-21，以 `/speckit-constitution` 產生），**技術棧已定案**（憲章「技術限制與範圍」）：
+**憲章 v1.0.1 已完成**（`.specify/memory/constitution.md`，2026-11-21，以 `/speckit-constitution` 產生；v1.0.1 補上 lint 與型別檢查工具），**技術棧已定案**（憲章「技術限制與範圍」）：
 
 - 堆疊與環境：Python 3.11 以上 + FastAPI；Google Sheets 匯入／寫回使用 Google Sheets API（OAuth，由老師授權）；Windows 本機執行，後端只監聽 localhost；活動狀態只存在記憶體，不用資料庫。
-- 程式碼風格：PEP 8；公開函式／類別／方法必須有型別提示與 docstring；lint／格式化工具由 001 的 plan 決定後補回憲章。
+- 程式碼風格：PEP 8；公開函式／類別／方法必須有型別提示與 docstring；lint／格式化用 Ruff（`ruff check`、`ruff format`），型別檢查用 mypy（`src/`），設定在 `pyproject.toml`，提交前三者都要通過（憲章 v1.0.1）。
 - 日誌：只用 `logging`（INFO、stdout），不用 `print`；不得記錄 token、授權碼、client secret。
 - 效能：狀態變更 2 秒內反映到所有畫面（WebSocket 或 SSE 由 plan 決定）；效能驗證組數 N 由 001 plan 決定；組數上限待 alignment Q-07，不得自訂。
 - **架構（NON-NEGOTIABLE）**：核心邏輯（學習單解析、提交判定、順位計算）是不依賴網路、框架與系統時鐘的純函式，時間由呼叫端傳入；Google、API、畫面在外層轉接層，相依只能由外層指向核心。
@@ -39,7 +39,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - Spec Kit v1.2.1 已安裝（`specify init --here --integration claude --script ps`），skill 位於 `.claude/skills/speckit-*`，命令是**連字號**格式：`/speckit-constitution`、`/speckit-specify`、`/speckit-clarify`、`/speckit-plan`、`/speckit-tasks`、`/speckit-analyze`、`/speckit-implement`、`/speckit-converge`（另有 `/speckit-checklist`、`/speckit-taskstoissues`）。
 - 流程：憲章全專案一份；每個子功能各跑一次 specify → clarify → plan → tasks → analyze → implement → converge。子功能產物放在 `specs/<編號>-<名稱>/`。
-- `.specify/memory/constitution.md` 是 v1.0.0 憲章（7 項核心原則，其中 I 跨組行為一致、II 圖表生成／PlantUML 設計優先為 NON-NEGOTIABLE）。`/speckit-plan` 的 Constitution Check 須逐條檢查；修改憲章須走 PR 並經兩位組員同意。
+- `.specify/memory/constitution.md` 是 v1.0.1 憲章（7 項核心原則，其中 I 跨組行為一致、II 圖表生成／PlantUML 設計優先為 NON-NEGOTIABLE）。`/speckit-plan` 的 Constitution Check 須逐條檢查；修改憲章須走 PR 並經兩位組員同意。
 - **憲章不保證會被自動遵守**：每個子功能的 `/speckit-specify`、`/speckit-plan` prompt 都要再明確寫一次原則 III（動態定位、兩份版面學習單驗證）、V（資料可見性、安全輸出、輸入驗證與錯誤訊息）、VI（Scenario 對應測試、Google mock、真實路徑驗證、人工驗證）與架構限制。
 - 一致性範圍包含 Demo 影片：錄影前依規章第 11 節鎖定 Git tag。
 - `.specify/templates/overrides/` 放專案覆寫範本（優先於 core）：`spec-template.md` 加了「OpenSpec Traceability」與「Diagrams」必填區塊；`tasks-template.md` 把測試改為必做，並加入架構分層要求，以及圖表一致性、真實 Google 路徑、兩份版面學習單、效能、日誌與人工驗證任務。core 範本不要改。`/speckit-tasks` 的 SKILL.md 仍寫「Tests are OPTIONAL」，**以憲章原則 VI 為準，一律產生測試任務**。
