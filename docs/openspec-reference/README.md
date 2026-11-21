@@ -6,7 +6,7 @@
 
 - **來源**：OpenSpec 組提供的 `specs/` 目錄（各能力一份 `spec.md`），由 jacky0407 自對方交付的檔案複製。
 - **取得日期**：2026-11-20
-- **對方 repo／commit**：尚未取得，已列入 `docs/alignment.md` 待確認問題。
+- **對方 repo／commit**：尚未取得；這只是來源紀錄，不列入 `docs/alignment.md`，取得後補在這裡。
 - **處理方式**：原封不動複製，未修改任何內容（含標題 `# Spec Delta` 與 `## ADDED Requirements`）。`.gitattributes` 已對本目錄的 `spec.md` 關閉換行轉換，確保與來源逐位元一致。
 
 ## 檔案與對應子功能

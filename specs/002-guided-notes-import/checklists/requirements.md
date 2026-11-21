@@ -13,7 +13,7 @@
 
 ## Requirement Completeness
 
-- [x] No [NEEDS CLARIFICATION] markers remain（2026-11-21 Q-13、Q-15、Q-17 已由使用者決定並寫入 spec，`grep` 結果為 0 個；但這三項是超出 OpenSpec 原文的新增行為，OpenSpec 組尚未確認，見下方 Notes）
+- [x] No [NEEDS CLARIFICATION] markers remain（`grep` 結果為 0 個；曾提議的超出 OpenSpec 原文的新增行為已於 2026-11-21 取消，見下方 Notes）
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)
@@ -40,7 +40,7 @@
 
 ## Notes
 
-- 2026-11-21 OpenSpec 組表示學習單範例格式固定：已取消「結構輔助定位」「表頭同義詞」「子編號位置不固定」，Q-13、Q-15 改採 OpenSpec 原文字面解讀；Q-17 維持「忽略空白列」（符合 OpenSpec「間隔列」Scenario，非新增行為）。取代紀錄見 `docs/alignment.md`，原提案封存於本機 `archive/002-structure-assist-proposal.md`。
-- 目前 spec 沒有超出 OpenSpec 原文的新增行為；alignment.md 新決議列的兩方確認人仍為「待確認」（口頭轉述，需補記確認人）。其他待確認問題（Q-11、Q-12、Q-14、Q-16、Q-18、Q-19）暫採保守字面解讀。
+- 2026-11-21 OpenSpec 組表示學習單範例格式固定（已有共識）：已取消「結構輔助定位」「表頭同義詞」「子編號位置不固定」，改採 OpenSpec 原文字面解讀；維持「忽略空白列」（符合 OpenSpec「間隔列」Scenario，非新增行為）。取代紀錄見 `docs/alignment.md`，原提案封存於本機 `archive/002-structure-assist-proposal.md`。
+- 目前 spec 沒有需與 OpenSpec 組討論的新增行為；單一工作表自動選用屬實作細節（見 spec Assumptions）。alignment.md 11/21 決議列的 OpenSpec 組欄位為口頭轉述。其他解析細節依 OpenSpec 原文字面解讀，不列入 alignment.md。
 - 圖表的視覺檢查只確認可讀與無遮蓋；圖表與程式碼的一致性驗證要在 `/speckit-implement` 之後進行。
 - 以上勾選為 2026-11-21 對 spec.md 與三張 PNG 的人工／AI 檢查結果；尚未執行任何自動化測試（本子功能還沒有程式碼）。

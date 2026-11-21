@@ -23,14 +23,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 `.gitignore` 排除了下列檔案，但它們是需求的來源，開工前先讀：
 
 - `期末專題說明.md`（與原始 `期末專題說明.pdf`）：課程作業說明，是需求與評分標準的依據。
-- `project_proposal_draft.md`：小組提案草稿（功能清單 C1–E6、五個子功能拆分 001–005、各子功能的 `/speckit-*` prompt、待與 OpenSpec 組對齊的事項）。**這是草稿**：Python／FastAPI 與 Google Sheets API（OAuth）已由憲章定案；其餘細節（例如是否使用 Picker，見 `docs/alignment.md` Q-11）以憲章、對齊紀錄與各子功能 spec 為準。
+- `project_proposal_draft.md`：小組提案草稿（功能清單 C1–E6、五個子功能拆分 001–005、各子功能的 `/speckit-*` prompt、待與 OpenSpec 組對齊的事項）。**這是草稿**：Python／FastAPI 與 Google Sheets API（OAuth）已由憲章定案；其餘細節（例如選檔採 Google Picker，見 002 spec 的 Assumptions）以憲章、對齊紀錄與各子功能 spec 為準。
 
 不要把這兩類檔案 `git add` 進去，也不要在 commit、PR、Issue 中貼出其內容中的機敏資訊。
 
 ## 跨組對齊文件（追蹤）
 
 - `docs/openspec-reference/<能力>/spec.md`：OpenSpec 組 5 份 spec 的原封副本，是**使用者可見行為的唯一基準**（憲章原則 I）。不得修改；對方更新時整份重新複製，並更新 `docs/openspec-reference/README.md` 的取得日期與 SHA-256。`.gitattributes` 已對這些檔案關閉換行轉換。
-- `docs/alignment.md`：跨組決議紀錄（日期、議題、結論、影響範圍、雙方確認人）與「待與 OpenSpec 組確認」問題清單。撰寫子功能 spec 前先查這份清單；涉及仍「待確認」的項目時，在 spec 中標記 `[NEEDS CLARIFICATION]` 並引用問題編號（如 Q-11），不得自行假設答案。
+- `docs/alignment.md`：跨組決議紀錄（日期、議題、結論、影響範圍、雙方確認人）與「待與 OpenSpec 組確認」問題清單。這份文件只收與對方組在重大功能性需求上的差異；實作細節與設計方式（選檔元件、OAuth scope 等）不放這裡，由 spec／plan 決定。撰寫子功能 spec 前先查這份清單；涉及仍「待確認」的項目時，在 spec 中標記 `[NEEDS CLARIFICATION]` 並引用問題編號（如 Q-07），不得自行假設答案。
 - 每份子功能 spec 都要標註對應的 OpenSpec Requirement；偏離或新增行為須先記入 `docs/alignment.md` 並經雙方確認。
 
 ## 開發流程（Spec Kit + Claude）
@@ -53,6 +53,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Guided Notes 匯入／匯出不得寫死儲存格位置**：助教會拿另一份學習單測試，必須依表頭與內容動態定位。
 - 不得在文件、程式碼或 repo 中放密碼、金鑰、機敏資料（`.env`、憑證 JSON 已在 `.gitignore`，repo 只放 `.env.example`）。
 - 只需在本機跑，不必架設可供外部連線的伺服器。
-- 與 OpenSpec 小組的系統功能必須一致；影響行為或規則的變更先討論並記錄在 `docs/alignment.md`。
+- 與 OpenSpec 小組的系統功能必須一致；重大功能性差異先討論並記錄在 `docs/alignment.md`，實作細節與設計方式不需要（範圍見 PROJECT_WORKFLOW 第 10 節）。
 - 評分會對照 constitution、spec、plan、tasks、圖表與程式碼、Demo 影片是否一致，所以任何一方改動都要同步其餘部分。
 - 繳交期限 2026-11-30 00:00，內部以 11/29 晚上為凍結點。
