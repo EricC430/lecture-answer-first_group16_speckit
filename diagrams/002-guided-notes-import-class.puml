@@ -34,7 +34,6 @@ package "核心（純資料與純函式）" {
     questions : Question 清單
     sourceMapping : 來源映射
     structure : StructureSnapshot
-    headerDetectedBy : 文字／結構
     issues : ValidationIssue 清單
   }
 
@@ -82,7 +81,6 @@ package "應用層" {
     blanksPerQuestion
     totalQuestions
     totalBlanks
-    headerByStructure : 是否以結構判定表頭
   }
 }
 
