@@ -1,0 +1,53 @@
+@startuml 001-activity-session-component
+!pragma layout smetana
+skinparam defaultFontName "Microsoft JhengHei"
+skinparam componentStyle rectangle
+title 001 活動與階段同步 — 組件圖（相依方向：外層 → 核心）
+
+actor "老師" as Teacher
+actor "學生（各組）" as Student
+
+package "外層：畫面與 API（轉接層）" {
+  [老師畫面\n（建立活動、開輪、關輪、結束／取消、\n查看各組憑證、刪除空組）] as TeacherUI
+  [學生畫面\n（加入組別、身分恢復、階段顯示、\n查看本組憑證、離開本組）] as StudentUI
+  [活動 API\n（身分解析、輸入驗證、錯誤訊息轉換、重送去重）] as Api
+  [同步推送\n（依角色裁切快照、狀態版本、同步中斷提示）] as Sync
+}
+
+package "應用層" {
+  [活動服務\n（實作 002 的 ActivityGateway；\n呼叫狀態機、序列化同一活動的操作）] as Service
+  [倒數排程\n（到期時以傳入時間呼叫關輪）] as Timer
+  [活動登錄表\n（只存在記憶體，重啟清空）] as Registry
+}
+
+package "核心（純函式：不依賴網路、Web 框架、系統時鐘）" {
+  [階段狀態機\n（目前狀態 + 操作 + 傳入時間 → 新狀態或拒絕原因）] as StateMachine
+  [輸入規則\n（組名正規化、倒數 1～3600 秒、選題檢查、\n換組與刪組條件）] as Rules
+  [快照裁切\n（老師版／學生版，只含自己組資料）] as View
+}
+
+package "其他子功能（依賴 001）" {
+  [002 匯入服務] as Import
+  [003 提交服務] as Submit
+  [004 順位與定案] as Ranking
+  [005 匯出] as Export
+}
+
+Teacher --> TeacherUI
+Student --> StudentUI
+TeacherUI --> Api
+StudentUI --> Api
+TeacherUI <.. Sync : 推送
+StudentUI <.. Sync : 推送
+Api --> Service
+Timer --> Service : 截止時關輪
+Service --> Registry
+Service --> StateMachine
+Service --> Rules
+Service --> View
+Service --> Sync : 狀態變更通知
+Import --> Service : 查詢階段／老師身分、\n替換題目
+Submit --> Service : 查詢輪次與組別身分
+Ranking --> Service : 確認定案
+Export --> Service : 讀取已結束活動
+@enduml
