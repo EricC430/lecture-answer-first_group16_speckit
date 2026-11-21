@@ -63,11 +63,17 @@ package "核心（純資料與純函式）" {
     payload
   }
 
+  class FinalizeOutcome <<資料，由 004 提供>> {
+    solvedQuestions : 本輪新成功題號
+    successIncrements : 各組成功次數增量
+  }
+
   class Transition <<資料>> {
     ok : 是否成功
     activity : 新的 Activity
     rejection : RejectionReason
-    events : 需推送的變更
+    changed : 是否真的改變（決定版本與推送）
+    issued : 新產生的憑證／token（由服務層傳入）
   }
 
   enum RejectionReason <<資料>> {
@@ -117,21 +123,29 @@ package "應用層" {
     +join(code, name, credential) : 裝置身分
     +openRound(requester, rules, now)
     +closeRound(requester, now)
-    +finalize(requester) : 由 004 觸發
+    +finalize(requester, outcome) : 由 004 觸發
     +end(requester)
     +cancel(requester)
     +leaveGroup(device)
     +deleteGroup(requester, groupName)
     +snapshot(device) : ActivitySnapshot
-    .. 002 ActivityGateway ..
+    .. 002 ActivityGateway（皆加上 code 參數） ..
     +stage() : Stage
     +isTeacher(requester) : bool
-    +replaceQuestions(result)
+    +replaceQuestions(questionNumbers)
+    .. 003 介面 ..
+    +resolveDevice(deviceToken) : DeviceContext
+    +acceptsSubmission(now) : bool
+    +markGroupSubmitted(groupName)
+    .. 004／005 介面 ..
+    +currentRound() : Round
+    +exportView(requester) : ExportView
   }
 
   class ActivityRegistry {
     activities : 代碼 → Activity（只在記憶體）
-    processed : requestId → 結果
+    processed : 身分＋Idempotency-Key → 原回應
+    locks : 每個活動一把鎖
   }
 
   class CountdownScheduler {
@@ -157,6 +171,7 @@ DeviceIdentity ..> Group : 指向
 ActivityStateMachine ..> Activity
 ActivityStateMachine ..> Command
 ActivityStateMachine ..> Transition
+ActivityStateMachine ..> FinalizeOutcome
 ActivityStateMachine ..> InputRules
 Transition --> RejectionReason
 SnapshotView ..> ActivitySnapshot
