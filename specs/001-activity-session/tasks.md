@@ -541,7 +541,7 @@ Task: "T035 src/lecture_quiz/core/activity/input_rules.py normalize_group_name"
 
 ### MVP First
 
-1. Phase 1 + Phase 2（基礎，包含架構測試）。
+1. Phase 1 + Phase 2（基礎，包含架構測試）→ 單獨 PR 先合併（見下方「共用骨架先合併」）。
 2. 依序完成 US1 → US2 → US3 → US4 → US6（全部 P1），每完成一個 Story 就執行該 Story 的整合測試。
 3. **STOP and VALIDATE**：完成 P1 後，跑 quickstart 第 1～14、17、19、20 步。
 
@@ -551,12 +551,23 @@ Task: "T035 src/lecture_quiz/core/activity/input_rules.py normalize_group_name"
 2. 加上 US7（組別更正，⚠ 提案相依）→ 驗證 quickstart 第 11、15、16 步。若 OpenSpec 組不同意這兩項新增行為，整個 Phase 9 可以單獨移除，不影響其他 Story。
 3. 完成 Polish → 開 PR（`Closes #5`），由 EricC430 審查。
 
-### 兩人分工建議
+### 共用骨架先合併
 
-- Foundational 完成後：
-  - jacky0407 負責 US1 → US2 → US3 → US4。
-  - EricC430 可以先寫 US6 的契約測試（T060），以及 US2、US3 的核心單元測試。
-- 實作者與審查者輪替（規章 2.2）；T084 的人工驗證必須由非實作者執行。
+- Phase 1 + Phase 2（T001～T022）建立 002～005 都會用到的共用骨架：`pyproject.toml`、三層目錄、`main.py`、`tests/conftest.py`、前端 `api.js`／`sync.js`／`identity.js`。
+- 這部分先從 main 開 `chore/5-project-skeleton` 分支，**單獨開 PR**（`Refs #5`，不關閉 Issue），盡快合併到 main。之後 001 的 User Story 與 002～005 都從 main 接續。
+- 共用檔案的約定（與 EricC430 協調，見 Issue #5）：
+
+  | 檔案或目錄 | 約定 |
+  |---|---|
+  | `main.py` | 每個子功能只新增一行，掛自己的 router |
+  | `teacher.html`／`student.html` | 每個子功能只新增一個區塊與自己的 `js/<能力>.js` |
+  | `pyproject.toml` | 相依追加在列表最後 |
+  | 程式碼 | 放在自己的 `core/<能力>/`、`app/<能力>/`、`adapters/web/<能力>.py` |
+
+### 分工
+
+- 本子功能（001）全部由 jacky0407 實作。
+- EricC430 負責審查 PR，並執行 T084 的人工驗證（規章 2.2、第 9 節：人工驗證必須由非實作者執行）。
 
 ---
 
