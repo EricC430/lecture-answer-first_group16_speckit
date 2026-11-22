@@ -324,7 +324,7 @@ description: "001-activity-session 任務清單"
 
 ### Tests for User Story 4 (REQUIRED) ⚠️
 
-- [ ] T052 [P] [US4] 在 `tests/unit/core/test_state_machine_close_finalize.py` 測試：
+- [x] T052 [P] [US4] 在 `tests/unit/core/test_state_machine_close_finalize.py` 測試：
   - `Scenario: US4-AS1`：`CloseRound(Teacher)` 後為 `RESULT_PENDING`，`closed=True`，`close_cause="teacher"`。
   - `Scenario: US4-AS2`：`CloseRound(System)` 在 `now >= deadline` 時生效；`now < deadline` 時回傳成功但 `changed=False`。
   - `Scenario: US4-AS3`：已關輪後再收到 `CloseRound`，`changed=False`，`version` 不變。
@@ -332,27 +332,28 @@ description: "001-activity-session 任務清單"
   - `Scenario: US4-AS5`：在 `RESULT_PENDING` 開輪時回傳 `STAGE_NOT_ALLOWED`。
   - `Scenario: US4-AS6`：`Finalize(outcome)` 後為 `RESULT_FINAL`，`solved_questions` 與 `success_count` 依 `outcome` 更新；再開輪時 `number=2`，只能選未成功題。
   - `is_deadline_passed` 的邊界：截止前 1 微秒為 `False`、剛好截止時為 `True`。
-- [ ] T053 [P] [US4] 在 `tests/unit/app/test_concurrent_close.py` 測試 SC-003：
+- [x] T053 [P] [US4] 在 `tests/unit/app/test_concurrent_close.py` 測試 SC-003：
   - 用 `asyncio.gather(service.close_round(teacher), scheduler.fire(code))`，重複 50 次，每次都新建活動。
   - 每次只有一個呼叫產生變更，`version` 只加 1，`SyncPublisher` 只被呼叫一次。
-- [ ] T054 [P] [US4] 在 `tests/contract/test_http_close_finalize.py` 測試契約：
+- [x] T054 [P] [US4] 在 `tests/contract/test_http_close_finalize.py` 測試契約：
   - `POST /rounds/current/close` 回 `{"roundNumber", "version", "alreadyClosed"}`，第二次呼叫 `alreadyClosed == true`，而且 `version` 不變。
   - `POST /rounds/current/finalize` 回 `{"version"}`。
-- [ ] T055 [P] [US4] 在 `tests/integration/test_us4_close_finalize.py` 以 HTTP、WebSocket、`FakeClock`、`ManualScheduler` 測試 `Scenario: US4-AS1`～`US4-AS6`。
+- [x] T055 [P] [US4] 在 `tests/integration/test_us4_close_finalize.py` 以 HTTP、WebSocket、`FakeClock`、`ManualScheduler` 測試 `Scenario: US4-AS1`～`US4-AS6`。
 
 ### Implementation for User Story 4
 
-- [ ] T056 [US4] **核心**：在 `src/lecture_quiz/core/activity/state_machine.py` 實作：
+- [x] T056 [US4] **核心**：在 `src/lecture_quiz/core/activity/state_machine.py` 實作：
   - `CloseRound`：`Teacher` 與 `System` 都可以；`System` 只有在 `now >= deadline` 時才生效；已關輪時 `changed=False`。
   - `Finalize(outcome)`：`outcome` 的題號必須是本輪所選題目的子集，否則拒絕。
   - `is_deadline_passed(round, now)`。
-- [ ] T057 [US4] **服務層**：在 `src/lecture_quiz/app/activity/service.py` 實作：
+- [x] T057 [US4] **服務層**：在 `src/lecture_quiz/app/activity/service.py` 實作：
   - `close_round(code, requester)`：成功時呼叫 `scheduler.cancel(code)`。
   - `finalize(code, requester, outcome=FinalizeOutcome(frozenset(), {}))`。
   - 給 003 的 `accepts_submission(code, now)`。
   - 倒數回呼：`close_round(System)`，`now = max(clock.now(), deadline)`（2026-11-23 依 PR #15 審查第 3 項修正）。
-- [ ] T058 [US4] **轉接層**：在 `src/lecture_quiz/adapters/web/http_api.py` 實作 `POST /rounds/current/close`（含 `alreadyClosed`）與 `POST /rounds/current/finalize`；在 `main.py` 把 `AsyncioCountdownScheduler` 的回呼接到服務層。
-- [ ] T059 [US4] **轉接層**：在 `teacher.html`、`teacher.js`、`student.html`、`student.js` 加入「關輪」「確認定案」按鈕，以及兩邊的倒數剩餘秒數（依 `deadline` 計算）。
+- [x] T058 [US4] **轉接層**：在 `src/lecture_quiz/adapters/web/http_api.py` 實作 `POST /rounds/current/close`（含 `alreadyClosed`）與 `POST /rounds/current/finalize`；在 `main.py` 把 `AsyncioCountdownScheduler` 的回呼接到服務層。
+- [x] T059 [US4] **轉接層**：在 `teacher.html`、`teacher.js`、`student.html`、`student.js` 加入「關輪」「確認定案」按鈕，以及兩邊的倒數剩餘秒數（依 `deadline` 計算）。
+  - 註（2026-11-23）：學生頁的顯示與倒數已完成，但加入表單待 US2，目前只能以本分頁已保存的裝置身分恢復。
 
 **Checkpoint**: 搶答主流程（建立 → 加入 → 開輪 → 關輪 → 定案）可以運作
 

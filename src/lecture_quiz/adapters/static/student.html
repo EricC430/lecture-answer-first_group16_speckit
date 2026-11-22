@@ -19,10 +19,27 @@
       例如：<section id="import-section" data-feature="002-guided-notes-import"></section>
     -->
     <!-- ── 子功能區塊開始 ── -->
+    <section id="activity-section" data-feature="001-activity-session">
+      <h2>活動</h2>
+      <p id="student-error" class="error-message" role="alert" hidden></p>
+      <p id="student-join-pending" class="muted">
+        組別加入畫面將依「組號＋組數上限」決議實作（001 US2）。
+      </p>
+      <div id="student-info" hidden>
+        <p>活動代碼：<strong id="student-code" class="activity-code"></strong></p>
+        <p>本組：<strong id="student-group"></strong>
+          <span class="muted">歷史成功次數：<span id="student-success"></span></span></p>
+        <p>目前階段：<strong id="student-stage"></strong>
+          <span id="student-round" class="muted"></span></p>
+        <p id="student-open" hidden>本輪開放題目：<span id="student-open-questions"></span>
+          <span id="student-countdown" class="countdown"></span></p>
+      </div>
+    </section>
     <!-- ── 子功能區塊結束 ── -->
   </main>
   <div id="sync-status" aria-live="polite"></div>
   <!-- ── 子功能 script 開始（每個子功能一行）── -->
+  <script type="module" src="js/student.js"></script>
   <!-- ── 子功能 script 結束 ── -->
 </body>
 </html>

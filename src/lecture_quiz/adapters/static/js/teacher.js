@@ -3,6 +3,7 @@
 
 import { apiRequest, showError } from "./api.js";
 import { getTeacherToken, normalizeCode, setTeacherToken } from "./identity.js";
+import { startCountdown } from "./countdown.js";
 import { connectSync } from "./sync.js";
 
 export const STAGE_LABELS = {
@@ -133,10 +134,29 @@ async function detectDevSeed() {
 
 onTeacherSnapshot(renderOpenRoundPanel);
 
+// ── US4：關輪、定案與倒數 ──
+
+const countdown = startCountdown(() => $("round-countdown"));
+
+function renderRoundControls(snapshot) {
+  const open = snapshot.stage === "ROUND_OPEN";
+  $("round-status").hidden = !open;
+  $("round-questions").textContent = snapshot.openQuestions.map((q) => `第 ${q} 題`).join("、");
+  countdown.set(open ? snapshot.deadline : null);
+  $("close-round").hidden = !open;
+  $("finalize-round").hidden = snapshot.stage !== "RESULT_PENDING";
+}
+
+onTeacherSnapshot(renderRoundControls);
+
 function init() {
   $("create-activity").addEventListener("click", createActivity);
   $("open-round-panel").addEventListener("submit", openRound);
   $("dev-seed").addEventListener("click", seedQuestions);
+  $("close-round").addEventListener("click", () => teacherAction("POST", "/rounds/current/close", {}));
+  $("finalize-round").addEventListener("click", () =>
+    teacherAction("POST", "/rounds/current/finalize", {}),
+  );
   detectDevSeed();
   const code = normalizeCode(new URLSearchParams(location.search).get("code"));
   if (!code) return;

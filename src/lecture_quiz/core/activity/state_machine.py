@@ -256,8 +256,63 @@ def _replace_questions(
     return _changed(updated)
 
 
+def _close_round(
+    activity: Activity, command: Command, now: datetime, issued: IssuedSecrets | None
+) -> Transition:
+    """關輪：老師立即生效；System（倒數）只在 now >= deadline 時生效（FR-019）。"""
+    assert isinstance(command, CloseRound)
+    current = activity.current_round
+    assert current is not None  # 搶答中必定有目前輪次
+    is_system = isinstance(command.actor, System)
+    if is_system and not ActivityStateMachine.is_deadline_passed(current, now):
+        # 防止排程誤觸發：成功但不改變狀態
+        return _unchanged(activity)
+    closed = dataclasses.replace(
+        current,
+        closed=True,
+        closed_at=now,
+        close_cause="deadline" if is_system else "teacher",
+    )
+    updated = dataclasses.replace(
+        activity, stage=Stage.RESULT_PENDING, rounds=(*activity.rounds[:-1], closed)
+    )
+    return _changed(updated)
+
+
+def _finalize(
+    activity: Activity, command: Command, now: datetime, issued: IssuedSecrets | None
+) -> Transition:
+    """定案：套用 004 提供的結果（新成功題、各組成功次數增量）（FR-020）。"""
+    assert isinstance(command, Finalize)
+    current = activity.current_round
+    assert current is not None
+    outcome = command.outcome
+    increments = dict(outcome.success_increments)
+    if (
+        not outcome.solved_questions <= set(current.rules.question_numbers)
+        or not set(increments) <= set(activity.groups)
+        or any(not isinstance(v, int) or v < 0 for v in increments.values())
+    ):
+        return _reject(activity, RejectionReason.INVALID_SELECTION)
+    groups = {
+        name: dataclasses.replace(
+            g, success_count=g.success_count + increments.get(name, 0)
+        )
+        for name, g in activity.groups.items()
+    }
+    updated = dataclasses.replace(
+        activity,
+        stage=Stage.RESULT_FINAL,
+        solved_questions=activity.solved_questions | outcome.solved_questions,
+        groups=freeze(groups),
+    )
+    return _changed(updated)
+
+
 _HANDLERS: dict[type, Handler] = {
     JoinGroup: _join_group,
     OpenRound: _open_round,
     ReplaceQuestions: _replace_questions,
+    CloseRound: _close_round,
+    Finalize: _finalize,
 }

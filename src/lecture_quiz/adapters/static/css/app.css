@@ -89,3 +89,12 @@ body.sync-broken .success-hint {
   font: bold 1.5rem/1.2 ui-monospace, Consolas, monospace;
   letter-spacing: 0.15em;
 }
+
+.countdown {
+  margin-left: 0.5rem;
+  font-weight: bold;
+}
+
+.controls button {
+  margin-right: 0.5rem;
+}
