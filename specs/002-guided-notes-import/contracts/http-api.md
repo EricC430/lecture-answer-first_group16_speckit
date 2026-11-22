@@ -31,7 +31,7 @@
 |---|---|---|
 | `INVALID_REQUEST` | 400 | `message` 指出欄位 |
 | `NOT_TEACHER` | 403 | — |
-| `ACTIVITY_NOT_FOUND` | 404（有帶 token 時依 001 慣例 410 `ACTIVITY_GONE`） | — |
+| `ACTIVITY_NOT_FOUND` | 無 token 回 404 `ACTIVITY_NOT_FOUND`；帶 token 時依 001 慣例回 410，對外代碼為 `ACTIVITY_GONE`（同一個內部拒絕原因，不是另一個列舉值） | — |
 | `NOT_AUTHORIZED`、`AUTH_EXPIRED` | 401 | — |
 | `AUTH_DENIED` | 403 | — |
 | `PERMISSION_DENIED` | 403 | — |

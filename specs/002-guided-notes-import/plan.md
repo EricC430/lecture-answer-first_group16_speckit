@@ -145,9 +145,11 @@ tests/
 ├── unit/app/guided_notes_import/    # 服務層：順序、原子性、鎖、拒絕不改狀態
 ├── unit/adapters/google/            # HttpMockSequence：欄位遮罩、座標還原、錯誤對應
 ├── contract/guided_notes_import/    # HTTP 契約
+├── integration/                     # 兩份版面走入口（T067）、日誌不含機敏資料（T065）
 ├── architecture/                    # 沿用 test_core_is_pure.py，納入本核心套件
 ├── fixtures/                        # 手寫 fixture（標明手寫）；真實回應 fixture 在真實驗證後才新增
 └── real_google/                     # @pytest.mark.real_google，手動執行，缺環境變數明確失敗
+scripts/capture_real_fixture.py       # 擷取並去識別化真實回應（T068，只在本機執行）
 .env.example                         # 新增 5 個 Google 設定的空白範本（追加）
 ```
 

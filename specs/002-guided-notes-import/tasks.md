@@ -23,11 +23,11 @@ description: "002-guided-notes-import 任務清單"
 
 - **核心**：`src/lecture_quiz/core/guided_notes_import/`，只能是純函式與不可變資料，只依賴標準函式庫；`parse(snapshot)` 沒有時間參數。
 - **應用層**：`src/lecture_quiz/app/guided_notes_import/`。
-- **轉接層**：`src/lecture_quiz/adapters/google/`、`src/lecture_quiz/adapters/web/guided_notes_import.py`、`static/js/import.js`。
+- **轉接層**：`src/lecture_quiz/adapters/google/`、`src/lecture_quiz/adapters/web/guided_notes_import.py`、`src/lecture_quiz/adapters/static/js/import.js`。
 
 **⚠ 骨架凍結**（見 [plan.md](plan.md)「相依與時程」）：jacky0407 的骨架 PR 合併前，002 **不得**建立 `pyproject.toml`、`main.py`、`src/`；且 001 的活動建立、老師 token、`replace_questions`、開輪與取消完成之前也不開工（2026-11-22 決定：等相依完成再開始，不以 Fake 先行）。T001 是整份清單的前置關卡。
 
-**⚠ 共用檔案追加約定**：`main.py` 只加一行 router；`teacher.html` 只加一個區塊；`pyproject.toml` 相依追加在最後；`docs/alignment.md` 只追加在最後；`tests/conftest.py` 只追加 fixture 與參數，不改 001 既有簽章的預設行為。
+**⚠ 共用檔案追加約定**：`main.py` 只加一行 router；`<static>/teacher.html` 只加一個區塊；`pyproject.toml` 相依追加在最後；`docs/alignment.md` 只追加在最後；`tests/conftest.py` 只追加 fixture 與參數，不改 001 既有簽章的預設行為。
 
 **⚠ 待真實驗證的假設**（[plan.md](plan.md) 表格）：`drive.file` 足以讀取 Picker 選到的試算表、`GridRange` 結束索引為「不含」、非試算表的錯誤型態、Picker 在 `localhost` 的運作。驗證前不得宣稱成立；T028 是第一個里程碑。
 
@@ -38,7 +38,7 @@ description: "002-guided-notes-import 任務清單"
 - **[P]**: Can run in parallel (different files, no dependencies)
 - **[Story]**: Which user story this task belongs to (e.g., US1, US2, US3)
 - Include exact file paths in descriptions
-- 路徑中 `<core>` = `src/lecture_quiz/core/guided_notes_import`，`<app>` = `src/lecture_quiz/app/guided_notes_import`，`<google>` = `src/lecture_quiz/adapters/google`，`<web>` = `src/lecture_quiz/adapters/web/guided_notes_import.py`
+- 路徑中 `<core>` = `src/lecture_quiz/core/guided_notes_import`，`<app>` = `src/lecture_quiz/app/guided_notes_import`，`<google>` = `src/lecture_quiz/adapters/google`，`<web>` = `src/lecture_quiz/adapters/web/guided_notes_import.py`，`<static>` = `src/lecture_quiz/adapters/static`（`<static>/teacher.html`、`<static>/js/import.js`）
 
 ---
 
@@ -77,7 +77,7 @@ description: "002-guided-notes-import 任務清單"
 
 ### 應用層
 
-- [ ] T010 [P] 在 `<app>/models.py` 建立：`SourceRef(spreadsheet_id, sheet_id)`、`SheetInfo(sheet_id, title)`、`SpreadsheetInfo(spreadsheet_id, title, sheets)`、`SourceSelection(source, sheet_title)`、`ImportRecord(source, sheet_title, blanks, structure, question_numbers)`、`ImportPreview(question_numbers, blanks_per_question, total_questions, total_blanks)`、`ImportOutcome(ok, preview, issues, rejection)`、`ImportRejection` 列舉（`NOT_AUTHORIZED`、`AUTH_DENIED`、`AUTH_EXPIRED`、`PERMISSION_DENIED`、`NOT_A_SPREADSHEET`、`SHEET_NOT_FOUND`、`SOURCE_NOT_SELECTED`、`READ_FAILED`、`VALIDATION_FAILED`、`ACTIVITY_NOT_FOUND`、`NOT_TEACHER`、`ROUND_STARTED`、`ACTIVITY_CANCELLED`、`STAGE_NOT_PREPARING`、`GATEWAY_REJECTED`、`GOOGLE_NOT_CONFIGURED`、`INVALID_REQUEST`）、與 001 `Outcome` 同形的 `Result[T]`（`ok`、`value`、`rejection`）。服務不拋業務錯誤。
+- [ ] T010 [P] 在 `<app>/models.py` 建立：`SourceRef(spreadsheet_id, sheet_id)`、`SheetInfo(sheet_id, title)`、`SpreadsheetInfo(spreadsheet_id, title, sheets, auto_select_sheet_id)`、`SourceSelection(source, sheet_title)`、`ImportRecord(source, sheet_title, blanks, structure, question_numbers)`、`ImportPreview(question_numbers, blanks_per_question, total_questions, total_blanks)`、`ImportOutcome(ok, preview, issues, rejection)`、`ImportRejection` 列舉（`NOT_AUTHORIZED`、`AUTH_DENIED`、`AUTH_EXPIRED`、`PERMISSION_DENIED`、`NOT_A_SPREADSHEET`、`SHEET_NOT_FOUND`、`SOURCE_NOT_SELECTED`、`READ_FAILED`、`VALIDATION_FAILED`、`ACTIVITY_NOT_FOUND`、`NOT_TEACHER`、`ROUND_STARTED`、`ACTIVITY_CANCELLED`、`STAGE_NOT_PREPARING`、`GATEWAY_REJECTED`、`GOOGLE_NOT_CONFIGURED`、`INVALID_REQUEST`）、與 001 `Outcome` 同形的 `Result[T]`（`ok`、`value`、`rejection`）。服務不拋業務錯誤。`ACTIVITY_GONE`（410）不是獨立列舉值：它是 `ACTIVITY_NOT_FOUND` 在 HTTP 層、請求帶 token 時依 001 慣例的對外代碼與狀態碼，由 `<web>` 的錯誤轉換決定（見 [contracts/http-api.md](contracts/http-api.md)）。
 - [ ] T011 [P] 在 `<app>/ports.py` 以 `typing.Protocol` 定義 `AuthGateway`（`start_authorization`、`complete_authorization`、`is_authorized`、`picker_credentials`）與 `SheetsReader`（`inspect`、`read`），簽章照 [contracts/service-interfaces.md](contracts/service-interfaces.md)；所有跨出應用層的 I/O 為 `async`。`Clock` 與 `ActivityGateway`（`stage`、`is_teacher`、`replace_questions`）沿用 001，不重複定義。
 - [ ] T012 [P] 在 `<app>/store.py` 建立 `ImportStore`：依活動代碼為 key 的 `sessions`、`selections`、`records`、`locks`（每個活動一把 `asyncio.Lock`，與 001 活動鎖分開）；只在記憶體，不持久化（原則 VII）。
 - [ ] T013 在 `<app>/messages.py` 建立固定中文訊息對照表（每個 `ImportRejection` 一則，`IssueKind` 的修正建議於 T053 補齊），儲存格引用截斷在 40 字元；在 `tests/unit/app/guided_notes_import/test_messages.py` 測試每個代碼都有訊息，且訊息不含 token、授權碼、`state`、client secret、檔案路徑、堆疊字樣（FR-022、SC-005；`Edge: 輸入驗證失敗`）。（依賴 T010）
@@ -103,7 +103,7 @@ description: "002-guided-notes-import 任務清單"
 - [ ] T018 [P] [US1] 在 `tests/unit/adapters/google/test_sheets_inspect.py` 用 `HttpMockSequence`（手寫回應 JSON，標明手寫）測試 `inspect`：先以 Drive `mimeType` 判斷，非 Google 試算表（Google 文件、PDF、XLSX）→ `NOT_A_SPREADSHEET`；是試算表才以欄位遮罩 `properties.title,sheets.properties(sheetId,title,hidden,gridProperties)` 取得工作表清單；多張與單張兩種，並驗證 `SpreadsheetInfo` 能提供工作表數量判斷所需資料（`Scenario: US1-AS1`、`US1-AS2`、`US1-AS6`）。
 - [ ] T019 [P] [US1] 在 `tests/unit/adapters/google/test_errors.py` 測試 `HttpError` → `ImportRejection` 對應：401 → `AUTH_EXPIRED`、403／404 → `PERMISSION_DENIED`、429／逾時／5xx → `READ_FAILED`；對應結果的訊息不含憑證與內部細節（`Scenario: US1-AS4`；`Edge: 選檔後檔案消失或失去權限`）。
 - [ ] T020 [P] [US1] 在 `tests/unit/app/guided_notes_import/test_service_source.py` 以 Fake 連接埠測試：`inspect_spreadsheet` 不改任何狀態，且 `auto_select_sheet_id` 在恰好一張工作表時為該張識別、兩張以上為 `None`、零張時回 `SHEET_NOT_FOUND`（`Scenario: US1-AS2`，單一工作表自動選用的判斷在後端）；`select_source` 驗證 `sheet_id` 屬於該試算表後才保存、失敗時舊的選擇不變；沒有授權 → `NOT_AUTHORIZED`；取消選檔（沒有任何呼叫）不留下半途來源；授權在流程中途失效時，已選來源保留、重新授權後可直接重試（`Scenario: US1-AS1`、`US1-AS3`、`US1-AS4`、`US1-AS5`；`Edge: 授權在流程中途失效`）。
-- [ ] T021 [P] [US1] 在 `tests/contract/guided_notes_import/test_auth_source_api.py` 以 `TestClient` 依 [contracts/http-api.md](contracts/http-api.md) 驗證端點 #1～#6（#2 即 `/oauth/callback`）：狀態碼、回應形狀（含 #5 的 `autoSelectSheetId`：單張為該張的 `sheetId`、多張為 `null`）與 302 導回 `auth=ok|denied|error`；`picker-config` 帶 `Cache-Control: no-store` 且只限該活動老師；學生 token、其他活動老師、無 token 一律被拒；`GOOGLE_NOT_CONFIGURED` → 503 且訊息不含變數名稱；**路由表中沒有任何本機檔案上傳端點**（FR-005，`Scenario: US1-AS6`）。
+- [ ] T021 [P] [US1] 在 `tests/contract/guided_notes_import/test_auth_source_api.py` 以 `TestClient` 依 [contracts/http-api.md](contracts/http-api.md) 驗證端點 #1～#6（#2 即 `/oauth/callback`）：狀態碼、回應形狀（含 #5 的 `autoSelectSheetId`：單張為該張的 `sheetId`、多張為 `null`）與 302 導回 `auth=ok|denied|error`；`picker-config` 帶 `Cache-Control: no-store` 且只限該活動老師；學生 token、其他活動老師、無 token 一律被拒；`GOOGLE_NOT_CONFIGURED` → 503 且訊息不含變數名稱；**路由表中沒有任何本機檔案上傳端點**（FR-005，`Scenario: US1-AS6`）；格式錯誤的請求（`spreadsheetId` 為空字串或不是字串、`sheetId` 不是整數、缺欄位、多餘欄位）一律回 400 `INVALID_REQUEST`、訊息指出欄位、不更動任何狀態，且未驗證的值不會被送進 Google 呼叫（FR-021，`Edge: 輸入驗證失敗`）。
 
 ### Implementation for User Story 1
 
@@ -120,7 +120,7 @@ description: "002-guided-notes-import 任務清單"
 
 **前端**
 
-- [ ] T027 [US1] 在 `teacher.html` **只加一個**「匯入學習單」區塊，並建立 `static/js/import.js`：按鈕 → `auth/start` → 導向 Google → 回來後依 `?auth=ok|denied|error` 顯示狀態與重新授權入口 → `picker-config` → Google Picker（只允許 Google 試算表 MIME，取消時維持原狀）→ `inspect` → `autoSelectSheetId` 有值時自動 `PUT source` 並顯示名稱，為 `null` 時要求老師明確選一張；前端不自己數工作表。所有後端與試算表來的文字一律以 `textContent` 輸出。
+- [ ] T027 [US1] 在 `<static>/teacher.html` **只加一個**「匯入學習單」區塊，並建立 `<static>/js/import.js`：按鈕 → `auth/start` → 導向 Google → 回來後依 `?auth=ok|denied|error` 顯示狀態與重新授權入口 → `picker-config` → Google Picker（只允許 Google 試算表 MIME，取消時維持原狀）→ `inspect` → `autoSelectSheetId` 有值時自動 `PUT source` 並顯示名稱，為 `null` 時要求老師明確選一張；前端不自己數工作表。所有後端與試算表來的文字一律以 `textContent` 輸出。
 
 **真實驗證里程碑**
 
@@ -142,7 +142,7 @@ description: "002-guided-notes-import 任務清單"
 - [ ] T030 [P] [US2] 在 `tests/unit/core/guided_notes_import/test_parse_single.py` 測試：單題範本 → 6 題 6 格，每題答案位置為橫向合併範圍的左上角（`Scenario: US2-AS1`）；同樣內容以不同 `origin` 平移並更換工作表名稱 → 題數與格數不變、位置對應新位置，且結果不含任何固定座標假設（`Scenario: US2-AS2`；原則 III）。
 - [ ] T031 [P] [US2] 在 `tests/unit/core/guided_notes_import/test_parse_header_values.py` 測試：「題號」「作答」前後帶半形與全形空白仍可辨識（`Scenario: US2-AS3`）；題號值為數值 1.0 與文字 `"1"` 都得到題號 1（`Scenario: US2-AS4`）；工作表含題目敘述欄時，`ParseResult` 與其中任何欄位的字串化內容都不含題目敘述文字（`Scenario: US2-AS5`；FR-008）。
 - [ ] T032 [P] [US2] 在 `tests/unit/adapters/google/test_sheets_read.py` 用 `HttpMockSequence`（手寫回應 JSON）測試 `read`：欄位遮罩字串為 `sheets(properties(sheetId,title,gridProperties),merges,data(startRow,startColumn,rowData(values(effectiveValue,formattedValue))))`；`startRow`／`startColumn` 位移還原成絕對座標；`rowData` 省略結尾空儲存格；`GridRange` 結束索引「不含」轉成 `MergeRange` 的「含」；`numberValue` 與 `stringValue` 正確區分；工作表標題含單引號時的 `ranges` 跳脫；全程只送出讀取請求（FR-023；`Edge: 同一個格子被兩題指到` 前提）。
-- [ ] T033 [P] [US2] 在 `tests/unit/app/guided_notes_import/test_service_import.py` 測試 `import_sheet` 的順序與原子性（[research.md](research.md) R6）：階段與身分 → 讀取 → 解析 → 001 `replace_questions` → 才保存；讀取失敗、解析失敗、001 拒絕三種情況下都不保存、不改既有記錄；成功時只傳題號清單給 001；兩個並行的匯入依序執行，最後成功的一次整份取代（`Edge: 連續快速重複匯入`、`Edge: 解析後、寫入前階段或身分改變`）；多個活動同時存在互不影響。
+- [ ] T033 [P] [US2] 在 `tests/unit/app/guided_notes_import/test_service_import.py` 測試 `import_sheet` 的順序與原子性（[research.md](research.md) R6）：階段與身分 → 讀取 → 解析 → 001 `replace_questions` → 才保存；讀取失敗、解析失敗、001 拒絕三種情況下都不保存、不改既有記錄；成功時只傳題號清單給 001；兩個並行的匯入依序執行，最後成功的一次整份取代（`Edge: 連續快速重複匯入`、`Edge: 解析後、寫入前階段或身分改變`）；另測：快照讀取後，Fake 讀取器的來源內容被改動，已匯入的結果與記錄不變、也不自動更新（`Edge: 讀取期間老師編輯試算表`，以一次讀取為準）；多個活動同時存在互不影響。
 - [ ] T034 [P] [US2] 在 `tests/contract/guided_notes_import/test_import_api.py` 驗證 `POST /activities/{code}/import`：200 的 `ImportResult` 形狀（含 001 回傳的 `version`）、`SOURCE_NOT_SELECTED`、同一個 `Idempotency-Key` 重送回傳第一次的結果而不重複匯入。
 
 ### Implementation for User Story 2
@@ -178,7 +178,7 @@ description: "002-guided-notes-import 任務清單"
 
 ### Tests for User Story 3 (REQUIRED — one or more per Acceptance Scenario) ⚠️
 
-- [ ] T042 [P] [US3] 在 `tests/unit/core/guided_notes_import/test_parse_groups.py` 測試：原始題組範例 → 4 題 6 格，第二個子空格被辨識、答案位置為「（n）」右側的作答格而非編號格、編號位於作答表頭涵蓋的欄範圍內（`Scenario: US3-AS1`）；相鄰重複題號與縱向合併得到相同的題數與格數（`Scenario: US3-AS2`）；沒有題號也沒有子空格的間隔列被忽略、不繼承題號（`Scenario: US3-AS3`）；空白題號只在縱向合併範圍內繼承（`Scenario: US3-AS4`）；單題與題組混合，題組只算一題（`Scenario: US3-AS5`）；同一題的兩個子空格之間夾完全空白的列（縱向合併與逐列重複兩種，含合併範圍把間隔列包進去）→ 忽略該列、格數不變（`Scenario: US3-AS6`；FR-026）。
+- [ ] T042 [P] [US3] 在 `tests/unit/core/guided_notes_import/test_parse_groups.py` 測試：原始題組範例 → 4 題 6 格，第二個子空格被辨識、答案位置為「（n）」右側的作答格而非編號格、編號位於作答表頭涵蓋的欄範圍內（`Scenario: US3-AS1`）；相鄰重複題號與縱向合併得到相同的題數與格數（`Scenario: US3-AS2`）；沒有題號也沒有子空格的間隔列被忽略、不繼承題號（`Scenario: US3-AS3`）；空白題號只在縱向合併範圍內繼承（`Scenario: US3-AS4`）；單題與題組混合，題組只算一題（`Scenario: US3-AS5`）；同一題的兩個子空格之間夾完全空白的列（縱向合併與逐列重複兩種，含合併範圍把間隔列包進去）→ 忽略該列、格數不變（`Scenario: US3-AS6`；FR-026）。另測：作答格已有佔位文字（例如「請填寫」）仍視為作答格、位置不變（`Edge: 作答格已有佔位文字`）。
 - [ ] T043 [P] [US3] 在 `tests/unit/core/guided_notes_import/test_structure_snapshot.py` 以版面 A、版面 B 測試 `StructureSnapshot` 內容：表頭位置、`answer_cols`、`data_start_row`、僅含相交者的合併範圍、各列題號、答案格映射（FR-024；供 005 寫回前比對）。
 - [ ] T044 [P] [US3] 在 `tests/unit/core/guided_notes_import/test_sub_index_format.py` 測試子編號被接受的格式：「（1）」「(1)」（半形或全形括號、半形數字），且必須位於作答表頭涵蓋的欄範圍內（`Edge: 子編號與作答格的位置`；拒絕的變體在 T048 測試）。
 
@@ -202,7 +202,7 @@ description: "002-guided-notes-import 任務清單"
 
 ### Tests for User Story 4 (REQUIRED — one or more per Acceptance Scenario) ⚠️
 
-- [ ] T048 [P] [US4] 在 `tests/unit/core/guided_notes_import/test_parse_defects.py` 測試（**先寫、先確認失敗並記錄**）：缺「題號」、缺「作答」、兩者皆缺、空工作表（`Scenario: US4-AS1`）；兩個表頭區塊、同列重複表頭、「題號」「作答」不在同一列（`Scenario: US4-AS2`；`Edge: 兩組表頭但只有一組有合法題目`）；題號跳號、非相鄰重複題號、子編號缺漏、子編號重複、非數字題號（`Scenario: US4-AS3`）；孤立子空格、缺少答案格（含右側無儲存格與題號存在卻找不到任何作答格）、目標格重疊（`Scenario: US4-AS4`）；被拒絕的子編號變體：全形數字「（１）」、括號內夾空白；**近似錯誤對照**（格式與關鍵字都對、內容有缺陷，例如表頭存在但題號跳號）必須被拒絕；多個缺陷同時存在時**全部收集**回報；`ok` 為假時 `questions`、`blanks`、`structure` 為空（FR-016）。（SC-004）
+- [ ] T048 [P] [US4] 在 `tests/unit/core/guided_notes_import/test_parse_defects.py` 測試（**先寫、先確認失敗並記錄**）：缺「題號」、缺「作答」、兩者皆缺、空工作表（`Scenario: US4-AS1`）；兩個表頭區塊、同列重複表頭、「題號」「作答」不在同一列（`Scenario: US4-AS2`；`Edge: 兩組表頭但只有一組有合法題目`）；題號跳號、非相鄰重複題號、子編號缺漏、子編號重複、非數字題號（`Scenario: US4-AS3`）；孤立子空格、缺少答案格（含右側無儲存格與題號存在卻找不到任何作答格）、目標格重疊（`Scenario: US4-AS4`）；被拒絕的子編號變體：全形數字「（１）」、括號內夾空白；**近似錯誤對照**（格式與關鍵字都對、內容有缺陷，例如表頭存在但題號跳號）必須被拒絕；多個缺陷同時存在時**全部收集**回報；`ok` 為假時 `questions`、`blanks`、`structure` 為空（FR-016）。（SC-004）另測：表頭同義詞不被接受，「題目編號」「編號」「Answer」等一律視為缺表頭並拒絕，不猜結構（`Edge: 表頭同義詞不支援`；FR-006）。
 - [ ] T049 [P] [US4] 在 `tests/unit/app/guided_notes_import/test_import_rejection.py` 測試：先成功匯入一份合法學習單，再匯入各種缺陷學習單，每次都被整份拒絕，`FakeActivityGateway.replace_questions` 沒有被呼叫，既有的 `ImportRecord` 與題號清單完全不變（`Scenario: US4-AS5`）；解析成功但 001 拒絕（`GATEWAY_REJECTED`）時，002 保存的資料也不變（`Edge: 解析後、寫入前階段或身分改變`）。
 - [ ] T050 [P] [US4] 在 `tests/contract/guided_notes_import/test_validation_api.py` 驗證 422 `VALIDATION_FAILED` 的 `issues` 形狀：`kind`、`row`、`col`（1 起算，欄以 A、B… 字母表示，無位置時為 `null`）、`quoted`（≤40 字元）、`hint`；回應不含堆疊、檔案路徑或憑證；含 `<script>` 之類字樣的儲存格文字原樣當純文字回傳（FR-022、SC-004；`Edge: 不可信的儲存格文字`）。
 
@@ -219,7 +219,7 @@ description: "002-guided-notes-import 任務清單"
 
 **前端**
 
-- [ ] T054 [US4] 在 `static/js/import.js` 以表格呈現錯誤清單（列、欄、原因、修正建議），全部以 `textContent` 輸出；授權與讀取類錯誤顯示固定訊息與下一步。
+- [ ] T054 [US4] 在 `<static>/js/import.js` 以表格呈現錯誤清單（列、欄、原因、修正建議），全部以 `textContent` 輸出；授權與讀取類錯誤顯示固定訊息與下一步。
 
 **Checkpoint**: 每種缺陷都被整份拒絕並指出位置，既有資料不變
 
@@ -249,7 +249,7 @@ description: "002-guided-notes-import 任務清單"
 
 **前端**
 
-- [ ] T060 [US5] 在 `static/js/import.js` 顯示預覽（題號清單、各題空格數、總題數、總空格數）、頁面重新整理時以 #8 恢復、準備中可改選並重新匯入。
+- [ ] T060 [US5] 在 `<static>/js/import.js` 顯示預覽（題號清單、各題空格數、總題數、總空格數）、頁面重新整理時以 #8 恢復、準備中可改選並重新匯入。
 
 **Checkpoint**: 老師可核對匯入結果，005 可取得來源映射與結構
 
@@ -264,7 +264,7 @@ description: "002-guided-notes-import 任務清單"
 ### Tests for User Story 6 (REQUIRED — one or more per Acceptance Scenario) ⚠️
 
 - [ ] T061 [P] [US6] 在 `tests/unit/app/guided_notes_import/test_lock_after_round.py` 測試：001 階段為搶答中、結果未定案、結果已定案、已結束時，`select_source` 與 `import_sheet` 都回 `ROUND_STARTED`，`ImportRecord` 與既有提交不變（`Scenario: US6-AS1`）；002 不提供任何修改題號、空格數、答案位置的端點（對 `main.py` 路由表掃描），且透過 001 `replace_questions` 的修改被拒、題目定義不變（`Scenario: US6-AS2`）；已取消回 `ACTIVITY_CANCELLED`，其他非準備中階段回 `STAGE_NOT_PREPARING`（`Edge: 活動不在「準備中」`）。
-- [ ] T062 [P] [US6] 在 `tests/contract/guided_notes_import/test_identity_gate.py` 測試每個端點（#1、#3～#8）：非老師、其他活動的老師、不存在的活動代碼都被拒絕且不更動任何題目（`Edge: 非老師的請求`、`Edge: 活動代碼不存在`；FR-025）；解析成功但 001 因階段剛好改變而拒絕 → `GATEWAY_REJECTED`、001 題目與 002 保存的資料都不變。
+- [ ] T062 [P] [US6] 在 `tests/contract/guided_notes_import/test_identity_gate.py` 測試每個端點（#1、#3～#8）：非老師、其他活動的老師、不存在的活動代碼都被拒絕且不更動任何題目（`Edge: 非老師的請求`、`Edge: 活動代碼不存在`；FR-025）；活動不存在時依 001 慣例，無 token 回 404 `ACTIVITY_NOT_FOUND`、帶 token 回 410 `ACTIVITY_GONE`；解析成功但 001 因階段剛好改變而拒絕 → `GATEWAY_REJECTED`、001 題目與 002 保存的資料都不變。
 
 ### Implementation for User Story 6
 
@@ -274,7 +274,7 @@ description: "002-guided-notes-import 任務清單"
 
 **前端**
 
-- [ ] T064 [US6] 在 `static/js/import.js` 依 001 的活動快照在階段不是準備中時停用匯入區塊，並顯示「搶答已開始，題目不可更動」（已取消時顯示「活動已取消」）。
+- [ ] T064 [US6] 在 `<static>/js/import.js` 依 001 的活動快照在階段不是準備中時停用匯入區塊，並顯示「搶答已開始，題目不可更動」（已取消時顯示「活動已取消」）。
 
 **Checkpoint**: 所有 User Story 完成
 
@@ -290,7 +290,7 @@ description: "002-guided-notes-import 任務清單"
 - [ ] T068 [P] 建立 `scripts/capture_real_fixture.py`：把真實 `spreadsheets.get` 回應去識別化（刪除標題、帳號、檔案 ID）後存成 `tests/fixtures/real/*.json`；憑證與輸出只在本機，不入版控的內容不得提交。
 - [ ] T069 [P] 建立 `tests/real_google/test_real_import.py`，標記 `@pytest.mark.real_google`，明確指定真實轉接器（不跟隨預設的 Fake）；缺少任何 Google 環境變數時**明確失敗**並說明缺什麼，不跳過、不退回離線路徑；pytest 不會自動讀 `.env`，環境變數由執行者在 shell 設定。預設 `pytest` 不執行它。
 - [ ] T070 在 [quickstart.md](quickstart.md) B 區補一步「選只有一張工作表的試算表 → 自動選用並顯示名稱」（`Scenario: US1-AS2`；自動選用的判斷已由 T020、T021 自動測試，這裡人工確認畫面顯示名稱），並把 US1-AS5「選檔取消」對應到 B-3。
-- [ ] T071 **真實路徑驗證（SC-009，合併前必做）**：EricC430 以兩份版面不同的真實 Google 試算表，依 quickstart B-1～B-13 各走一次，記錄日期、操作、結果數字與 SC-006 的「確認工作表到看見預覽」秒數，填入 quickstart 紀錄表；憑證只在本機，不貼進 repo、Issue、PR。（依賴 T074）
+- [ ] T071 **真實路徑驗證（SC-009，合併前必做）**：EricC430 以兩份版面不同的真實 Google 試算表，依 quickstart B-1～B-13 各走一次，記錄日期、操作、結果數字與 SC-006 的「確認工作表到看見預覽」秒數（**超過 10 秒記為未通過**，並記錄當時題數與網路狀況），填入 quickstart 紀錄表；憑證只在本機，不貼進 repo、Issue、PR。（依賴 T074）
 - [ ] T072 T071 通過後執行 T068 擷取兩份版面的真實回應，新增「JSON → 轉接層 → 解析」的入口測試，確認 `GridRange` 結束索引「不含」的假設，並把假設 1～4 的驗證結果寫回 plan「待真實驗證的假設」。擷取之前不得宣稱入口路徑已驗證。（依賴 T071）
 - [ ] T073 程式碼與圖表一致性驗證：逐一比對 `diagrams/002-guided-notes-import-{component,class,sequence}.puml` 與實作（`ImportService` 的方法、`AuthGateway`／`SheetsReader` 的方法、`ImportRecord` 的欄位、`SpreadsheetInfo.autoSelectSheetId`、時序圖的 inspect／`PUT source`／匯入步驟；`IssueKind` 的值。類別圖與時序圖已於 2026-11-22 依 plan 同步，這裡驗證實作沒有再偏離）。有差異時先更新圖表並重新轉出 PNG（原則 II）。
 - [ ] T074 執行全部自動化測試 `pytest -m "not real_google and not perf"`，並以 `-v` 確認核心、應用層、轉接層（`HttpMockSequence`）、HTTP 契約、架構純度、日誌各自有項目、沒有任何一類是 0 筆；記錄日期、指令與通過／失敗／略過數字（原則 VI）。
@@ -298,7 +298,7 @@ description: "002-guided-notes-import 任務清單"
 - [ ] T076 由非實作者（jacky0407）依 [quickstart.md](quickstart.md) B 區做人工驗證，記錄日期、每一步操作與結果於 quickstart 紀錄表並簽名（原則 VI）。
 - [ ] T077 追蹤 001 的開發用 seed API（`adapters/web/dev_seed.py`、`LECTURE_QUIZ_DEV_SEED`、`tests/integration/test_dev_seed.py`、前端「放入假題目」按鈕）：依 001 plan 在 002 合併後的第一個 PR 移除；因檔案屬 001，先與 jacky0407 協調是在本 PR 一併移除還是另開 PR，並在 PR 描述記錄結論。
 - [ ] T078 更新 `CLAUDE.md`「專案現況」：補上 `pytest -m real_google` 的手動執行方式與 002 的三層路徑；再用全新 clone 在乾淨的 venv 重跑安裝與 `pytest`，確認不依賴任何本機未提交的檔案（規章第 9 節）。
-- [ ] T079 開 PR 前確認：文末 Scenario 對照表的 28 個項目都有已通過的測試；spec 的 Traceability 與 `docs/alignment.md` 沒有新增偏離項；quickstart 紀錄表沒有空白的已執行項目；PR 描述列出尚未驗證的假設（若有）。
+- [ ] T079 開 PR 前確認：文末 Scenario 對照表的 28 個項目都有已通過的測試；spec 的 Traceability 與 `docs/alignment.md` 沒有新增偏離項；quickstart 紀錄表沒有空白的已執行項目；PR 描述列出尚未驗證的假設（若有）；品質關卡 7：`git status` 與 `git diff` 確認沒有夾帶 `.env`、憑證、token、`期末專題說明.md`、`project_proposal_draft.md` 或其他不追蹤的檔案。
 
 ---
 
@@ -399,7 +399,7 @@ Task: "<core>/headers.py（T036）"
 | US6-AS1 | T061 |
 | US6-AS2 | T061 |
 
-**Edge Case 對照**：授權中途失效 → T020；選檔後檔案消失 → T019；子編號與作答格位置 → T044、T048；題號格式 → T029；同一格被兩題指到 → T048；非相鄰重複 → T048；非老師、活動不存在、非準備中 → T061、T062；解析後寫入前階段改變 → T033、T049、T062；連續快速重複匯入 → T033；輸入驗證失敗與訊息不含內部細節 → T013、T050；不可信的儲存格文字 → T050、T054；讀取期間老師編輯試算表（以一次讀取為準，匯入後不自動更新）→ T033。
+**Edge Case 對照**：授權中途失效 → T020；選檔後檔案消失 → T019；子編號與作答格位置 → T044、T048；題號格式 → T029；同一格被兩題指到 → T048；非相鄰重複 → T048；非老師、活動不存在、非準備中 → T061、T062；解析後寫入前階段改變 → T033、T049、T062；連續快速重複匯入 → T033；輸入驗證失敗與訊息不含內部細節 → T013、T021、T050；作答格已有佔位文字 → T042；表頭同義詞不支援 → T048；不可信的儲存格文字 → T050、T054；讀取期間老師編輯試算表（以一次讀取為準，匯入後不自動更新）→ T033（已補測試描述）。
 
 ---
 
