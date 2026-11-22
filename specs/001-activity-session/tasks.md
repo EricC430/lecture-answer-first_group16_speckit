@@ -39,19 +39,19 @@ description: "001-activity-session 任務清單"
 
 **Purpose**: 建立專案骨架、相依套件與品質工具
 
-- [ ] T001 建立 `pyproject.toml`：
+- [x] T001 建立 `pyproject.toml`：
   - 套件名 `lecture-quiz`，src 佈局 `src/lecture_quiz`，`requires-python = ">=3.11"`。
   - 執行相依：`fastapi`、`uvicorn[standard]`。
   - `[project.optional-dependencies].dev`：`pytest`、`pytest-timeout`、`httpx`、`websockets`、`ruff`、`mypy`。
   - `[tool.pytest.ini_options]`：`testpaths = ["tests"]`，註冊 marker `perf`，`addopts = "-m 'not perf'"`，`timeout = 30`。
-- [ ] T002 在 `pyproject.toml` 設定 Ruff 與 mypy（憲章 v1.0.1 技術限制 2）：
+- [x] T002 在 `pyproject.toml` 設定 Ruff 與 mypy（憲章 v1.0.1 技術限制 2）：
   - `[tool.ruff.lint] select = ["E","F","W","I","N","UP","B","D","ANN"]`，`pydocstyle.convention = "google"`，`per-file-ignores` 讓 `tests/**` 排除 `D`、`ANN`。
   - `[tool.ruff] target-version = "py311"`。
   - `[tool.mypy] files = ["src"]`，`disallow_untyped_defs = true`，`python_version = "3.11"`。
-- [ ] T003 [P] 建立套件與測試目錄，各放空的 `__init__.py`：
+- [x] T003 [P] 建立套件與測試目錄，各放空的 `__init__.py`：
   - 套件：`src/lecture_quiz/`、`src/lecture_quiz/core/`、`src/lecture_quiz/core/activity/`、`src/lecture_quiz/app/`、`src/lecture_quiz/app/activity/`、`src/lecture_quiz/adapters/`、`src/lecture_quiz/adapters/web/`。
   - 測試目錄：`tests/unit/core/`、`tests/unit/app/`、`tests/architecture/`、`tests/contract/`、`tests/integration/`、`tests/perf/`。
-- [ ] T004 [P] 確認 `diagrams/001-activity-session-{component,class,sequence}.puml` 與對應 PNG 都存在，且 PNG 比 `.puml` 新；不符合時，先執行 `java -jar plantuml.jar "./diagrams/*.puml"`（原則 II）。
+- [x] T004 [P] 確認 `diagrams/001-activity-session-{component,class,sequence}.puml` 與對應 PNG 都存在，且 PNG 比 `.puml` 新；不符合時，先執行 `java -jar plantuml.jar "./diagrams/*.puml"`（原則 II）。
 
 ---
 
@@ -63,19 +63,19 @@ description: "001-activity-session 任務清單"
 
 ### 測試基礎
 
-- [ ] T005 建立 `tests/conftest.py`，內容包括：
+- [x] T005 建立 `tests/conftest.py`，內容包括：
   - `FakeClock`：`now()` 回傳可手動 `advance(seconds)` 的有時區 `datetime`，起點 `2026-11-21T09:00:00+08:00`。
   - `ManualScheduler`：記錄 `schedule(code, deadline)`，`fire(code)` 時以 `deadline` 呼叫回呼。
   - `make_app(clock, scheduler, dev_seed=False)` 工廠。
   - fixture：`client`（`TestClient`）、`teacher`（建立活動並回傳 code、token 的 helper）。
-- [ ] T006 [P] 建立 `tests/architecture/test_core_is_pure.py`，用 `ast` 掃描 `src/lecture_quiz/core/**/*.py`：
+- [x] T006 [P] 建立 `tests/architecture/test_core_is_pure.py`，用 `ast` 掃描 `src/lecture_quiz/core/**/*.py`：
   - 匯入 `fastapi`、`starlette`、`asyncio`、`socket`、`time`、`lecture_quiz.app`、`lecture_quiz.adapters` 時失敗。
   - 呼叫 `datetime.now`、`datetime.utcnow`、`date.today` 時失敗。
   - 依據：研究 R4、技術限制 4。
 
 ### 核心（純函式）
 
-- [ ] T007 [P] 在 `src/lecture_quiz/core/activity/models.py` 建立 frozen dataclass，欄位與規則照 [data-model.md](data-model.md) 原文：
+- [ ] T007 [P] ⏸ 部分完成（`Group.join_credential` 待 US2）。在 `src/lecture_quiz/core/activity/models.py` 建立 frozen dataclass，欄位與規則照 [data-model.md](data-model.md) 原文：
   - `Stage`（`PREPARING`、`ROUND_OPEN`、`RESULT_PENDING`、`RESULT_FINAL`、`ENDED`、`CANCELLED`；`is_terminal` 屬性）。
   - `TeacherIdentity(token_hash)`、`Group(name, join_credential, success_count, has_submissions)`、`DeviceIdentity(token_hash, group_name)`。
   - `RoundRules(question_numbers, fair_mode, countdown_seconds, deadline)`。
@@ -83,69 +83,70 @@ description: "001-activity-session 任務清單"
   - `Activity(code, stage, version, changed_at, teacher, question_numbers, solved_questions, groups, devices, rounds)`，含 `current_round`、`unsolved_questions` 衍生屬性。
   - 集合欄位一律使用 `tuple`、`frozenset`、`MappingProxyType`。
   - 每個公開類別都有 Google 風格 docstring。
-- [ ] T008 [P] 在 `src/lecture_quiz/core/activity/commands.py` 建立：
+- [ ] T008 [P] ⏸ 部分完成：已有 Actor、`CreateActivity`、`OpenRound`、`CloseRound`、`Finalize`、`EndActivity`、`CancelActivity`、`ReplaceQuestions`、`FinalizeOutcome`；`JoinGroup` 目前是最小入口 `JoinGroup(group_name)`，`LeaveGroup`、`DeleteGroup`、`MarkGroupSubmitted` 待 US2／US7。在 `src/lecture_quiz/core/activity/commands.py` 建立：
   - Actor 型別：`Teacher(token_hash)`、`Device(token_hash)`、`System`、`Anonymous`。
   - Command 型別：`CreateActivity`、`JoinGroup(name_raw, credential_raw)`、`LeaveGroup`、`DeleteGroup(name)`、`OpenRound(question_numbers, fair_mode, countdown_raw)`、`CloseRound`、`Finalize(outcome)`、`EndActivity`、`CancelActivity`、`ReplaceQuestions(question_numbers)`、`MarkGroupSubmitted(group_name)`。
   - `FinalizeOutcome(solved_questions: frozenset[int], success_increments: Mapping[str, int])`。
-- [ ] T009 [P] 在 `src/lecture_quiz/core/activity/results.py` 建立：
+- [x] T009 [P] 在 `src/lecture_quiz/core/activity/results.py` 建立：
   - `RejectionReason` 列舉，11 個值，每個值附 HTTP 狀態碼與 [data-model.md](data-model.md) 表中的中文訊息；`STAGE_NOT_ALLOWED` 的訊息由「階段 × 操作」產生。
   - `IssuedSecrets(group_credential, device_token_hash)`，由服務層傳入。
   - `Transition(ok, activity, changed, rejection, issued)`。
-- [ ] T010 在 `src/lecture_quiz/core/activity/state_machine.py` 建立 `ActivityStateMachine.apply(activity, command, now, issued=None) -> Transition` 的分派骨架：
+- [x] T010 在 `src/lecture_quiz/core/activity/state_machine.py` 建立 `ActivityStateMachine.apply(activity, command, now, issued=None) -> Transition` 的分派骨架：
   - 依序檢查：活動已終止、老師權限、「階段 × 操作」相容表。表格照 spec「活動階段狀態機」與「不改變階段的組別操作」兩張表。
   - 尚未實作的操作回傳 `STAGE_NOT_ALLOWED`。
   - 成功且 `changed` 時，`version + 1`，`changed_at = now`。
-- [ ] T011 [P] 在 `src/lecture_quiz/core/activity/snapshot_view.py` 建立 `ActivitySnapshot` 與 `SnapshotView.for_teacher`、`SnapshotView.for_group` 的共同欄位：`code`、`version`、`changedAt`、`stage`、`roundNumber`、`openQuestions`、`deadline`、`fairMode`、`unsolvedQuestions`，格式照 [contracts/sync-websocket.md](contracts/sync-websocket.md)。
+- [x] T011 [P] 在 `src/lecture_quiz/core/activity/snapshot_view.py` 建立 `ActivitySnapshot` 與 `SnapshotView.for_teacher`、`SnapshotView.for_group` 的共同欄位：`code`、`version`、`changedAt`、`stage`、`roundNumber`、`openQuestions`、`deadline`、`fairMode`、`unsolvedQuestions`，格式照 [contracts/sync-websocket.md](contracts/sync-websocket.md)。
 
 ### 服務層
 
-- [ ] T012 [P] 在 `src/lecture_quiz/app/activity/ports.py` 定義：
+- [x] T012 [P] 在 `src/lecture_quiz/app/activity/ports.py` 定義：
   - Protocol：`Clock`、`CountdownScheduler(schedule, cancel)`、`SyncPublisher(publish)`、`ActivityGateway`（`stage`、`is_teacher`、`replace_questions`，都有 `code` 參數）。
   - 型別：`Requester`、`Outcome[T]`。
   - 依據：[contracts/service-interfaces.md](contracts/service-interfaces.md)。
-- [ ] T013 [P] 在 `src/lecture_quiz/app/activity/secrets_gen.py` 實作：
+- [x] T013 [P] 在 `src/lecture_quiz/app/activity/secrets_gen.py` 實作：
   - `new_code(existing)` 與 `new_credential()`：6 碼，字元集 `ABCDEFGHJKLMNPQRSTUVWXYZ23456789`，用 `secrets.choice`；活動代碼不與 `existing` 重複。
   - `new_token()`：`secrets.token_urlsafe(32)`。
   - `hash_token()`：SHA-256。
   - `tokens_match()`：`secrets.compare_digest`。
   - `normalize_code_input()`：去除首尾空白並轉成大寫。
-- [ ] T014 在 `src/lecture_quiz/app/activity/registry.py` 實作 `ActivityRegistry`：
+- [x] T014 在 `src/lecture_quiz/app/activity/registry.py` 實作 `ActivityRegistry`：
   - 存放：`code → Activity`、每個活動一把 `asyncio.Lock`、活動內的「(身分雜湊, Idempotency-Key) → 原回應」（每個活動最多 1000 筆，超過時淘汰最舊的）、全域的「建立活動 key → (code, teacher token)」。
   - 只存在記憶體（原則 VII）。
-- [ ] T015 在 `src/lecture_quiz/app/activity/service.py` 建立 `ActivityService._execute(code, requester, command, idempotency_key)`，流程照研究 R6：
-  1. 查詢去重表。
-  2. 取得鎖。
+- [x] T015 在 `src/lecture_quiz/app/activity/service.py` 建立 `ActivityService._execute(code, requester, command, idempotency_key)`，流程照研究 R6：
+  1. 取得鎖。
+  2. 查詢去重表。
   3. 呼叫 `ActivityStateMachine.apply(..., now=clock.now())`。
   4. 成功時替換 `Activity`。
-  5. 釋放鎖。
-  6. `changed` 時呼叫 `SyncPublisher.publish`。
-  7. 記錄去重結果。
+  5. 記錄去重結果。
+  6. 釋放鎖。
+  7. `changed` 時呼叫 `SyncPublisher.publish`。
+  - 查表、套用、記錄都在同一把鎖內（2026-11-23 依 PR #15 審查第 2 項修正，原本查表在鎖外）；以 `asyncio.gather` 同 key 並行建立的測試在 `tests/integration/test_us1_teacher.py`。
   - 另外實作 `resolve_requester(code, bearer_token)`，把 token 轉成 `Teacher`、`Device` 或 `Anonymous`。
-- [ ] T016 [P] 在 `tests/unit/app/test_secrets_registry.py` 測試：代碼字元集與長度、不與既有代碼重複、`compare_digest` 比對、去重表上限 1000 筆與淘汰順序。
+- [x] T016 [P] 在 `tests/unit/app/test_secrets_registry.py` 測試：代碼字元集與長度、不與既有代碼重複、`compare_digest` 比對、去重表上限 1000 筆與淘汰順序。
 
 ### 轉接層
 
-- [ ] T017 [P] 在 `src/lecture_quiz/adapters/clock.py` 實作 `SystemClock.now()`，回傳有時區的現在時間。
-- [ ] T018 [P] 在 `src/lecture_quiz/adapters/countdown.py` 實作 `AsyncioCountdownScheduler`：`schedule(code, deadline)` 建立 asyncio 任務，到期時呼叫回呼；`cancel(code)` 取消任務。
-- [ ] T019 在 `src/lecture_quiz/adapters/web/http_api.py` 建立 APIRouter `/api` 的共用基礎：
+- [x] T017 [P] 在 `src/lecture_quiz/adapters/clock.py` 實作 `SystemClock.now()`，回傳有時區的現在時間。
+- [x] T018 [P] 在 `src/lecture_quiz/adapters/countdown.py` 實作 `AsyncioCountdownScheduler`：`schedule(code, deadline)` 建立 asyncio 任務，到期時呼叫回呼；`cancel(code)` 取消任務。
+- [x] T019 在 `src/lecture_quiz/adapters/web/http_api.py` 建立 APIRouter `/api` 的共用基礎：
   - 解析 `Authorization: Bearer` 與 `Idempotency-Key`。
   - `RejectionReason` 轉成 HTTP 狀態碼與 `{"error": {"code", "message"}}`；請求驗證錯誤統一成 `INVALID_REQUEST`，訊息指出欄位。
   - 全域例外處理器：未預期的錯誤回 500 與通用訊息，不含堆疊追蹤。
   - 請求 log 中介層：每個請求一行 `INFO`，只記錄方法、路徑樣板、活動代碼、結果代碼、`version`、耗時。
   - 依據：[contracts/http-api.md](contracts/http-api.md)、技術限制 3。
-- [ ] T020 在 `src/lecture_quiz/adapters/web/ws_sync.py` 實作 `WebSocketHub`（`SyncPublisher` 的實作）：
+- [x] T020 在 `src/lecture_quiz/adapters/web/ws_sync.py` 實作 `WebSocketHub`（`SyncPublisher` 的實作）：
   - 路徑 `/ws/activities/{code}`。
   - 第一則訊息必須是 `auth`，5 秒內沒收到就關閉連線。
   - 每 10 秒送一次 `ping`。
   - 活動不存在時送 `gone` 並以 4410 關閉；token 無效時送 `unauthorized`（附 `reason`）並以 4401 關閉。
   - 每條連線依角色以 `SnapshotView` 裁切後推送；單一連線送出失敗時只關閉該連線。
   - 依據：[contracts/sync-websocket.md](contracts/sync-websocket.md)。
-- [ ] T021 在 `src/lecture_quiz/main.py` 建立 `create_app(clock, scheduler, dev_seed)` 與模組層級的 `app`：
+- [x] T021 在 `src/lecture_quiz/main.py` 建立 `create_app(clock, scheduler, dev_seed)` 與模組層級的 `app`：
   - `logging.basicConfig(level=logging.INFO, stream=sys.stdout)`。
   - 掛載 HTTP router、WebSocket 與靜態檔 `adapters/static`。
   - 從環境變數 `LECTURE_QUIZ_DEV_SEED` 讀取 `dev_seed`。
   - 在 docstring 註明啟動方式為 `uvicorn lecture_quiz.main:app --host 127.0.0.1`。
-- [ ] T022 [P] 建立前端共用模組，都放在 `src/lecture_quiz/adapters/static/`：
+- [x] T022 [P] 建立前端共用模組，都放在 `src/lecture_quiz/adapters/static/`：
   - `css/app.css`：狀態列與「同步中斷」橫幅樣式。
   - `js/api.js`：fetch 包裝，自動帶 `Authorization` 與每次操作的 `Idempotency-Key`（UUID），重試時沿用同一個 key；錯誤時顯示 `error.message`。
   - `js/identity.js`：老師 token 存在 `localStorage["teacher:{code}"]`，裝置 token 存在 `sessionStorage["device:{code}"]`（⚠ 提案相依 Q-04）。
@@ -171,14 +172,15 @@ description: "001-activity-session 任務清單"
 
 ### Tests for User Story 1 (REQUIRED) ⚠️
 
-- [ ] T023 [P] [US1] 在 `tests/unit/core/test_state_machine_create_and_permissions.py` 測試：
+- [x] T023 [P] [US1] 在 `tests/unit/core/test_state_machine_create_and_permissions.py` 測試：
   - `Scenario: US1-AS1`：`CreateActivity` 後為 `PREPARING`、`version == 1`、沒有題目也沒有輪次。
-  - `Scenario: US1-AS4, US1-AS5, US1-AS6`：`Device`、別的活動的 `Teacher`、`Anonymous` 對 10 種老師專用操作（開輪、關輪、判錯與撤銷判錯的預留入口、定案、結束、取消、匯入、匯出、刪除組別）都回傳 `NOT_TEACHER`，且 `activity` 完全不變（SC-002）。
-- [ ] T024 [P] [US1] 在 `tests/contract/test_http_activities.py` 測試契約：
+  - `Scenario: US1-AS4, US1-AS5, US1-AS6`：`Device`、別的活動的 `Teacher`、`Anonymous` 對 001 擁有的 6 種老師專用操作（開輪、關輪、定案、結束、取消、匯入題號 `ReplaceQuestions`）都回傳 `NOT_TEACHER`，且 `activity` 完全不變（SC-002）。
+  - 範圍調整（2026-11-23，jacky0407 決定，回應 PR #15 審查 nit）：判錯、撤銷判錯、匯出、刪除組別不屬於 001 的 Command，由 004、005、US7 各自測試權限。
+- [x] T024 [P] [US1] 在 `tests/contract/test_http_activities.py` 測試契約：
   - `POST /api/activities` 回 `201 {"code", "teacherToken", "version"}`。
   - 代碼不存在時回 404 與 `error.code`、`error.message`。
   - 錯誤回應不含 `Traceback`、檔案路徑或 token。
-- [ ] T025 [P] [US1] 在 `tests/integration/test_us1_teacher.py` 測試：
+- [x] T025 [P] [US1] 在 `tests/integration/test_us1_teacher.py` 測試：
   - `Scenario: US1-AS1`：已有一個活動時再建立一個，兩個代碼都是 6 碼，字元都在字元集內，而且互不相同。
   - `Scenario: US1-AS2` ⚠ 提案相依 Q-04：用同一個 token 建立新的 client（模擬重新整理或新分頁），仍可取得老師快照並操作。
   - `Scenario: US1-AS3` ⚠ 提案相依 Q-04：沒有 token 的 client 操作時回 403 `NOT_TEACHER`。
@@ -188,13 +190,13 @@ description: "001-activity-session 任務清單"
 
 ### Implementation for User Story 1
 
-- [ ] T026 [US1] **核心**：在 `src/lecture_quiz/core/activity/state_machine.py` 實作 `CreateActivity`（產生 `PREPARING` 的 `Activity`；代碼與 `teacher.token_hash` 由 `issued` 傳入），以及老師權限檢查（`actor` 是 `Teacher` 且 `token_hash` 相同）。
-- [ ] T027 [US1] **服務層**：在 `src/lecture_quiz/app/activity/service.py` 實作：
+- [x] T026 [US1] **核心**：在 `src/lecture_quiz/core/activity/state_machine.py` 實作 `CreateActivity`（產生 `PREPARING` 的 `Activity`；代碼與 `teacher.token_hash` 由 `issued` 傳入），以及老師權限檢查（`actor` 是 `Teacher` 且 `token_hash` 相同）。
+- [x] T027 [US1] **服務層**：在 `src/lecture_quiz/app/activity/service.py` 實作：
   - `create(idempotency_key)`：產生代碼與 token；同一個 key 回傳同一組結果。
   - `stage(code)`、`is_teacher(code, requester)`（`ActivityGateway`）。
   - `snapshot(code, requester)`。
-- [ ] T028 [US1] **轉接層**：在 `src/lecture_quiz/adapters/web/http_api.py` 實作 `POST /activities` 與 `GET /activities/{code}/snapshot`。snapshot 在活動不存在時：帶 token 回 410 `ACTIVITY_GONE`，不帶 token 回 404。
-- [ ] T029 [US1] **轉接層**：建立 `src/lecture_quiz/adapters/static/teacher.html` 與 `js/teacher.js`：
+- [x] T028 [US1] **轉接層**：在 `src/lecture_quiz/adapters/web/http_api.py` 實作 `POST /activities` 與 `GET /activities/{code}/snapshot`。snapshot 在活動不存在時：帶 token 回 410 `ACTIVITY_GONE`，不帶 token 回 404。
+- [x] T029 [US1] **轉接層**：建立 `src/lecture_quiz/adapters/static/teacher.html` 與 `js/teacher.js`：
   - 「建立活動」按鈕，建立後顯示代碼，token 存到 `identity.js`（⚠ 提案相依 Q-04）。
   - 網址帶 `?code=` 時，從 `localStorage` 取 token 並連線同步；沒有 token 時顯示「需要該活動的老師身分」。
 
@@ -203,6 +205,8 @@ description: "001-activity-session 任務清單"
 ---
 
 ## Phase 4: User Story 2 - 學生以組別加入，多裝置同組並可恢復身分 (Priority: P1)
+
+> **⏸ 暫緩（2026-11-23）**：組別將依 alignment 2026-11-22 決議改為「組號＋老師指定組數上限」，組別加入憑證也在等 OpenSpec 組回覆。目前 core 只有最小入口 `JoinGroup(group_name)`（建立組別並登記裝置，不做正規化與憑證檢查），服務層 `ActivityService.join(code, group_name)` 沒有 HTTP 端點，只給 US1、US3 之後的測試使用（`tests/conftest.py` 的 `join_group`）。實作 US2 時要改掉這個最小入口與相關測試。
 
 **Goal**: 學生用代碼加組名加入；既有組要附上憑證；本組裝置看得到憑證；重新整理後恢復身分
 
@@ -345,7 +349,7 @@ description: "001-activity-session 任務清單"
   - `close_round(code, requester)`：成功時呼叫 `scheduler.cancel(code)`。
   - `finalize(code, requester, outcome=FinalizeOutcome(frozenset(), {}))`。
   - 給 003 的 `accepts_submission(code, now)`。
-  - 倒數回呼：`close_round(System)`。
+  - 倒數回呼：`close_round(System)`，`now = max(clock.now(), deadline)`（2026-11-23 依 PR #15 審查第 3 項修正）。
 - [ ] T058 [US4] **轉接層**：在 `src/lecture_quiz/adapters/web/http_api.py` 實作 `POST /rounds/current/close`（含 `alreadyClosed`）與 `POST /rounds/current/finalize`；在 `main.py` 把 `AsyncioCountdownScheduler` 的回呼接到服務層。
 - [ ] T059 [US4] **轉接層**：在 `teacher.html`、`teacher.js`、`student.html`、`student.js` 加入「關輪」「確認定案」按鈕，以及兩邊的倒數剩餘秒數（依 `deadline` 計算）。
 
@@ -361,7 +365,7 @@ description: "001-activity-session 任務清單"
 
 ### Tests for User Story 6 (REQUIRED) ⚠️
 
-- [ ] T060 [P] [US6] 在 `tests/contract/test_ws_sync.py` 測試契約：
+- [x] T060 [P] [US6] 在 `tests/contract/test_ws_sync.py` 測試契約：
   - 第一則訊息不是 `auth`，或 5 秒內沒送，會被關閉。
   - 老師版與學生版的 `snapshot` 欄位符合 [contracts/sync-websocket.md](contracts/sync-websocket.md)。
   - 每 10 秒收到 `ping`（測試可縮短間隔）。

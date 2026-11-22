@@ -83,3 +83,9 @@ body.sync-broken .success-hint {
 .muted {
   color: var(--color-muted);
 }
+
+/* ── 001 活動 ── */
+.activity-code {
+  font: bold 1.5rem/1.2 ui-monospace, Consolas, monospace;
+  letter-spacing: 0.15em;
+}
