@@ -72,8 +72,72 @@ async function createActivity() {
   start(code, teacherToken);
 }
 
+// ── US3：開輪面板與開發用假題目 ──
+
+let lastQuestionKey = "";
+
+function renderOpenRoundPanel(snapshot) {
+  const canOpen = snapshot.stage === "PREPARING" || snapshot.stage === "RESULT_FINAL";
+  $("open-round-panel").hidden = !canOpen;
+  $("activity-questions").textContent = snapshot.questionNumbers.length
+    ? snapshot.questionNumbers.map((q) => `第 ${q} 題`).join("、")
+    : "尚未匯入";
+  // 老師快照目前沒有「已成功題」欄位（001 的定案不標記成功題，由 004 補上），
+  // 先列出全部題目；選到已成功題時由後端拒絕並說明。
+  const unsolved = snapshot.questionNumbers;
+  // 題目清單或階段改變時才重畫，避免老師勾到一半被同步覆蓋
+  const key = `${snapshot.stage}|${snapshot.roundNumber}|${snapshot.questionNumbers.join(",")}`;
+  if (!canOpen || key === lastQuestionKey) return;
+  lastQuestionKey = key;
+  const box = $("open-round-questions");
+  box.replaceChildren();
+  for (const q of unsolved) {
+    const label = document.createElement("label");
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.value = String(q);
+    input.checked = true;
+    label.append(input, ` 第 ${q} 題 `);
+    box.append(label);
+  }
+}
+
+async function openRound(event) {
+  event.preventDefault();
+  const questionNumbers = [...$("open-round-questions").querySelectorAll("input:checked")].map(
+    (input) => Number(input.value),
+  );
+  const rawCountdown = $("open-round-countdown").value.trim();
+  const body = {
+    questionNumbers,
+    fairMode: $("open-round-fair").checked,
+    // 原樣送出，由後端驗證並回傳「倒數秒數須為 1～3600 的整數」
+    countdownSeconds: rawCountdown === "" ? null : Number(rawCountdown),
+  };
+  await teacherAction("POST", "/rounds", body);
+}
+
+async function seedQuestions() {
+  const result = await apiRequest(
+    "POST",
+    `/api/dev/activities/${encodeURIComponent(state.code)}/seed-questions`,
+    { token: state.token, body: { count: 4 } },
+  );
+  showError($("activity-error"), result.ok ? null : result.error);
+}
+
+async function detectDevSeed() {
+  const result = await apiRequest("GET", "/api/dev/status");
+  $("dev-seed").hidden = !(result.ok && result.data?.enabled);
+}
+
+onTeacherSnapshot(renderOpenRoundPanel);
+
 function init() {
   $("create-activity").addEventListener("click", createActivity);
+  $("open-round-panel").addEventListener("submit", openRound);
+  $("dev-seed").addEventListener("click", seedQuestions);
+  detectDevSeed();
   const code = normalizeCode(new URLSearchParams(location.search).get("code"));
   if (!code) return;
   const token = getTeacherToken(code);

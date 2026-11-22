@@ -11,7 +11,7 @@
 import dataclasses
 import hmac
 from collections.abc import Callable
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from lecture_quiz.core.activity.commands import (
     CancelActivity,
@@ -26,11 +26,13 @@ from lecture_quiz.core.activity.commands import (
     System,
     Teacher,
 )
+from lecture_quiz.core.activity.input_rules import InputRules, InvalidInputError
 from lecture_quiz.core.activity.models import (
     Activity,
     DeviceIdentity,
     Group,
     Round,
+    RoundRules,
     Stage,
     TeacherIdentity,
     freeze,
@@ -213,6 +215,49 @@ def _join_group(
     return _changed(updated, issued)
 
 
+def _open_round(
+    activity: Activity, command: Command, now: datetime, issued: IssuedSecrets | None
+) -> Transition:
+    """開輪：驗證輸入、固定規則快照、保存各組成功次數基準（FR-013～017）。"""
+    assert isinstance(command, OpenRound)
+    if activity.stage is Stage.PREPARING and not activity.question_numbers:
+        return _reject(activity, RejectionReason.NO_QUESTIONS)
+    try:
+        countdown = InputRules.validate_countdown(command.countdown_raw)
+        selected = InputRules.validate_selection(
+            command.question_numbers,
+            activity.question_numbers,
+            activity.solved_questions,
+        )
+    except InvalidInputError as exc:
+        return _reject(activity, exc.reason)
+    deadline = now + timedelta(seconds=countdown) if countdown is not None else None
+    rules = RoundRules(selected, bool(command.fair_mode), countdown, deadline)
+    baseline = freeze({name: g.success_count for name, g in activity.groups.items()})
+    new_round = Round(len(activity.rounds) + 1, rules, now, baseline)
+    updated = dataclasses.replace(
+        activity, stage=Stage.ROUND_OPEN, rounds=(*activity.rounds, new_round)
+    )
+    return _changed(updated)
+
+
+def _replace_questions(
+    activity: Activity, command: Command, now: datetime, issued: IssuedSecrets | None
+) -> Transition:
+    """以整份新題號取代舊的；被拒時既有題目完全不變（原則 III）。"""
+    assert isinstance(command, ReplaceQuestions)
+    try:
+        numbers = InputRules.validate_question_numbers(command.question_numbers)
+    except InvalidInputError as exc:
+        return _reject(activity, exc.reason)
+    updated = dataclasses.replace(
+        activity, question_numbers=numbers, solved_questions=frozenset()
+    )
+    return _changed(updated)
+
+
 _HANDLERS: dict[type, Handler] = {
     JoinGroup: _join_group,
+    OpenRound: _open_round,
+    ReplaceQuestions: _replace_questions,
 }

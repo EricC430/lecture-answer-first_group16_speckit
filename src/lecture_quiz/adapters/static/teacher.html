@@ -29,7 +29,20 @@
         <p>活動代碼：<strong id="activity-code" class="activity-code"></strong></p>
         <p>目前階段：<strong id="activity-stage"></strong>
           <span id="activity-round" class="muted"></span></p>
+        <p>題目：<span id="activity-questions" class="muted"></span></p>
+        <button type="button" id="dev-seed" hidden>放入假題目（開發用）</button>
       </div>
+      <form id="open-round-panel" hidden>
+        <h3>開輪</h3>
+        <fieldset>
+          <legend>本輪題目（預設全選未成功題）</legend>
+          <div id="open-round-questions"></div>
+        </fieldset>
+        <label><input type="checkbox" id="open-round-fair"> 公平模式</label>
+        <label>倒數秒數（選填，1～3600）：
+          <input type="number" id="open-round-countdown" min="1" max="3600" step="1"></label>
+        <button type="submit">開輪</button>
+      </form>
     </section>
     <!-- ── 子功能區塊結束 ── -->
   </main>

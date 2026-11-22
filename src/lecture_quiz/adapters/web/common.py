@@ -11,7 +11,6 @@ import logging
 import re
 import time
 from typing import Annotated
-from urllib.parse import unquote
 
 from fastapi import FastAPI, Header, Request
 from fastapi.exceptions import RequestValidationError
@@ -186,17 +185,44 @@ def _path_template(scope: Scope) -> str:
     """取得路由樣板（例如 `/api/activities/{code}`），不記錄路徑參數的實際值。
 
     巢狀 router 的 route 物件只有相對路徑，因此改以實際路徑為底，
-    把每個等於路徑參數值的片段換成 `{參數名}`。沒有匹配任何路由時回傳
-    `<unmatched>`（不記錄使用者輸入的網址），靜態檔回傳 `<static>`。
+    把每個路徑參數的值（以完整片段比對，可跨多段）換成 `{參數名}`。
+    沒有匹配任何路由時回傳 `<unmatched>`（不記錄使用者輸入的網址），
+    靜態檔回傳 `<static>`。
     """
     if scope.get("endpoint") is None:
         return "<unmatched>"
     if "route" not in scope:
         return "<static>"
-    by_value = {str(v): k for k, v in (scope.get("path_params") or {}).items()}
-    segments = str(scope.get("path", "")).split("/")
-    return "/".join(
-        f"{{{by_value[unquote(s)]}}}" if unquote(s) in by_value else s for s in segments
+    template = str(scope.get("path", ""))
+    params = (scope.get("path_params") or {}).items()
+    for name, value in sorted(params, key=lambda kv: -len(str(kv[1]))):
+        text = str(value)
+        if text:
+            template = re.sub(
+                "/" + re.escape(text) + "(?=/|$)", "/{" + name + "}", template, count=1
+            )
+    return template
+
+
+def install_api_fallback(app: FastAPI, prefix: str = "/api") -> None:
+    """讓 `/api` 下所有未定義的路徑都回 404 統一錯誤格式。
+
+    必須在所有子功能 router 之後、掛載靜態檔之前呼叫；否則未知的 API 路徑會落到
+    掛在 `/` 的靜態檔，POST 會變成 405。
+
+    Args:
+        app: 要註冊的 app。
+        prefix: API 前綴。
+    """
+
+    async def api_not_found(rest: str) -> None:
+        raise StarletteHTTPException(status_code=404)
+
+    app.add_api_route(
+        prefix + "/{rest:path}",
+        api_not_found,
+        methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
+        include_in_schema=False,
     )
 
 

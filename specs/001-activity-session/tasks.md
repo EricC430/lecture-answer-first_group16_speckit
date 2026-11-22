@@ -270,44 +270,45 @@ description: "001-activity-session 任務清單"
 
 ### Tests for User Story 3 (REQUIRED) ⚠️
 
-- [ ] T041 [P] [US3] 在 `tests/unit/core/test_input_rules_round.py` 測試：
+- [x] T041 [P] [US3] 在 `tests/unit/core/test_input_rules_round.py` 測試：
   - `Scenario: US3-AS6` ⚠ 提案相依 Q-08：`validate_countdown` 接受 `None`、`1`、`3600`；拒絕 `0`、`-1`、`3601`、`2.5`、`"10"`、`""`、`True`，回傳 `INVALID_COUNTDOWN`，訊息為「倒數秒數須為 1～3600 的整數。」
   - `validate_selection` 拒絕空清單、重複題號、不存在的題號、已成功的題號，回傳 `INVALID_SELECTION`。
-- [ ] T042 [P] [US3] 在 `tests/unit/core/test_state_machine_open_round.py` 測試：
+- [x] T042 [P] [US3] 在 `tests/unit/core/test_state_machine_open_round.py` 測試：
   - `Scenario: US3-AS1`：`question_numbers=None` 時選取全部未成功題，`fair_mode` 預設為 `False`，`deadline` 為 `None`。
   - `Scenario: US3-AS2`：選 2 題，建立 `Round(number=1)`，`baseline` 等於各組 `success_count`，`stage == ROUND_OPEN`。
   - `Scenario: US3-AS3`：沒有題目時回傳 `NO_QUESTIONS`。
   - `Scenario: US3-AS4`：零題、已成功題、在 `RESULT_PENDING` 時開輪，全部被拒。
   - `Scenario: US3-AS5`：在 `ROUND_OPEN` 再送 `OpenRound` 時回傳 `RULES_LOCKED`，規則不變。
   - 倒數 60 秒時，`deadline == opened_at + 60s`。
-- [ ] T043 [P] [US3] 在 `tests/unit/core/test_replace_questions.py` 測試：
+- [x] T043 [P] [US3] 在 `tests/unit/core/test_replace_questions.py` 測試：
   - `ReplaceQuestions` 只允許老師在 `PREPARING` 時呼叫，成功時整份取代題號。
   - 被拒時（例如在 `ROUND_OPEN`），既有題號完全不變（原則 III）。
-- [ ] T044 [P] [US3] 在 `tests/contract/test_http_rounds.py` 測試契約：
+- [x] T044 [P] [US3] 在 `tests/contract/test_http_rounds.py` 測試契約：
   - `POST /rounds` 回 `201 {"roundNumber", "deadline", "version"}`。
   - `countdownSeconds: 2.5` 回 400 `INVALID_COUNTDOWN`。
-- [ ] T045 [P] [US3] 在 `tests/integration/test_us3_open_round.py` 以 HTTP 加 `ManualScheduler` 測試 `Scenario: US3-AS1`～`US3-AS7`：
+- [x] T045 [P] [US3] 在 `tests/integration/test_us3_open_round.py` 以 HTTP 加 `ManualScheduler` 測試 `Scenario: US3-AS1`～`US3-AS7`：
   - AS2：所有 WebSocket 連線都收到 `stage == "ROUND_OPEN"`。
   - AS7：同一個 `Idempotency-Key` 重送開輪，只產生一個輪次，回應相同（SC-004）。
+  - 註（2026-11-23）：AS4 的「選已成功題」「結果未定案時開新輪」需要關輪與定案，整合層改由 US4-AS5 涵蓋，核心層仍在 T042 測試；另補一個同 key 並行開輪只套用一次的測試（PR #15 審查第 2 項）。
 
 ### Implementation for User Story 3
 
-- [ ] T046 [P] [US3] **核心**：在 `src/lecture_quiz/core/activity/input_rules.py` 實作：
+- [x] T046 [P] [US3] **核心**：在 `src/lecture_quiz/core/activity/input_rules.py` 實作：
   - `validate_countdown(raw)`：`None` 或 1～3600 的 `int`，排除 `bool`（⚠ 提案相依 Q-08）。
   - `validate_selection(selected, imported, solved)`：`selected` 為 `None` 時回傳全部未成功題；其餘照 T041 的規則。
-- [ ] T047 [US3] **核心**：在 `src/lecture_quiz/core/activity/state_machine.py` 實作：
+- [x] T047 [US3] **核心**：在 `src/lecture_quiz/core/activity/state_machine.py` 實作：
   - `OpenRound`：允許 `PREPARING`（必須有題目）與 `RESULT_FINAL`；建立 `RoundRules` 與 `Round`，`deadline = now + countdown_seconds`。
   - `ReplaceQuestions`：只允許 `PREPARING`。
-- [ ] T048 [US3] **服務層**：在 `src/lecture_quiz/app/activity/service.py` 實作：
+- [x] T048 [US3] **服務層**：在 `src/lecture_quiz/app/activity/service.py` 實作：
   - `open_round(...)`：成功且有 `deadline` 時，呼叫 `scheduler.schedule(code, deadline)`。
   - `replace_questions(code, requester, question_numbers)`（`ActivityGateway`）。
   - `current_round(code)`：給 004 使用。
-- [ ] T049 [US3] **轉接層**：在 `src/lecture_quiz/adapters/web/http_api.py` 實作 `POST /activities/{code}/rounds`。
-- [ ] T050 [US3] **轉接層**：建立 `src/lecture_quiz/adapters/web/dev_seed.py`：
+- [x] T049 [US3] **轉接層**：在 `src/lecture_quiz/adapters/web/http_api.py` 實作 `POST /activities/{code}/rounds`。
+- [x] T050 [US3] **轉接層**：建立 `src/lecture_quiz/adapters/web/dev_seed.py`：
   - 端點 `POST /api/dev/activities/{code}/seed-questions`，只在 `dev_seed=True` 時掛載，只限老師，呼叫 `replace_questions(1..count)`。
   - 在 `tests/integration/test_dev_seed.py` 測試：預設不存在（404）、啟用後學生呼叫時回 403。
   - 依據：研究 R8、Complexity Tracking。
-- [ ] T051 [US3] **轉接層**：在 `src/lecture_quiz/adapters/static/teacher.html` 與 `js/teacher.js` 加入：
+- [x] T051 [US3] **轉接層**：在 `src/lecture_quiz/adapters/static/teacher.html` 與 `js/teacher.js` 加入：
   - 開輪面板：題目核取方塊預設全選未成功題、公平模式預設關閉、倒數輸入選填（⚠ 提案相依 Q-08）。
   - 「放入假題目」按鈕：只在 seed 端點存在時顯示。
 

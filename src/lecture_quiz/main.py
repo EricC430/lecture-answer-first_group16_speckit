@@ -22,9 +22,11 @@ from fastapi.staticfiles import StaticFiles
 
 from lecture_quiz.adapters.clock import SupportsNow, SystemClock
 from lecture_quiz.adapters.countdown import AsyncioCountdownScheduler
+from lecture_quiz.adapters.web import dev_seed as dev_seed_api
 from lecture_quiz.adapters.web import http_api, system, ws_sync
 from lecture_quiz.adapters.web.common import (
     RequestLogMiddleware,
+    install_api_fallback,
     install_error_handlers,
 )
 from lecture_quiz.app.activity.ports import CountdownScheduler
@@ -95,8 +97,11 @@ def create_app(
     # ── 子功能 router：每個子功能只加一行（順序不限）──
     api.include_router(system.create_router(app))
     api.include_router(http_api.create_router(app))  # 001
+    if app.state.dev_seed:  # 001 開發用；002 合併後移除（研究 R8）
+        api.include_router(dev_seed_api.create_router(app))
     # ── 子功能 router 結束 ──
     app.include_router(api)
+    install_api_fallback(app)  # 未定義的 /api 路徑一律 404
 
     # WebSocket 路由也要在掛載靜態檔之前加入。
     app.include_router(ws_sync.create_router(app.state.sync_hub))  # 001
