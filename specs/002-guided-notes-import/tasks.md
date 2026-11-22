@@ -25,7 +25,7 @@ description: "002-guided-notes-import 任務清單"
 - **應用層**：`src/lecture_quiz/app/guided_notes_import/`。
 - **轉接層**：`src/lecture_quiz/adapters/google/`、`src/lecture_quiz/adapters/web/guided_notes_import.py`、`static/js/import.js`。
 
-**⚠ 骨架凍結**（見 [plan.md](plan.md)「相依與時程」）：jacky0407 的骨架 PR 合併前，002 **不得**建立 `pyproject.toml`、`main.py`、`src/`。T001 是整份清單的前置關卡。
+**⚠ 骨架凍結**（見 [plan.md](plan.md)「相依與時程」）：jacky0407 的骨架 PR 合併前，002 **不得**建立 `pyproject.toml`、`main.py`、`src/`；且 001 的活動建立、老師 token、`replace_questions`、開輪與取消完成之前也不開工（2026-11-22 決定：等相依完成再開始，不以 Fake 先行）。T001 是整份清單的前置關卡。
 
 **⚠ 共用檔案追加約定**：`main.py` 只加一行 router；`teacher.html` 只加一個區塊；`pyproject.toml` 相依追加在最後；`docs/alignment.md` 只追加在最後；`tests/conftest.py` 只追加 fixture 與參數，不改 001 既有簽章的預設行為。
 
@@ -46,9 +46,9 @@ description: "002-guided-notes-import 任務清單"
 
 **Purpose**: 確認骨架就緒，追加相依與目錄
 
-- [ ] T001 **前置關卡**：確認 001 的骨架 PR 已合併到 `main`，且 002 分支已從 main 接續；檢查 `pyproject.toml`（含 Ruff、mypy 設定）、`src/lecture_quiz/{core,app,adapters}/`、`src/lecture_quiz/main.py` 的 `create_app`、`tests/conftest.py`、`tests/architecture/test_core_is_pure.py` 都存在。任一項缺少就**停止並回報**，不自行建立（骨架凍結）。
+- [ ] T001 **前置關卡（等相依完成再開始）**：確認以下兩項都已完成，在 `main` 或 002 所接續的 001 分支上都可以，**未完成就停止並回報，不開工、不自行建立**：(1) 001 的骨架 PR（目前為 #14）已合併，且 002 分支已從該基底接續；(2) 001 的 `ActivityService` 已實作 002 契約測試與真實驗證會用到的功能：建立活動與老師 token（001 US1）、`replace_questions`（001 tasks T043 對應的實作）、開輪與取消（001 US3、US4，US6 測試需要）。骨架檢查： `pyproject.toml`（含 Ruff、mypy 設定）、`src/lecture_quiz/{core,app,adapters}/`、`src/lecture_quiz/main.py` 的 `create_app`、`tests/conftest.py`、`tests/architecture/test_core_is_pure.py` 都存在。任一項缺少就**停止並回報**，不自行建立（骨架凍結）。
 - [ ] T002 [P] 確認 `diagrams/002-guided-notes-import-{component,class,sequence}.puml` 與對應 PNG 都存在，且 PNG 不舊於 `.puml`；不符時先執行 `java -jar plantuml.jar "./diagrams/002-*.puml"`（原則 II）。
-- [ ] T003 在 `pyproject.toml` 相依列表**最後**追加 `google-api-python-client`、`google-auth`、`google-auth-oauthlib`（核心相依，不放選用 extra）；版本以 `pip index versions <套件>` 查證後釘選並記錄在 PR 描述，不憑記憶。註冊 pytest marker `real_google`，並讓預設 `addopts` 排除它（與 001 的 `perf` 並存）。
+- [ ] T003 在 `pyproject.toml` 相依列表**最後**追加 `google-api-python-client`、`google-auth`、`google-auth-oauthlib`（核心相依，不放選用 extra）；版本以 `pip index versions <套件>` 查證後釘選並記錄在 PR 描述，不憑記憶。註冊 pytest marker `real_google`，並讓預設 `addopts` 排除它：`addopts` 合併為單一表達式 `-m "not perf and not real_google"`（001 已有 `-m 'not perf'`；命令列再給 `-m` 會**覆蓋**它，所以指令一律用 `not real_google and not perf`）。
 - [ ] T004 [P] 建立套件與測試目錄，各放空的 `__init__.py`：`<core>/`、`<app>/`、`src/lecture_quiz/adapters/google/`、`tests/unit/core/guided_notes_import/`、`tests/unit/app/guided_notes_import/`、`tests/unit/adapters/google/`、`tests/contract/guided_notes_import/`、`tests/fixtures/`、`tests/real_google/`。
 - [ ] T005 [P] 在 `.env.example` **追加**五個空白設定：`GOOGLE_CLIENT_ID`、`GOOGLE_CLIENT_SECRET`、`GOOGLE_API_KEY`、`GOOGLE_APP_ID`、`OAUTH_REDIRECT_URI`（註解寫明本機固定值 `http://localhost:8000/api/oauth/callback`）；確認 `.gitignore` 已排除 `.env`。
 
@@ -82,7 +82,7 @@ description: "002-guided-notes-import 任務清單"
 - [ ] T012 [P] 在 `<app>/store.py` 建立 `ImportStore`：依活動代碼為 key 的 `sessions`、`selections`、`records`、`locks`（每個活動一把 `asyncio.Lock`，與 001 活動鎖分開）；只在記憶體，不持久化（原則 VII）。
 - [ ] T013 在 `<app>/messages.py` 建立固定中文訊息對照表（每個 `ImportRejection` 一則，`IssueKind` 的修正建議於 T053 補齊），儲存格引用截斷在 40 字元；在 `tests/unit/app/guided_notes_import/test_messages.py` 測試每個代碼都有訊息，且訊息不含 token、授權碼、`state`、client secret、檔案路徑、堆疊字樣（FR-022、SC-005；`Edge: 輸入驗證失敗`）。（依賴 T010）
 - [ ] T014 [P] 建立 `tests/unit/app/guided_notes_import/fakes.py`：`FakeAuthGateway`、`FakeSheetsReader`（可注入快照、授權狀態、各種拒絕）、`FakeActivityGateway`（行為依 001 契約：`stage`、`is_teacher`、`replace_questions` 只允許老師在準備中、成功回傳新 `version`、被拒時題目不變；可注入「解析後、寫入前階段改變」）。檔頭標明為測試替身。
-- [ ] T015 [P] 在 `<google>/config.py` 讀取五個環境變數，**空字串視為未設定**，缺任何一項時匯入相關操作回 `GOOGLE_NOT_CONFIGURED`，不退回離線路徑、不假裝成功；授權範圍常數（`drive.file`）與 `state` 有效期限各只定義在這個檔案。在 `tests/unit/adapters/google/test_config.py` 測試：缺值、空字串、全部齊備三種情況。
+- [ ] T015 [P] 在 `<google>/config.py` 讀取五個環境變數，**空字串視為未設定**，缺任何一項時匯入相關操作回 `GOOGLE_NOT_CONFIGURED`，不退回離線路徑、不假裝成功；`config.py` 只讀 `os.environ`，`.env` 由啟動指令載入（`uvicorn ... --env-file .env`，`uvicorn[standard]` 內含 python-dotenv；實作時以已安裝版本的 `uvicorn --help` 確認此選項）；授權範圍常數（`drive.file`）與 `state` 有效期限各只定義在這個檔案。在 `tests/unit/adapters/google/test_config.py` 測試：缺值、空字串、全部齊備三種情況。
 - [ ] T016 擴充 `tests/conftest.py`（只追加）：`make_app` 增加選用參數 `auth_gateway`、`sheets_reader`（預設為 Fake），讓契約測試使用 001 的真實 `ActivityService`、`teacher` fixture 與 `FakeClock`，只替換 Google 相關連接埠。（依賴 T014）
 
 **Checkpoint**: 型別、連接埠、Fake 與測試輔助就緒，可以開始 User Story
@@ -100,31 +100,31 @@ description: "002-guided-notes-import 任務清單"
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
 - [ ] T017 [P] [US1] 在 `tests/unit/adapters/google/test_auth.py` 測試 `GoogleAuthGateway`（以 `FakeClock` 與假的 token 交換）：`state` 只能用一次、超過有效期限失敗、不符或重複使用時**不交換 token** 並導回 `auth=error`；使用者取消或拒絕 → `auth=denied`；token 只在記憶體、不出現在任何回傳值或日誌（`Scenario: US1-AS3`、`US1-AS4`）。
-- [ ] T018 [P] [US1] 在 `tests/unit/adapters/google/test_sheets_inspect.py` 用 `HttpMockSequence`（手寫回應 JSON，標明手寫）測試 `inspect`：先以 Drive `mimeType` 判斷，非 Google 試算表（Google 文件、PDF、XLSX）→ `NOT_A_SPREADSHEET`；是試算表才以欄位遮罩 `properties.title,sheets.properties(sheetId,title,hidden,gridProperties)` 取得工作表清單；多張與單張兩種（`Scenario: US1-AS1`、`US1-AS2`、`US1-AS6`）。
+- [ ] T018 [P] [US1] 在 `tests/unit/adapters/google/test_sheets_inspect.py` 用 `HttpMockSequence`（手寫回應 JSON，標明手寫）測試 `inspect`：先以 Drive `mimeType` 判斷，非 Google 試算表（Google 文件、PDF、XLSX）→ `NOT_A_SPREADSHEET`；是試算表才以欄位遮罩 `properties.title,sheets.properties(sheetId,title,hidden,gridProperties)` 取得工作表清單；多張與單張兩種，並驗證 `SpreadsheetInfo` 能提供工作表數量判斷所需資料（`Scenario: US1-AS1`、`US1-AS2`、`US1-AS6`）。
 - [ ] T019 [P] [US1] 在 `tests/unit/adapters/google/test_errors.py` 測試 `HttpError` → `ImportRejection` 對應：401 → `AUTH_EXPIRED`、403／404 → `PERMISSION_DENIED`、429／逾時／5xx → `READ_FAILED`；對應結果的訊息不含憑證與內部細節（`Scenario: US1-AS4`；`Edge: 選檔後檔案消失或失去權限`）。
-- [ ] T020 [P] [US1] 在 `tests/unit/app/guided_notes_import/test_service_source.py` 以 Fake 連接埠測試：`inspect_spreadsheet` 不改任何狀態；`select_source` 驗證 `sheet_id` 屬於該試算表後才保存、失敗時舊的選擇不變；沒有授權 → `NOT_AUTHORIZED`；取消選檔（沒有任何呼叫）不留下半途來源；授權在流程中途失效時，已選來源保留、重新授權後可直接重試（`Scenario: US1-AS1`、`US1-AS3`、`US1-AS4`、`US1-AS5`；`Edge: 授權在流程中途失效`）。
-- [ ] T021 [P] [US1] 在 `tests/contract/guided_notes_import/test_auth_source_api.py` 以 `TestClient` 依 [contracts/http-api.md](contracts/http-api.md) 驗證端點 #1～#6 與 `/oauth/callback`：狀態碼、回應形狀與 302 導回 `auth=ok|denied|error`；`picker-config` 帶 `Cache-Control: no-store` 且只限該活動老師；學生 token、其他活動老師、無 token 一律被拒；`GOOGLE_NOT_CONFIGURED` → 503 且訊息不含變數名稱；**路由表中沒有任何本機檔案上傳端點**（FR-005，`Scenario: US1-AS6`）。
+- [ ] T020 [P] [US1] 在 `tests/unit/app/guided_notes_import/test_service_source.py` 以 Fake 連接埠測試：`inspect_spreadsheet` 不改任何狀態，且 `auto_select_sheet_id` 在恰好一張工作表時為該張識別、兩張以上為 `None`、零張時回 `SHEET_NOT_FOUND`（`Scenario: US1-AS2`，單一工作表自動選用的判斷在後端）；`select_source` 驗證 `sheet_id` 屬於該試算表後才保存、失敗時舊的選擇不變；沒有授權 → `NOT_AUTHORIZED`；取消選檔（沒有任何呼叫）不留下半途來源；授權在流程中途失效時，已選來源保留、重新授權後可直接重試（`Scenario: US1-AS1`、`US1-AS3`、`US1-AS4`、`US1-AS5`；`Edge: 授權在流程中途失效`）。
+- [ ] T021 [P] [US1] 在 `tests/contract/guided_notes_import/test_auth_source_api.py` 以 `TestClient` 依 [contracts/http-api.md](contracts/http-api.md) 驗證端點 #1～#6（#2 即 `/oauth/callback`）：狀態碼、回應形狀（含 #5 的 `autoSelectSheetId`：單張為該張的 `sheetId`、多張為 `null`）與 302 導回 `auth=ok|denied|error`；`picker-config` 帶 `Cache-Control: no-store` 且只限該活動老師；學生 token、其他活動老師、無 token 一律被拒；`GOOGLE_NOT_CONFIGURED` → 503 且訊息不含變數名稱；**路由表中沒有任何本機檔案上傳端點**（FR-005，`Scenario: US1-AS6`）。
 
 ### Implementation for User Story 1
 
 **應用層**
 
-- [ ] T022 [US1] 在 `<app>/service.py` 建立 `ImportService`（建構子注入 `AuthGateway`、`SheetsReader`、`ActivityGateway`、`ImportStore`、`Clock`），實作 `start_auth`、`inspect_spreadsheet`、`select_source`：每個入口先以 `stage(code)`、`is_teacher(code, requester)` 判斷（錯誤代碼依 research R8），`select_source` 驗證 `sheet_id` 屬於該試算表才寫入 `selections`。（依賴 T010～T014）
+- [ ] T022 [US1] 在 `<app>/service.py` 建立 `ImportService`（建構子注入 `AuthGateway`、`SheetsReader`、`ActivityGateway`、`ImportStore`、`Clock`），實作 `start_auth`、`inspect_spreadsheet`（計算 `auto_select_sheet_id`）、`select_source`：每個入口先以 `stage(code)`、`is_teacher(code, requester)` 判斷（錯誤代碼依 research R8），`select_source` 驗證 `sheet_id` 屬於該試算表才寫入 `selections`。（依賴 T010～T014）
 
 **轉接層**
 
 - [ ] T023 [P] [US1] 在 `<google>/errors.py` 實作 `HttpError`／逾時 → `ImportRejection` 的對應（T019 的規則）。
 - [ ] T024 [US1] 在 `<google>/auth.py` 實作 `GoogleAuthGateway`：授權碼流程（`google-auth-oauthlib`）、一次性且有期限的 `state`、token 只存記憶體（`ImportStore.sessions`）、`picker_credentials` 只回短效 `drive.file` token；不記錄 token、授權碼、`state`、client secret。（依賴 T015、T023）
 - [ ] T025 [P] [US1] 在 `<google>/sheets_reader.py` 實作 `GoogleSheetsReader.inspect`：Drive `files.get` 取 `mimeType`，再以 `spreadsheets.get` 與欄位遮罩取工作表清單；以 `asyncio.to_thread` 呼叫同步的 Google 程式庫；只用讀取方法（FR-023）。
-- [ ] T026 [US1] 在 `<web>` 實作端點 #1～#6 與 `/oauth/callback`、錯誤轉換（依 http-api 的錯誤碼與狀態碼表，訊息取自 `messages.py`）與請求日誌（只記活動代碼、端點名稱、結果代碼）；在 `main.py` **只加一行** `include_router`。（依賴 T022、T024、T025）
+- [ ] T026 [US1] 在 `<web>` 實作端點 #1～#6（含 #2 `/oauth/callback`）、錯誤轉換（依 http-api 的錯誤碼與狀態碼表，訊息取自 `messages.py`）與請求日誌（只記活動代碼、端點名稱、結果代碼）；在 `main.py` **只加一行** `include_router`。（依賴 T022、T024、T025）
 
 **前端**
 
-- [ ] T027 [US1] 在 `teacher.html` **只加一個**「匯入學習單」區塊，並建立 `static/js/import.js`：按鈕 → `auth/start` → 導向 Google → 回來後依 `?auth=ok|denied|error` 顯示狀態與重新授權入口 → `picker-config` → Google Picker（只允許 Google 試算表 MIME，取消時維持原狀）→ `inspect` → 只有一張工作表時自動 `PUT source` 並顯示名稱，多張時要求老師明確選一張。所有後端與試算表來的文字一律以 `textContent` 輸出。
+- [ ] T027 [US1] 在 `teacher.html` **只加一個**「匯入學習單」區塊，並建立 `static/js/import.js`：按鈕 → `auth/start` → 導向 Google → 回來後依 `?auth=ok|denied|error` 顯示狀態與重新授權入口 → `picker-config` → Google Picker（只允許 Google 試算表 MIME，取消時維持原狀）→ `inspect` → `autoSelectSheetId` 有值時自動 `PUT source` 並顯示名稱，為 `null` 時要求老師明確選一張；前端不自己數工作表。所有後端與試算表來的文字一律以 `textContent` 輸出。
 
 **真實驗證里程碑**
 
-- [ ] T028 [US1] **里程碑 0（待驗證假設 1）**：以真實 Google 帳號與一份真實試算表，依 [quickstart.md](quickstart.md) 前置條件設定好 `.env`，用 `uvicorn` 啟動後走完「授權 → Picker 選檔 → `inspect`」，確認 `drive.file` 足以讀取 Picker 選到的試算表。把日期、操作與結果填入 quickstart 紀錄表；若讀取失敗，依 [research.md](research.md) R1 的 fallback 評估改用敏感範圍，並在 plan「待真實驗證的假設」註明；**未做之前不得宣稱授權範圍成立**。（依賴 T026、T027）
+- [ ] T028 [US1] **里程碑 0（待驗證假設 1）**：以真實 Google 帳號與一份真實試算表，依 [quickstart.md](quickstart.md) 前置條件設定好 `.env`，用 `uvicorn lecture_quiz.main:app --host 127.0.0.1 --port 8000 --env-file .env` 啟動後走完「授權 → Picker 選檔 → `inspect`」，確認 `drive.file` 足以讀取 Picker 選到的試算表。把日期、操作與結果填入 quickstart 紀錄表；若讀取失敗，依 [research.md](research.md) R1 的 fallback 評估改用敏感範圍，並在 plan「待真實驗證的假設」註明；**未做之前不得宣稱授權範圍成立**。（依賴 T026、T027）
 
 **Checkpoint**: 老師可以授權、選檔並選定工作表；失敗時題目不變
 
@@ -288,12 +288,12 @@ description: "002-guided-notes-import 任務清單"
 - [ ] T066 [P] 在 `tests/unit/core/guided_notes_import/test_parse_scale.py` 測試 50 題、數百列學習單的解析結果正確（SC-006 的前提；不以 mock 的耗時冒充真實耗時，真實秒數在 T071 記錄）。
 - [ ] T067 [P] 在 `tests/integration/test_import_two_layouts.py` 以版面 A、版面 B（原則 III、SC-003）走入口：`TestClient` → 真實 `GoogleSheetsReader`（`HttpMockSequence` 餵入手寫的 `spreadsheets.get` 回應 JSON，標明手寫）→ `parse` → 001 `ActivityService`，驗證兩份版面都得到正確題數、格數與答案位置、整體移位後結果一致（`Scenario: US2-AS2`、`US3-AS1`、`US5-AS1`）。
 - [ ] T068 [P] 建立 `scripts/capture_real_fixture.py`：把真實 `spreadsheets.get` 回應去識別化（刪除標題、帳號、檔案 ID）後存成 `tests/fixtures/real/*.json`；憑證與輸出只在本機，不入版控的內容不得提交。
-- [ ] T069 [P] 建立 `tests/real_google/test_real_import.py`，標記 `@pytest.mark.real_google`，明確指定真實轉接器（不跟隨預設的 Fake）；缺少任何 Google 環境變數時**明確失敗**並說明缺什麼，不跳過、不退回離線路徑。預設 `pytest` 不執行它。
-- [ ] T070 在 [quickstart.md](quickstart.md) B 區補一步「選只有一張工作表的試算表 → 自動選用並顯示名稱」（`Scenario: US1-AS2`，前端行為無自動化測試，以人工驗證涵蓋），並把 US1-AS5「選檔取消」對應到 B-3。
+- [ ] T069 [P] 建立 `tests/real_google/test_real_import.py`，標記 `@pytest.mark.real_google`，明確指定真實轉接器（不跟隨預設的 Fake）；缺少任何 Google 環境變數時**明確失敗**並說明缺什麼，不跳過、不退回離線路徑；pytest 不會自動讀 `.env`，環境變數由執行者在 shell 設定。預設 `pytest` 不執行它。
+- [ ] T070 在 [quickstart.md](quickstart.md) B 區補一步「選只有一張工作表的試算表 → 自動選用並顯示名稱」（`Scenario: US1-AS2`；自動選用的判斷已由 T020、T021 自動測試，這裡人工確認畫面顯示名稱），並把 US1-AS5「選檔取消」對應到 B-3。
 - [ ] T071 **真實路徑驗證（SC-009，合併前必做）**：EricC430 以兩份版面不同的真實 Google 試算表，依 quickstart B-1～B-13 各走一次，記錄日期、操作、結果數字與 SC-006 的「確認工作表到看見預覽」秒數，填入 quickstart 紀錄表；憑證只在本機，不貼進 repo、Issue、PR。（依賴 T074）
 - [ ] T072 T071 通過後執行 T068 擷取兩份版面的真實回應，新增「JSON → 轉接層 → 解析」的入口測試，確認 `GridRange` 結束索引「不含」的假設，並把假設 1～4 的驗證結果寫回 plan「待真實驗證的假設」。擷取之前不得宣稱入口路徑已驗證。（依賴 T071）
-- [ ] T073 程式碼與圖表一致性驗證：逐一比對 `diagrams/002-guided-notes-import-{component,class,sequence}.puml` 與實作（`ImportService` 的方法、`AuthGateway`／`SheetsReader` 的方法、`ImportRecord` 的欄位——類別圖目前寫 `sourceMapping`，data-model 與實作用 `blanks`，需同步；`IssueKind` 的值）。有差異時先更新圖表並重新轉出 PNG（原則 II）。
-- [ ] T074 執行全部自動化測試 `pytest -m "not real_google"`，並以 `-v` 確認核心、應用層、轉接層（`HttpMockSequence`）、HTTP 契約、架構純度、日誌各自有項目、沒有任何一類是 0 筆；記錄日期、指令與通過／失敗／略過數字（原則 VI）。
+- [ ] T073 程式碼與圖表一致性驗證：逐一比對 `diagrams/002-guided-notes-import-{component,class,sequence}.puml` 與實作（`ImportService` 的方法、`AuthGateway`／`SheetsReader` 的方法、`ImportRecord` 的欄位、`SpreadsheetInfo.autoSelectSheetId`、時序圖的 inspect／`PUT source`／匯入步驟；`IssueKind` 的值。類別圖與時序圖已於 2026-11-22 依 plan 同步，這裡驗證實作沒有再偏離）。有差異時先更新圖表並重新轉出 PNG（原則 II）。
+- [ ] T074 執行全部自動化測試 `pytest -m "not real_google and not perf"`，並以 `-v` 確認核心、應用層、轉接層（`HttpMockSequence`）、HTTP 契約、架構純度、日誌各自有項目、沒有任何一類是 0 筆；記錄日期、指令與通過／失敗／略過數字（原則 VI）。
 - [ ] T075 執行 `ruff check .`、`ruff format --check .`、`mypy src`，全部通過並記錄結果（技術限制 2）。
 - [ ] T076 由非實作者（jacky0407）依 [quickstart.md](quickstart.md) B 區做人工驗證，記錄日期、每一步操作與結果於 quickstart 紀錄表並簽名（原則 VI）。
 - [ ] T077 追蹤 001 的開發用 seed API（`adapters/web/dev_seed.py`、`LECTURE_QUIZ_DEV_SEED`、`tests/integration/test_dev_seed.py`、前端「放入假題目」按鈕）：依 001 plan 在 002 合併後的第一個 PR 移除；因檔案屬 001，先與 jacky0407 協調是在本 PR 一併移除還是另開 PR，並在 PR 描述記錄結論。
@@ -356,7 +356,7 @@ Task: "<core>/headers.py（T036）"
 ### Incremental Delivery
 
 1. 加 US4（缺陷拒絕）→ 加 US5（預覽與重新匯入，005 需要）→ 加 US6（鎖定）。
-2. 每個故事完成後都跑 `pytest -m "not real_google"`，不得破壞前一個故事。
+2. 每個故事完成後都跑 `pytest -m "not real_google and not perf"`，不得破壞前一個故事。
 3. 最後做 Polish 與真實路徑驗證；真實驗證通過後才擷取真實 fixture。
 
 ### Parallel Team Strategy
@@ -371,7 +371,7 @@ Task: "<core>/headers.py（T036）"
 | Scenario | 對應測試任務 |
 |---|---|
 | US1-AS1 | T018、T020、T067（人工 T071） |
-| US1-AS2 | T018（自動選用為前端行為，人工 T070、T071） |
+| US1-AS2 | T018、T020、T021（`autoSelectSheetId` 由後端決定；前端只依它呼叫 `PUT source` 並顯示名稱，該顯示部分以人工 T070、T071 涵蓋） |
 | US1-AS3 | T017、T020、T021 |
 | US1-AS4 | T017、T019、T020 |
 | US1-AS5 | T020（人工 T070、T071） |

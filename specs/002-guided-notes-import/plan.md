@@ -87,7 +87,7 @@
 ## 相依與時程
 
 - **相依 001**：`ActivityGateway`（`stage`、`is_teacher`、`replace_questions`）契約已對齊（Issue #6）。001 尚在 `feature/5-001-activity-session` 分支，未合併。
-- **骨架 PR 凍結**（jacky0407 於 Issue #5 約定，2026-11-21 留言）：骨架 PR 計畫命名為 `chore/5-project-skeleton`，但**截至 2026-11-22 遠端沒有這個分支，也沒有對應 PR**（001 分支也還沒有 `pyproject.toml`、`src/`），實際分支名稱與時間以 jacky0407 為準。骨架 PR 合併前，002 **不得**建立 `pyproject.toml`、`main.py`、`src/`；合併後從 main 接續。因此本 plan 只產出文件，不產生程式碼。`/speckit-implement` 前要先確認骨架 PR 已合併。
+- **骨架 PR 凍結**（jacky0407 於 Issue #5 約定，2026-11-21 留言）：骨架 PR 計畫命名為 `chore/5-project-skeleton`，但**截至 2026-11-22 遠端沒有這個分支，也沒有對應 PR**（001 分支也還沒有 `pyproject.toml`、`src/`），實際分支名稱與時間以 jacky0407 為準。骨架 PR 合併前，002 **不得**建立 `pyproject.toml`、`main.py`、`src/`；合併後從 main 接續。因此本 plan 只產出文件，不產生程式碼。**2026-11-22 更新**：骨架 PR 已開為 #14（尚未合併），001 的 PR 為草稿 #15。決定**等相依完成再開始實作**：`/speckit-implement` 前要確認骨架 PR 已合併，且 001 的活動建立、老師 token、`replace_questions`、開輪與取消已完成（在 main 或 001 分支皆可）；骨架 PR 只涵蓋 001 的 T001～T022，不含這些功能（tasks T001）。
 - **共用檔案約定**：`main.py` 只加一行 router；`teacher.html` 只加一個區塊；`pyproject.toml` 相依追加在最後；`docs/alignment.md` 只追加在最後。
 - **001 的開發用 seed API**（`LECTURE_QUIZ_DEV_SEED=1`）：001 的 plan 規定「002 合併後的第一個 PR 移除」。tasks 要包含確認或移除這個 API 的任務（與 jacky0407 協調，因為檔案屬 001）。
 - **後續**：005 依 `ImportRecord` 與同一個 `AuthGateway`／`SheetsReader` 寫回。
@@ -164,7 +164,16 @@ tests/
 | `AuthGateway` 補上 `startAuthorization`、`completeAuthorization`、`isAuthorized`、`pickerCredentials` | OAuth 授權碼流程與 Picker 設定（research R1） |
 | `SheetsReader` 補上 `inspect`，`read` 帶活動代碼 | 授權依活動代碼保存 |
 
-組件圖與時序圖不需變動：組件圖已列出授權、選檔、Sheets 三個轉接元件；時序圖已涵蓋授權、選檔、匯入、重新匯入與鎖定。實作完成後仍須做「程式碼與圖表一致性驗證」（原則 II）。
+2026-11-22 `/speckit-analyze` 後再同步（類別圖、時序圖 `.puml` 與 PNG 同一個 commit；組件圖不需變動，已列出授權、選檔、Sheets 三個轉接元件）：
+
+| 差異 | 原因 |
+|---|---|
+| 類別圖 `ImportService.import(code, requester, source)` 改為 `importSheet(code, requester)`，補 `getImportSummary` | 與契約一致：匯入使用已由 `PUT source` 記住的來源 |
+| 類別圖 `ParseResult`、`ImportRecord` 的 `sourceMapping` 改為 `blanks`，`ImportRecord` 補 `sheetTitle`、`questionNumbers` | 與資料模型一致 |
+| 類別圖 `SpreadsheetInfo` 補 `autoSelectSheetId` | 單一工作表自動選用由後端決定（FR-002） |
+| 時序圖補上「檢視試算表（inspect，後端以檔案類型重新驗證）」「`autoSelectSheetId` 分支」「保存來源（`PUT source`）」，匯入改為不帶來源識別 | 先前時序圖與契約的端點流程不符 |
+
+實作完成後仍須做「程式碼與圖表一致性驗證」（原則 II）。
 
 ## Complexity Tracking
 

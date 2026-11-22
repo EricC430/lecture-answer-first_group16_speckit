@@ -32,7 +32,7 @@ package "核心（純資料與純函式）" {
   class ParseResult <<資料>> {
     +ok : 是否成功
     questions : Question 清單
-    sourceMapping : 來源映射
+    blanks : Blank 清單（每格的題號、子編號、答案位置）
     structure : StructureSnapshot
     issues : ValidationIssue 清單
   }
@@ -69,7 +69,8 @@ package "應用層" {
     +startAuth(code, requester) : 授權網址
     +inspectSpreadsheet(code, requester, spreadsheetId) : SpreadsheetInfo
     +selectSource(code, requester, source : SourceRef) : SourceSelection
-    +import(code, requester, source) : ImportOutcome
+    +importSheet(code, requester) : ImportOutcome（使用已選定的來源）
+    +getImportSummary(code, requester) : ImportPreview（重新整理後恢復預覽）
     +getImportRecord(code) : ImportRecord（供 005 寫回）
   }
 
@@ -81,6 +82,7 @@ package "應用層" {
   class SpreadsheetInfo <<資料>> {
     title
     sheets : 工作表識別與標題清單
+    autoSelectSheetId : 只有一張工作表時為其識別，否則為空（由後端決定）
   }
 
   class SourceSelection <<資料>> {
@@ -90,8 +92,10 @@ package "應用層" {
 
   class ImportRecord <<資料>> {
     source : SourceRef
-    sourceMapping : 來源映射
+    sheetTitle
+    blanks : Blank 清單（來源映射）
     structure : StructureSnapshot
+    questionNumbers
   }
 
   class ImportOutcome <<資料>> {
@@ -153,6 +157,7 @@ ImportService "1" o-- "*" SourceSelection : 依活動代碼保存
 SourceSelection --> SourceRef
 ImportRecord --> SourceRef
 ImportRecord --> StructureSnapshot
+ImportRecord "1" o-- "*" Blank
 SheetsReader ..> SpreadsheetInfo
 ImportService ..> ImportOutcome
 ImportOutcome --> ImportPreview

@@ -233,7 +233,7 @@
 **決定**：
 
 - 沿用 001 的原生 JavaScript：`teacher.html` 只加一個「匯入學習單」區塊，邏輯放在 `static/js/import.js`（依 jacky0407 於 Issue #5 的約定）。
-- 流程：按鈕 → `auth/start` → 導向 Google → 回來後 `?auth=ok` → `picker-config` → Picker → `inspect`（取得工作表清單，只有一張就自動 `PUT source`）→ 老師選工作表 → `POST import` → 顯示預覽或錯誤清單。
+- 流程：按鈕 → `auth/start` → 導向 Google → 回來後 `?auth=ok` → `picker-config` → Picker → `inspect`（取得工作表清單與後端決定的 `autoSelectSheetId`，有值就自動 `PUT source`）→ 老師選工作表 → `POST import` → 顯示預覽或錯誤清單。
 - 所有後端或試算表來的文字一律用 `textContent`；錯誤清單用表格呈現（列、欄、原因、修正建議）。
 - 重新整理頁面時以 `GET .../import` 恢復「已匯入 N 題、M 格」的畫面。
 

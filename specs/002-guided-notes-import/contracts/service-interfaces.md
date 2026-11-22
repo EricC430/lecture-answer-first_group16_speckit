@@ -31,7 +31,7 @@
 | 方法 | 說明 |
 |---|---|
 | `start_auth(code, requester) -> Result[str]` | 先查階段與身分，再委派 `AuthGateway` |
-| `inspect_spreadsheet(code, requester, spreadsheet_id) -> Result[SpreadsheetInfo]` | 不改狀態 |
+| `inspect_spreadsheet(code, requester, spreadsheet_id) -> Result[SpreadsheetInfo]` | 不改狀態；`SpreadsheetInfo.auto_select_sheet_id` 在清單恰好一張時為該張識別，否則為 `None`（單一工作表自動選用的判斷在這裡，不在前端） |
 | `select_source(code, requester, source: SourceRef) -> Result[SourceSelection]` | 驗證 `sheet_id` 屬於該試算表後才保存；失敗不改舊選擇 |
 | `import_sheet(code, requester) -> ImportOutcome` | 持有該活動的匯入鎖；順序見 [research.md](../research.md) R6 |
 | `get_import_record(code) -> ImportRecord \| None` | **給 005 使用**：唯讀；回傳最後一次成功匯入的來源、來源映射與匯入時結構 |

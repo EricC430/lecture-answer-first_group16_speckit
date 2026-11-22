@@ -12,7 +12,7 @@
 | 2 | `GET /oauth/callback?code=…&state=…`（Google 導回） | — | `302` 導回 `/teacher.html?code=<活動代碼>&auth=ok\|denied\|error` | FR-001、FR-003 |
 | 3 | `GET /activities/{code}/import/auth/status` | — | `200 {"authorized": bool}` | FR-003 |
 | 4 | `GET /activities/{code}/import/picker-config` | — | `200 {"accessToken", "apiKey", "appId"}`，`Cache-Control: no-store` | FR-001 |
-| 5 | `POST /activities/{code}/import/source/inspect` | `{"spreadsheetId": str}` | `200 {"spreadsheetId", "title", "sheets": [{"sheetId": int, "title": str}]}` | FR-002、FR-005 |
+| 5 | `POST /activities/{code}/import/source/inspect` | `{"spreadsheetId": str}` | `200 {"spreadsheetId", "title", "sheets": [{"sheetId": int, "title": str}], "autoSelectSheetId": int \| null}` | FR-002、FR-005 |
 | 6 | `PUT /activities/{code}/import/source` | `{"spreadsheetId": str, "sheetId": int}` | `200 {"spreadsheetId", "sheetId", "sheetTitle"}` | FR-002 |
 | 7 | `POST /activities/{code}/import` | `{}`（使用 #6 記住的來源） | `200 ImportResult` | FR-015～FR-019、FR-027 |
 | 8 | `GET /activities/{code}/import` | — | `200 ImportResult \| {"imported": false}` | FR-017 |
@@ -20,8 +20,8 @@
 - **`ImportResult`**：`{"imported": true, "sheetTitle": str, "questionNumbers": [int], "blanksPerQuestion": {"<題號>": int}, "totalQuestions": int, "totalBlanks": int, "version": int}`。`version` 是 001 `replace_questions` 回傳的新版本。
 - **#2 回呼**是瀏覽器導向，不是 fetch；它以 `state` 找回活動代碼與老師身分，不需要 `Authorization` 標頭。`state` 只能用一次、有有效期限；不符、過期、重複使用都導回 `auth=error`，且**不交換 token**。
 - **#4**：access token 只含 `drive.file` 範圍，只回給該活動老師，且**不寫入日誌**。
-- **#5 inspect**：不改任何狀態；用來列出工作表。檔案不是 Google 試算表回 `NOT_A_SPREADSHEET`。
-- **#6**：只在驗證所選 `sheetId` 屬於該試算表之後才寫入；失敗時舊的選定來源不變。只有一張工作表時，前端自動呼叫它（FR-002）。
+- **#5 inspect**：不改任何狀態；用來列出工作表。檔案不是 Google 試算表回 `NOT_A_SPREADSHEET`。**`autoSelectSheetId` 由後端決定**：`sheets` 恰好一張時為該張的 `sheetId`，否則為 `null`（FR-002）。前端只依它行事，不自己數工作表。
+- **#6**：只在驗證所選 `sheetId` 屬於該試算表之後才寫入；失敗時舊的選定來源不變。前端在 `autoSelectSheetId` 有值時自動呼叫它，否則等老師明確選一張（FR-002）。
 - **#7**：流程與順序見 [research.md](../research.md) R6。成功時回傳 `ImportResult`；驗證失敗回 422 並附 `issues`。
 - **#8**：頁面重新整理後恢復預覽用；沒有匯入過回 `{"imported": false}`。
 
