@@ -1,0 +1,57 @@
+[build-system]
+requires = ["hatchling>=1.21"]
+build-backend = "hatchling.build"
+
+[project]
+name = "lecture-quiz"
+version = "0.1.0"
+description = "Vibe Coding 課堂搶答系統（NCU SE6005 第 16 組 SpecKit）"
+readme = "README.md"
+requires-python = ">=3.11"
+# 共用檔案約定：各子功能的執行相依追加在列表最後。
+dependencies = [
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.29",
+]
+
+[project.optional-dependencies]
+# 共用檔案約定：各子功能的開發相依追加在列表最後。
+dev = [
+    "pytest>=8.0",
+    "pytest-timeout>=2.3",
+    "httpx>=0.27",
+    "websockets>=12.0",
+    "ruff>=0.6",
+    "mypy>=1.10",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/lecture_quiz"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "perf: 效能測試，需真實 uvicorn；以 `pytest -m perf` 執行",
+]
+addopts = "-m 'not perf'"
+timeout = 30
+
+[tool.ruff]
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "D", "ANN"]
+# D415 只接受半形 .?! 結尾，與繁體中文 docstring 的「。」衝突，因此停用這一條。
+ignore = ["D415"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["D", "ANN"]
+
+[tool.mypy]
+files = ["src"]
+python_version = "3.11"
+disallow_untyped_defs = true
