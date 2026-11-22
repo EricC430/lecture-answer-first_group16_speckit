@@ -176,3 +176,49 @@ def test_request_log_path_template_for_nested_and_static(client, caplog):
     # 未知路徑會落到掛在 "/" 的靜態檔，同樣只記 <static>，不記原始網址
     assert "path=<static> " in lines[2] and "status=404" in lines[2]
     assert all(SECRET not in line for line in lines)
+
+
+@pytest.mark.parametrize(
+    "raw_code",
+    [
+        "K7QH2M%0AINFO%20lecture_quiz.request%20method=POST%20activity=FORGED",
+        "K7QH2M%0D%0Aforged",
+        "A" * 3000,
+        "k7qh2m",
+        "K7QH2M%20",
+    ],
+)
+def test_request_log_rejects_untrusted_activity_code(probe_client, caplog, raw_code):
+    """Scenario: 日誌偽造（PR #14 審查第 1 項）。
+
+    不符合活動代碼格式的路徑參數不得寫入日誌，日誌恰好一行。
+    """
+    caplog.set_level(logging.INFO, logger="lecture_quiz.request")
+    probe_client.post(f"/api/probe/activities/{raw_code}/annotated")
+    records = [r for r in caplog.records if r.name == "lecture_quiz.request"]
+    assert len(records) == 1
+    line = records[0].getMessage()
+    assert "\n" not in line and "\r" not in line
+    assert "activity=<invalid>" in line
+    assert "FORGED" not in line and "forged" not in line
+    assert "A" * 50 not in line
+
+
+def test_annotate_request_log_also_validates_activity_code(probe_client, caplog):
+    caplog.set_level(logging.INFO, logger="lecture_quiz.request")
+    app = probe_client.app
+    router = APIRouter()
+
+    @router.get("/api/probe/forge")
+    async def forge(request: Request):
+        annotate_request_log(request, activity_code="X\nINFO forged", result="A\nB")
+        return {}
+
+    app.router.routes.insert(0, router.routes[0])
+    probe_client.get("/api/probe/forge")
+    line = [r.getMessage() for r in caplog.records if r.name == "lecture_quiz.request"][
+        0
+    ]
+    assert "\n" not in line
+    assert "activity=<invalid>" in line
+    assert "result=<invalid>" in line

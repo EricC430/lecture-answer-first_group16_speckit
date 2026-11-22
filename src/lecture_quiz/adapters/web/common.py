@@ -8,6 +8,7 @@ token 或憑證（憲章原則 V）。請求日誌只記錄白名單欄位，不
 """
 
 import logging
+import re
 import time
 from typing import Annotated
 from urllib.parse import unquote
@@ -36,6 +37,17 @@ _LOCATION_PREFIXES = {"body", "query", "path", "header", "cookie"}
 
 # 請求日誌的白名單欄位，處理函式以 `annotate_request_log` 填入。
 _LOG_STATE_KEY = "lecture_quiz_log"
+# 寫入日誌前的格式白名單：不符合時記成 <invalid>，避免換行等不可信內容偽造日誌行。
+_ACTIVITY_CODE_PATTERN = re.compile(r"[A-Z0-9]{1,16}")
+_RESULT_CODE_PATTERN = re.compile(r"[A-Z][A-Z0-9_]{0,63}")
+_INVALID = "<invalid>"
+
+
+def _safe_log_value(value: object, pattern: re.Pattern[str]) -> str:
+    """只有完全符合格式的字串才原樣回傳，否則回傳 `<invalid>`。"""
+    if isinstance(value, str) and pattern.fullmatch(value):
+        return value
+    return _INVALID
 
 
 class ApiError(Exception):
@@ -150,6 +162,8 @@ def annotate_request_log(
     """為這次請求的日誌補上白名單欄位。
 
     只接受活動代碼、結果代碼與版本號，避免把 token 或憑證寫入日誌。
+    寫入前會再檢查格式：活動代碼須為 1～16 個大寫英數字、結果代碼須為大寫英數字與底線，
+    不符合時記成 `<invalid>`，避免換行等不可信內容偽造日誌行。
 
     Args:
         request: 目前的請求。
@@ -232,8 +246,17 @@ class RequestLogMiddleware:
         """依白名單輸出一行請求日誌。"""
         fields = scope.get("state", {}).get(_LOG_STATE_KEY, {})
         path_params = scope.get("path_params") or {}
-        activity_code = fields.get("activity_code", path_params.get("code", "-"))
-        result = fields.get("result", "OK" if status < 400 else f"HTTP_{status}")
+        raw_code = fields.get("activity_code", path_params.get("code"))
+        activity_code = (
+            "-"
+            if raw_code is None
+            else _safe_log_value(raw_code, _ACTIVITY_CODE_PATTERN)
+        )
+        default_result = "OK" if status < 400 else f"HTTP_{status}"
+        result = _safe_log_value(
+            fields.get("result", default_result), _RESULT_CODE_PATTERN
+        )
+        version = fields.get("version")
         logger.info(
             "method=%s path=%s activity=%s result=%s status=%d version=%s "
             "elapsed_ms=%.1f",
@@ -242,7 +265,7 @@ class RequestLogMiddleware:
             activity_code,
             result,
             status,
-            fields.get("version", "-"),
+            version if isinstance(version, int) else "-",
             elapsed_ms,
         )
 
