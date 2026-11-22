@@ -31,3 +31,10 @@ plantuml.jar
 .idea/
 .DS_Store
 Thumbs.db
+
+# 工具快取與建置產物
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
