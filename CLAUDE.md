@@ -14,7 +14,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 效能：狀態變更 2 秒內反映到所有畫面（WebSocket 或 SSE 由 plan 決定）；效能驗證組數 N 由 001 plan 決定；組數上限待 alignment Q-07，不得自訂。
 - **架構（NON-NEGOTIABLE）**：核心邏輯（學習單解析、提交判定、順位計算）是不依賴網路、框架與系統時鐘的純函式，時間由呼叫端傳入；Google、API、畫面在外層轉接層，相依只能由外層指向核心。
 
-**目前還沒有任何應用程式碼，也沒有 build／lint／test 指令。** 不要憑空假設指令或目錄結構，程式碼出現後再補上本節。下一步是依序執行子功能 `001-activity-session` → `002-guided-notes-import` → `003-round-submission` → `004-ranking-review` → `005-result-export` 的 `/speckit-specify`（各自另開 Issue）。
+**共用骨架**（Issue #5，`chore/5-project-skeleton`）：`pyproject.toml`、`src/lecture_quiz/{core,app,adapters}/`、`main.py`、共用 HTTP 錯誤／日誌（`adapters/web/common.py`）、前端共用 `static/js/{api,sync,identity}.js`、`tests/conftest.py`（`FakeClock`）、`tests/architecture/test_core_is_pure.py`。完整說明與子功能擴充約定見 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)。指令（Windows，先 `py -3.11 -m venv .venv`，再 `.venv\Scripts\python -m pip install -e ".[dev]"`）：
+
+- lint／格式：`ruff check .`、`ruff format --check .`；型別：`mypy`（只檢查 `src/`）；測試：`pytest`（預設排除 `perf`；單一測試：`pytest tests/contract/test_http_common.py::test_health`）。
+- 啟動：`python -m lecture_quiz`（只監聽 127.0.0.1:8000）。
+
+子功能依序為 `001-activity-session` → `002-guided-notes-import` → `003-round-submission` → `004-ranking-review` → `005-result-export`（各自另開 Issue）。
 
 回覆與文件一律使用台灣繁體中文。
 
