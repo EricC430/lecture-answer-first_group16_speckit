@@ -9,9 +9,9 @@ description: "Task list template for feature implementation"
 
 **Prerequisites**: plan.md (required), spec.md (required for user stories), research.md, data-model.md, contracts/
 
-**Tests**: REQUIRED（專案覆寫，憲章 v1.0.0 原則 VI）。每個 Acceptance Scenario（含其對應的 OpenSpec Scenario）至少要有一個自動化測試任務，任務描述須標明驗證的 Scenario；Google OAuth／Sheets API 一律用 mock，不得呼叫真實外部服務。
+**Tests**: REQUIRED（專案覆寫，憲章 v1.1.0 原則 VI）。每個 Acceptance Scenario（含其對應的 OpenSpec Scenario）至少要有一個自動化測試任務，任務描述須標明驗證的 Scenario；Google OAuth／Sheets API 一律用 mock，不得呼叫真實外部服務。
 
-**Diagrams**: REQUIRED（專案覆寫，憲章 v1.0.0 原則 II）。實作前確認 `./diagrams/[###-feature-name]-*.puml` 與 PNG 存在；實作後必須有「程式碼與圖表一致性驗證」任務。
+**Diagrams**: REQUIRED（專案覆寫，憲章 v1.1.0 原則 II）。實作前確認 `./diagrams/[###-feature-name]-*.puml` 與 PNG 存在；實作後必須有「程式碼與圖表一致性驗證」任務。
 
 **Architecture**: REQUIRED（憲章技術限制 4，NON-NEGOTIABLE）。核心業務邏輯（解析、判定、順位）放在不依賴網路、框架與系統時鐘的純函式模組，時間由呼叫端傳入；Google、API、畫面放在外層轉接層，相依只能由外層指向核心。核心模組的任務與轉接層任務分開列出。
 

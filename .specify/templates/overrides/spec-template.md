@@ -11,7 +11,7 @@
 **OpenSpec Capability**: [對應的 OpenSpec 能力名稱，例如 activity-session；基準檔 `docs/openspec-reference/<能力>/spec.md`]
 
 <!--
-  專案覆寫範本（憲章 v1.0.0 原則 I、II）。本檔覆寫 core 的 spec-template.md。
+  專案覆寫範本（憲章 v1.1.0 原則 I、II）。本檔覆寫 core 的 spec-template.md。
   - 全文使用台灣繁體中文。
   - 每個 Acceptance Scenario 與 FR 都必須在「OpenSpec Traceability」表中對應到 OpenSpec Requirement／Scenario。
   - 涉及 docs/alignment.md 中仍「待確認」的問題時，標記 [NEEDS CLARIFICATION: Q-xx ...]，不得自行假設。
