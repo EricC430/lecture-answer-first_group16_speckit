@@ -85,12 +85,12 @@ par 老師手動關輪
   T -> API : 關輪
   API -> S : closeRound(老師, now)
 else 倒數到期
-  C -> S : closeRound(系統, 截止時間)
+  C -> S : closeRound(系統, now = max(現在, 截止時間))
 end
 S -> M : apply(關輪)（同一活動的操作依序處理）
 M --> S : 第一個：結果未定案，產生一份初始結果
 S -> M : apply(關輪)（第二個）
-M --> S : 已關輪：不改變狀態、不重算
+M --> S : 已關輪：冪等成功、不改變狀態、不重算（alreadyClosed）
 S -> P : publish（只推送一次變更）
 P --> T : 本輪結果（未定案）
 P --> SA : 本輪結果（未定案）

@@ -148,10 +148,10 @@
 | `LeaveGroup` | `PREPARING`、`RESULT_PENDING`、`RESULT_FINAL` | 移除該裝置 |
 | `DeleteGroup` | 非終止 | `has_submissions == False` 時，移除組別與其所有裝置 |
 | `OpenRound` | `PREPARING`（已有題目）、`RESULT_FINAL` | `ROUND_OPEN`，新增 `Round` |
-| `CloseRound` | `ROUND_OPEN` | `RESULT_PENDING`，`closed = True`；如果已經關過，回傳成功但沒有變化 |
+| `CloseRound` | `ROUND_OPEN`；目前輪次已關時（`RESULT_PENDING`、`RESULT_FINAL`）視為冪等 | `RESULT_PENDING`，`closed = True`；目前輪次已經關過時，回傳成功但沒有變化（`changed=False`，HTTP `alreadyClosed: true`） |
 | `Finalize` | `RESULT_PENDING` | `RESULT_FINAL`；套用 `outcome`（已成功題、各組成功次數增量） |
 | `EndActivity` | `RESULT_FINAL` | `ENDED` |
 | `CancelActivity` | `PREPARING` | `CANCELLED` |
 | `MarkGroupSubmitted`（003） | `ROUND_OPEN` | 該組 `has_submissions = True` |
 
-**倒數截止**：`System` 送出的 `CloseRound`，只有在 `deadline` 不為 `None` 且 `now >= deadline` 時才生效；否則回傳成功但沒有變化。這是為了防止排程誤觸發。`ActivityStateMachine.is_deadline_passed(round, now)` 是供 003 判斷「截止後才到的提交」用的純函式。
+**倒數截止**：`System` 送出的 `CloseRound`，只有在 `deadline` 不為 `None` 且 `now >= deadline` 時才生效；否則回傳成功但沒有變化。這是為了防止排程誤觸發。服務層的倒數回呼一律以 `now = max(clock.now(), deadline)` 呼叫（研究 R6）。`ActivityStateMachine.is_deadline_passed(round, now)` 是供 003 判斷「截止後才到的提交」用的純函式。
