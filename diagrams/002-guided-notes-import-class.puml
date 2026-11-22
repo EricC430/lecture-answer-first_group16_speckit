@@ -66,8 +66,15 @@ package "核心（純資料與純函式）" {
 
 package "應用層" {
   class ImportService {
-    +selectSource(spreadsheetId, sheetId)
-    +import(requester, source) : ImportOutcome
+    +selectSource(code, spreadsheetId, sheetId)
+    +import(code, requester, source) : ImportOutcome
+    +getImportRecord(code) : ImportRecord（供 005 寫回）
+  }
+
+  class ImportRecord <<資料>> {
+    source : 試算表識別＋工作表識別
+    sourceMapping : 來源映射
+    structure : StructureSnapshot
   }
 
   class ImportOutcome <<資料>> {
@@ -91,12 +98,19 @@ package "外層轉接層" {
   interface AuthGateway {
     +ensureAuthorized(teacher)
   }
-  interface ActivityGateway {
-    +stage() : 階段
-    +isTeacher(requester) : bool
-    +replaceQuestions(result)
+  interface ActivityGateway <<由 001 ActivityService 實作，皆為 async>> {
+    +stage(code) : 階段（活動不存在時為空）
+    +isTeacher(code, requester) : bool
+    +replaceQuestions(code, requester, questionNumbers) : Outcome（成功時回傳新 version）
   }
 }
+
+note bottom of ActivityGateway
+  契約：001 的 service-interfaces.md。
+  replaceQuestions 只收題號清單（tuple[int, ...]），
+  只允許老師在「準備中」呼叫；被拒時既有題目完全不變。
+  來源映射與匯入時結構由 002 自己依活動代碼保存。
+end note
 
 SheetSnapshot "1" o-- "*" MergeRange
 GuidedNotesParser ..> SheetSnapshot : 讀取
@@ -112,7 +126,9 @@ ValidationIssue --> CellRef
 ImportService ..> GuidedNotesParser
 ImportService ..> SheetsReader
 ImportService ..> AuthGateway
-ImportService ..> ActivityGateway
+ImportService ..> ActivityGateway : 只傳題號清單
+ImportService "1" o-- "*" ImportRecord : 依活動代碼保存
+ImportRecord --> StructureSnapshot
 ImportService ..> ImportOutcome
 ImportOutcome --> ImportPreview
 @enduml

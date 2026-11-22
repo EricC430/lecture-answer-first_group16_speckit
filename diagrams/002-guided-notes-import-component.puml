@@ -12,7 +12,7 @@ package "外層：畫面與 API（轉接層）" {
 }
 
 package "應用層" {
-  [匯入服務\n（原子替換、來源鎖定）] as ImportService
+  [匯入服務\n（原子替換、來源鎖定；\n依活動代碼保存來源映射與匯入時結構）] as ImportService
 }
 
 package "核心（純函式：不依賴網路、Web 框架、系統時鐘）" {
@@ -27,7 +27,7 @@ package "外層：外部服務轉接層" {
 }
 
 package "001 活動（相依）" {
-  [活動狀態與老師身分\n（準備中／第一輪開始後）] as Activity
+  [活動狀態與老師身分\n（ActivityService：stage、is_teacher、\nreplace_questions，皆帶活動代碼）] as Activity
 }
 
 cloud "Google 服務" as Google
@@ -37,7 +37,7 @@ UI --> Api
 UI ..> PickerAdapter : 選檔
 UI ..> AuthAdapter : 授權
 Api --> ImportService
-ImportService --> Activity : 查詢階段與身分、\n寫入匯入結果
+ImportService --> Activity : 查詢階段與身分、\n只寫入題號清單
 ImportService --> SheetsAdapter : 讀取工作表快照
 ImportService --> Parser : 傳入工作表快照
 Parser --> Validator
