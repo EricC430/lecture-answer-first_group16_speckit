@@ -1,0 +1,109 @@
+@startuml 005-result-export-class
+!pragma layout smetana
+skinparam defaultFontName "Microsoft JhengHei"
+skinparam classAttributeIconSize 0
+title 005 定案成果寫回 Google Sheets 與 CSV 匯出 — 類別圖
+
+package "核心（純資料與純函式）" {
+  class ResultSnapshot <<資料>> {
+    snapshotId : 成果快照識別（由定案輪次集合決定）
+    items : WritePlanItem 清單
+    unwrittenQuestions : 未寫入題號（未成功、全被判錯、無人提交）
+  }
+
+  class WritePlanItem <<資料>> {
+    questionNo : 題號
+    subIndex : 子編號（單題為空）
+    winnerGroupNo : 搶答成功者組號
+    answer : 答案（逐字文字值）
+    target : 目標位置（取自 002 映射，不寫死）
+    impact : OverwriteImpact
+  }
+
+  enum OverwriteImpact <<列舉>> {
+    EMPTY : 目標目前為空
+    REPLACE : 將取代原有內容
+    SAME : 內容相同
+  }
+
+  class StructureSnapshot <<資料，來自 002>> {
+    sourceId : 試算表與工作表識別
+    headerPositions
+    questionNumbers
+    subBlanks
+    mergeRanges : 與表頭列及資料區相交者
+    answerCellMap
+  }
+
+  class StructureCheckResult <<資料>> {
+    status : 相符 / 不符
+    differences : 差異類別與位置清單
+  }
+
+  class WriteOutcome <<資料>> {
+    status : 成功 / 明確失敗 / 待確認
+    confirmedCells : 已確認寫入格數
+    notWrittenCells : 確認未寫入格數
+    pendingCells : 尚未符合的格
+    reason : 失敗原因類別
+  }
+
+  class ExportRow <<資料>> {
+    round : 輪次
+    questionNo : 題號
+    subIndex : 子空格（單題為空）
+    groupNo : 組別（組號）
+    answer : 答案
+    receivedAt : 後端接收時間
+    rank : 順位（判錯為空）
+    succeeded : 是否成功
+    markedWrong : 是否被判錯
+  }
+
+  class ExportCore <<純函式>> {
+    +buildSnapshot(finalized, submissions, importRecord, currentCells) : ResultSnapshot
+    +checkStructure(importedStructure, rereadStructure) : StructureCheckResult
+    +judgeOutcome(expected, readBack, structureOk) : WriteOutcome
+    +buildRows(finalized, submissions) : ExportRow 清單
+    +renderCsv(rows, formatTime) : 文字（UTF-8；逗號、引號、換行、公式字元保護）
+  }
+}
+
+package "應用層" {
+  class ExportService {
+    +preview(activityCode, teacher) : ResultSnapshot
+    +confirmWrite(activityCode, teacher, snapshotId) : WriteAttempt
+    +recheck(activityCode, teacher, attemptId) : WriteAttempt
+    +retry(activityCode, teacher, attemptId) : WriteAttempt
+    +downloadCsv(activityCode, teacher) : 檔案內容
+  }
+
+  class WriteAttempt <<資料>> {
+    attemptId
+    snapshotId
+    outcome : WriteOutcome
+    startedAt : 時間（由外層傳入）
+    inProgress : 是否進行中（每活動最多一個）
+  }
+}
+
+package "外層轉接" {
+  interface SheetsGateway {
+    +readStructure(sourceId) : StructureSnapshot
+    +readCells(targets) : 目標格內容
+    +writeTextValues(plan) : 外部結果（成功／明確失敗／無法證實）
+  }
+}
+
+ExportCore ..> ResultSnapshot
+ExportCore ..> StructureCheckResult
+ExportCore ..> WriteOutcome
+ExportCore ..> ExportRow
+ResultSnapshot "1" *-- "*" WritePlanItem
+WritePlanItem --> OverwriteImpact
+StructureCheckResult ..> StructureSnapshot : 比對
+ExportService ..> ExportCore : 呼叫純函式
+ExportService --> SheetsGateway : 讀取來源、寫入、讀回
+ExportService "1" o-- "0..*" WriteAttempt
+WriteAttempt --> WriteOutcome
+@enduml
