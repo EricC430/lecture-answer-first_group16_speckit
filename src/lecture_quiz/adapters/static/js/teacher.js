@@ -149,6 +149,22 @@ function renderRoundControls(snapshot) {
 
 onTeacherSnapshot(renderRoundControls);
 
+// ── US5：結束與取消 ──
+
+function formatQuestions(numbers) {
+  return numbers.length ? numbers.map((q) => `第 ${q} 題`).join("、") : "無";
+}
+
+function renderClosing(snapshot) {
+  $("end-activity").hidden = snapshot.stage !== "RESULT_FINAL";
+  $("cancel-activity").hidden = snapshot.stage !== "PREPARING";
+  $("ended-summary").hidden = snapshot.stage !== "ENDED";
+  $("ended-unsolved").textContent = formatQuestions(snapshot.unsolvedQuestions);
+  $("cancelled-summary").hidden = snapshot.stage !== "CANCELLED";
+}
+
+onTeacherSnapshot(renderClosing);
+
 function init() {
   $("create-activity").addEventListener("click", createActivity);
   $("open-round-panel").addEventListener("submit", openRound);
@@ -157,6 +173,8 @@ function init() {
   $("finalize-round").addEventListener("click", () =>
     teacherAction("POST", "/rounds/current/finalize", {}),
   );
+  $("end-activity").addEventListener("click", () => teacherAction("POST", "/end", {}));
+  $("cancel-activity").addEventListener("click", () => teacherAction("POST", "/cancel", {}));
   detectDevSeed();
   const code = normalizeCode(new URLSearchParams(location.search).get("code"));
   if (!code) return;

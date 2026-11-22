@@ -379,7 +379,7 @@ description: "001-activity-session 任務清單"
   - `Scenario: US6-AS3`：斷線期間發生變更，重連後第一則 `snapshot` 就是最新版本。
   - `Scenario: US6-AS4`：建立新的 `create_app()`（模擬重啟）後，舊老師 token 與舊裝置 token 的 WebSocket 都收到 `gone`，HTTP snapshot 回 410（SC-007）。
   - `Scenario: US6-AS5`：在 `ROUND_OPEN` 時，學生收到的每一則訊息都不含其他組的組名、憑證或 `hasSubmissions`（SC-009）。
-- [ ] T062 [P] [US6] ⏳ 測試已撰寫，需要 US5 的「結束活動」才能跑完，US5 完成後執行並記錄結果。在 `tests/perf/test_sync_latency.py` 撰寫 `@pytest.mark.perf` 效能測試（SC-001、研究 R2）：
+- [x] T062 [P] [US6] 2026-11-23 本機執行 `pytest -m perf`：1 passed；最大延遲 開輪 6.5 ms、關輪 5.1 ms、定案 5.0 ms、結束 5.4 ms（各 10 次、13 條連線）。在 `tests/perf/test_sync_latency.py` 撰寫 `@pytest.mark.perf` 效能測試（SC-001、研究 R2）：
   - 在背景執行緒以 `127.0.0.1` 啟動真實 uvicorn，連上老師 1 條與 6 組各 2 條，共 13 條 WebSocket。
   - 開輪、關輪、定案、結束各做 10 次，量測「送出 HTTP → 13 條連線都收到新版本」的時間。
   - 每項的最大值都要小於 2000 ms，並把每項的最大值與平均值印成報表。
@@ -409,25 +409,25 @@ description: "001-activity-session 任務清單"
 
 ### Tests for User Story 5 (REQUIRED) ⚠️
 
-- [ ] T065 [P] [US5] 在 `tests/unit/core/test_state_machine_end_cancel.py` 測試：
+- [x] T065 [P] [US5] 在 `tests/unit/core/test_state_machine_end_cancel.py` 測試：
   - `Scenario: US5-AS1`：在 `RESULT_FINAL` 結束後為 `ENDED`，`unsolved_questions` 含第 3 題。
   - `Scenario: US5-AS3`：在 `ROUND_OPEN`、`RESULT_PENDING` 結束時回傳 `STAGE_NOT_ALLOWED`，訊息含「請先關輪並確認定案」。
   - `Scenario: US5-AS4` ⚠ 提案相依 Q-09：在 `PREPARING` 取消後為 `CANCELLED`，之後任何操作都被拒。
   - `Scenario: US5-AS5`：`ENDED` 時加入被拒，`accepts_submission` 為 `False`。
   - `Scenario: US5-AS6`：在 `PREPARING` 送 `EndActivity` 被拒，訊息為「準備中只能取消活動」。
-- [ ] T066 [P] [US5] 在 `tests/integration/test_us5_end_cancel.py` 以 HTTP 加 WebSocket 測試 `Scenario: US5-AS1`～`US5-AS6`：
+- [x] T066 [P] [US5] 在 `tests/integration/test_us5_end_cancel.py` 以 HTTP 加 WebSocket 測試 `Scenario: US5-AS1`～`US5-AS6`：
   - AS1：所有頁面的快照都有 `unsolvedQuestions`。
   - `Scenario: US5-AS2`：`export_view` 在 `ENDED` 時可以使用，未成功題標示為未成功。
   - AS4 ⚠ Q-09／Q-33：在 `CANCELLED` 時呼叫 `export_view`，回傳 `STAGE_NOT_ALLOWED`。
 
 ### Implementation for User Story 5
 
-- [ ] T067 [US5] **核心**：在 `src/lecture_quiz/core/activity/state_machine.py` 實作 `EndActivity`（只允許 `RESULT_FINAL`）與 `CancelActivity`（只允許 `PREPARING`，⚠ 提案相依 Q-09）；`snapshot_view.py` 在 `ENDED` 時填入 `unsolvedQuestions`。
-- [ ] T068 [US5] **服務層**：在 `src/lecture_quiz/app/activity/service.py` 實作：
+- [x] T067 [US5] **核心**：在 `src/lecture_quiz/core/activity/state_machine.py` 實作 `EndActivity`（只允許 `RESULT_FINAL`）與 `CancelActivity`（只允許 `PREPARING`，⚠ 提案相依 Q-09）；`snapshot_view.py` 在 `ENDED` 時填入 `unsolvedQuestions`。
+- [x] T068 [US5] **服務層**：在 `src/lecture_quiz/app/activity/service.py` 實作：
   - `end(code, requester)`、`cancel(code, requester)`：兩者都呼叫 `scheduler.cancel`。
   - 給 005 的 `export_view(code, requester)`：只限老師，`CANCELLED` 時拒絕（⚠ 提案相依 Q-09／Q-33）。
-- [ ] T069 [US5] **轉接層**：在 `src/lecture_quiz/adapters/web/http_api.py` 實作 `POST /activities/{code}/end`（回傳 `unsolvedQuestions`）與 `POST /activities/{code}/cancel`。
-- [ ] T070 [US5] **轉接層**：在 `teacher.html`、`teacher.js`、`student.html`、`student.js` 加入：
+- [x] T069 [US5] **轉接層**：在 `src/lecture_quiz/adapters/web/http_api.py` 實作 `POST /activities/{code}/end`（回傳 `unsolvedQuestions`）與 `POST /activities/{code}/cancel`。
+- [x] T070 [US5] **轉接層**：在 `teacher.html`、`teacher.js`、`student.html`、`student.js` 加入：
   - 「結束活動」按鈕：只在已定案時可按。
   - 「取消活動」按鈕：只在準備中顯示。
   - 已結束畫面：顯示未成功題清單。

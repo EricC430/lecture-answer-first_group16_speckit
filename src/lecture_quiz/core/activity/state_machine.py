@@ -309,10 +309,26 @@ def _finalize(
     return _changed(updated)
 
 
+def _end_activity(
+    activity: Activity, command: Command, now: datetime, issued: IssuedSecrets | None
+) -> Transition:
+    """結束活動（只允許結果已定案；可以仍有未成功題，FR-022）。"""
+    return _changed(dataclasses.replace(activity, stage=Stage.ENDED))
+
+
+def _cancel_activity(
+    activity: Activity, command: Command, now: datetime, issued: IssuedSecrets | None
+) -> Transition:
+    """取消活動（只允許準備中，FR-025）。"""
+    return _changed(dataclasses.replace(activity, stage=Stage.CANCELLED))
+
+
 _HANDLERS: dict[type, Handler] = {
     JoinGroup: _join_group,
     OpenRound: _open_round,
     ReplaceQuestions: _replace_questions,
     CloseRound: _close_round,
     Finalize: _finalize,
+    EndActivity: _end_activity,
+    CancelActivity: _cancel_activity,
 }

@@ -41,6 +41,11 @@ function render(snapshot) {
   $("student-open").hidden = !open;
   $("student-open-questions").textContent = snapshot.openQuestions.map((q) => `第 ${q} 題`).join("、");
   countdown.set(open ? snapshot.deadline : null);
+  $("student-ended").hidden = snapshot.stage !== "ENDED";
+  $("student-unsolved").textContent = snapshot.unsolvedQuestions.length
+    ? snapshot.unsolvedQuestions.map((q) => `第 ${q} 題`).join("、")
+    : "無";
+  $("student-cancelled").hidden = snapshot.stage !== "CANCELLED";
   for (const fn of renderers) fn(snapshot);
 }
 
