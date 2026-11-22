@@ -124,8 +124,12 @@ Sheets 存取套件）由各子功能的 plan 決定並說明理由。課程不�
 
 - 遵循 PEP 8。
 - 公開的函式、類別、方法都必須有型別提示（Type Hints）與 docstring。
-- lint 與格式化工具由 `001-activity-session` 的 plan 決定；定案後依修訂程序補進本章，後續子功能
-  都沿用。
+- lint 與格式化使用 Ruff：`ruff check`（規則集 E、F、W、I、N、UP、B、D、ANN；docstring 採 Google
+  風格；`tests/` 排除 D 與 ANN 規則）與 `ruff format`。
+- 型別檢查使用 mypy，檢查 `src/`，不允許未標型別的函式（`disallow_untyped_defs = true`）。
+- 設定集中在 `pyproject.toml`，所有子功能沿用；提交前 `ruff check .`、`ruff format --check .`、
+  `mypy src` 必須全部通過。
+- 以上工具由 `001-activity-session` 的 plan（research R3）定案。
 
 ### 3. 合規與日誌
 

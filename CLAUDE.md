@@ -6,10 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 軟體工程期末專題（NCU SE6005）第 16 組 SpecKit 小組的「Vibe Coding 課堂搶答系統」：老師匯入 Google Sheets 格式的 Guided Notes，各組學生搶答，最後把搶答成功的答案寫回原學習單。組員：jacky0407、EricC430。
 
-**憲章 v1.1.0 已完成**（`.specify/memory/constitution.md`，2026-11-21 以 `/speckit-constitution` 產生，2026-11-22 修訂原則 I 的討論範圍），**技術棧已定案**（憲章「技術限制與範圍」）：
+**憲章 v1.1.0 已完成**（`.specify/memory/constitution.md`，2026-11-21 以 `/speckit-constitution` 產生；v1.0.1 補上 lint 與型別檢查工具，v1.1.0 於 2026-11-22 修訂原則 I 的討論範圍），**技術棧已定案**（憲章「技術限制與範圍」）：
 
 - 堆疊與環境：Python 3.11 以上 + FastAPI；Google Sheets 匯入／寫回使用 Google Sheets API（OAuth，由老師授權）；Windows 本機執行，後端只監聽 localhost；活動狀態只存在記憶體，不用資料庫。
-- 程式碼風格：PEP 8；公開函式／類別／方法必須有型別提示與 docstring；lint／格式化工具由 001 的 plan 決定後補回憲章。
+- 程式碼風格：PEP 8；公開函式／類別／方法必須有型別提示與 docstring；lint／格式化用 Ruff（`ruff check`、`ruff format`），型別檢查用 mypy（`src/`），設定在 `pyproject.toml`，提交前三者都要通過（憲章 v1.0.1）。
 - 日誌：只用 `logging`（INFO、stdout），不用 `print`；不得記錄 token、授權碼、client secret。
 - 效能：狀態變更 2 秒內反映到所有畫面（WebSocket 或 SSE 由 plan 決定）；效能驗證組數 N 由 001 plan 決定；組數上限由老師建立活動時指定（alignment 2026-11-22 決議，Q-07），系統不自訂固定上限。
 - **架構（NON-NEGOTIABLE）**：核心邏輯（學習單解析、提交判定、順位計算）是不依賴網路、框架與系統時鐘的純函式，時間由呼叫端傳入；Google、API、畫面在外層轉接層，相依只能由外層指向核心。

@@ -55,7 +55,7 @@ description: "Task list template for feature implementation"
 
 - [ ] T001 Create project structure per implementation plan
 - [ ] T002 Initialize [language] project with [framework] dependencies
-- [ ] T003 [P] Configure linting and formatting tools
+- [ ] T003 [P] 在 `pyproject.toml` 設定 Ruff（lint 規則 E、F、W、I、N、UP、B、D、ANN，Google docstring，`tests/` 排除 D、ANN；`ruff format`）與 mypy（`src/`，`disallow_untyped_defs = true`）（憲章技術限制 2；已設定則沿用）
 
 ---
 
@@ -167,6 +167,7 @@ Examples of foundational tasks (adjust based on your project):
 - [ ] TXXX （涉及 Google 的子功能）真實路徑驗證：以真實 Google 試算表、兩份版面不同的學習單各完成一次匯入與寫回；採明確標記、需手動啟動的整合測試或人工步驟，記錄結果，憑證只放本機（憲章原則 VI）
 - [ ] TXXX （涉及 Guided Notes 的子功能）以至少兩份版面不同的學習單（起始列欄不同、工作表名稱不同、單題與題組混合）執行匯入／寫回測試（憲章原則 III）
 - [ ] TXXX （涉及即時同步的子功能）效能驗證：老師加上 N 組學生同時連線，狀態變更 2 秒內反映到所有畫面（N 依 001 plan；憲章技術限制 4）
+- [ ] TXXX 執行 `ruff check .`、`ruff format --check .`、`mypy src`，全部通過並記錄結果（憲章技術限制 2）
 - [ ] TXXX 檢查日誌：使用 `logging`（INFO、stdout），無 `print` 日誌，未記錄 token／授權碼／client secret（憲章技術限制 3）
 
 ---
