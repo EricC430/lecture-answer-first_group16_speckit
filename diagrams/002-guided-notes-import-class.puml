@@ -66,13 +66,30 @@ package "核心（純資料與純函式）" {
 
 package "應用層" {
   class ImportService {
-    +selectSource(code, spreadsheetId, sheetId)
+    +startAuth(code, requester) : 授權網址
+    +inspectSpreadsheet(code, requester, spreadsheetId) : SpreadsheetInfo
+    +selectSource(code, requester, source : SourceRef) : SourceSelection
     +import(code, requester, source) : ImportOutcome
     +getImportRecord(code) : ImportRecord（供 005 寫回）
   }
 
+  class SourceRef <<資料>> {
+    spreadsheetId
+    sheetId
+  }
+
+  class SpreadsheetInfo <<資料>> {
+    title
+    sheets : 工作表識別與標題清單
+  }
+
+  class SourceSelection <<資料>> {
+    source : SourceRef
+    sheetTitle
+  }
+
   class ImportRecord <<資料>> {
-    source : 試算表識別＋工作表識別
+    source : SourceRef
     sourceMapping : 來源映射
     structure : StructureSnapshot
   }
@@ -93,10 +110,14 @@ package "應用層" {
 
 package "外層轉接層" {
   interface SheetsReader {
-    +read(source) : SheetSnapshot
+    +inspect(code, spreadsheetId) : SpreadsheetInfo（先確認是 Google 試算表）
+    +read(code, source) : SheetSnapshot（唯讀）
   }
   interface AuthGateway {
-    +ensureAuthorized(teacher)
+    +startAuthorization(code, requester) : 授權網址
+    +completeAuthorization(state, authCode)
+    +isAuthorized(code) : bool
+    +pickerCredentials(code) : 選檔用短效憑證
   }
   interface ActivityGateway <<由 001 ActivityService 實作，皆為 async>> {
     +stage(code) : 階段（活動不存在時為空）
@@ -128,7 +149,11 @@ ImportService ..> SheetsReader
 ImportService ..> AuthGateway
 ImportService ..> ActivityGateway : 只傳題號清單
 ImportService "1" o-- "*" ImportRecord : 依活動代碼保存
+ImportService "1" o-- "*" SourceSelection : 依活動代碼保存
+SourceSelection --> SourceRef
+ImportRecord --> SourceRef
 ImportRecord --> StructureSnapshot
+SheetsReader ..> SpreadsheetInfo
 ImportService ..> ImportOutcome
 ImportOutcome --> ImportPreview
 @enduml
