@@ -11,11 +11,22 @@ py -3.11 -m venv .venv
 
 `.venv/` 已列在 `.gitignore`，不要提交。
 
-> **專案路徑含中文時（例如放在「中央大學」資料夾）**：Python 3.11 在繁中 Windows（cp950）讀不了 `pip install -e` 寫入的 `.pth`，`.venv` 裡的 Python 會直接啟動失敗（`UnicodeDecodeError: 'cp950' codec can't decode ...`）。安裝完成後執行下面這一行，改成 ASCII 相對路徑即可；之後重新執行 `pip install -e` 時要再改一次。
->
-> ```powershell
-> Set-Content .venv\Lib\site-packages\_editable_impl_lecture_quiz.pth "../../../src" -Encoding ascii
-> ```
+### 專案路徑含中文時
+
+**路徑不含中文的話，不用做任何處理。**
+
+專案放在含中文的資料夾時（例如「中央大學」），在 Python 3.11／3.12 的繁中 Windows（cp950）上，`.venv` 裡的 Python 會直接啟動失敗，錯誤訊息是 `UnicodeDecodeError: 'cp950' codec can't decode ...`。
+
+原因：`pip install -e` 會把專案的絕對路徑寫進 `.venv\Lib\site-packages\_editable_impl_lecture_quiz.pth`，而 Python 3.11／3.12 用系統地區編碼（cp950）讀這個檔案。
+
+- **首選：把 `.pth` 改成 ASCII 相對路徑。** 每次執行 `pip install -e` 之後都要再執行一次：
+
+  ```powershell
+  Set-Content .venv\Lib\site-packages\_editable_impl_lecture_quiz.pth "../../../src" -Encoding ascii
+  ```
+
+- **備案：改用 Python 3.13 以上。** 3.13 起會先用 UTF-8 讀 `.pth`，不需要任何處理。建立 venv 時改成 `py -3.13 -m venv .venv`。
+- **注意：`PYTHONUTF8=1` 沒有用。** Python 3.11 的 `site.py` 以 `encoding="locale"` 讀 `.pth`，這個設定不受 UTF-8 模式影響。實測開啟 UTF-8 模式後，一樣會出現上面的錯誤。
 
 ## 常用指令
 
