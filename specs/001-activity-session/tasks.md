@@ -373,25 +373,25 @@ description: "001-activity-session 任務清單"
   - 每 10 秒收到 `ping`（測試可縮短間隔）。
   - 活動不存在時收到 `gone` 與 close code 4410。
   - token 無效時收到 `unauthorized`、`reason == "INVALID_TOKEN"`，close code 4401。
-- [ ] T061 [P] [US6] 在 `tests/integration/test_us6_sync.py` 測試：
+- [x] T061 [P] [US6] 在 `tests/integration/test_us6_sync.py` 測試：
   - `Scenario: US6-AS1`：老師與兩組共 3 條連線，關輪後都收到相同的 `version` 與 `roundNumber`，而且有 `changedAt`。
   - `Scenario: US6-AS2`：伺服端在斷線期間不會因為推送失敗而影響其他連線或狀態。前端「同步中斷」的畫面行為由 quickstart 第 17 步人工驗證補足（純前端行為，沒有自動化瀏覽器測試）。
   - `Scenario: US6-AS3`：斷線期間發生變更，重連後第一則 `snapshot` 就是最新版本。
   - `Scenario: US6-AS4`：建立新的 `create_app()`（模擬重啟）後，舊老師 token 與舊裝置 token 的 WebSocket 都收到 `gone`，HTTP snapshot 回 410（SC-007）。
   - `Scenario: US6-AS5`：在 `ROUND_OPEN` 時，學生收到的每一則訊息都不含其他組的組名、憑證或 `hasSubmissions`（SC-009）。
-- [ ] T062 [P] [US6] 在 `tests/perf/test_sync_latency.py` 撰寫 `@pytest.mark.perf` 效能測試（SC-001、研究 R2）：
+- [ ] T062 [P] [US6] ⏳ 測試已撰寫，需要 US5 的「結束活動」才能跑完，US5 完成後執行並記錄結果。在 `tests/perf/test_sync_latency.py` 撰寫 `@pytest.mark.perf` 效能測試（SC-001、研究 R2）：
   - 在背景執行緒以 `127.0.0.1` 啟動真實 uvicorn，連上老師 1 條與 6 組各 2 條，共 13 條 WebSocket。
   - 開輪、關輪、定案、結束各做 10 次，量測「送出 HTTP → 13 條連線都收到新版本」的時間。
   - 每項的最大值都要小於 2000 ms，並把每項的最大值與平均值印成報表。
 
 ### Implementation for User Story 6
 
-- [ ] T063 [US6] **轉接層**：在 `src/lecture_quiz/adapters/web/ws_sync.py` 完成：
+- [ ] T063 [US6] ⏸ 部分完成（`disconnect_device` 待 US7；其餘項目已在 T020 完成並由 T060、T061 驗證）。**轉接層**：在 `src/lecture_quiz/adapters/web/ws_sync.py` 完成：
   - 只有 `changed` 時才推送。
   - 推送時逐一連線送出，任一連線失敗時只關閉該連線，並記錄 `INFO`（不含 token）。
   - 支援 `disconnect_device(code, token_hash, reason)`，給離開本組與刪除組別使用。
   - 重啟後找不到活動時，送 `gone`。
-- [ ] T064 [US6] **轉接層**：在 `src/lecture_quiz/adapters/static/js/sync.js`、`teacher.js`、`student.js` 串接：
+- [x] T064 [US6] **轉接層**：在 `src/lecture_quiz/adapters/static/js/sync.js`、`teacher.js`、`student.js` 串接：
   - 「同步中斷，正在重新連線」橫幅。
   - 斷線期間停用所有成功提示。
   - 收到 `gone` 時清除身分並顯示「活動已失效，請重新建立或加入活動」。
