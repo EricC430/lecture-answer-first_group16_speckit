@@ -10,13 +10,15 @@ actor "學生（各組）" as Student
 package "外層：畫面與 API（轉接層）" {
   [老師畫面\n（建立活動、開輪、關輪、結束／取消、\n查看各組憑證、刪除空組）] as TeacherUI
   [學生畫面\n（加入組別、身分恢復、階段顯示、\n查看本組憑證、離開本組）] as StudentUI
-  [活動 API（HTTP）\n（身分解析、錯誤訊息轉換、Idempotency-Key 去重）] as Api
-  [同步推送（WebSocket，只推送）\n（依角色裁切完整快照、狀態版本、ping）] as Sync
+  [活動 API（HTTP）\n（解析 token 與 Idempotency-Key、錯誤訊息轉換；\n共用錯誤格式與請求日誌在 common.py）] as Api
+  [同步推送 WebSocketHub（只推送）\n（實作 SyncPublisher：依角色裁切完整快照、狀態版本、ping）] as Sync
+  [倒數排程 AsyncioCountdownScheduler\n（實作 CountdownScheduler）] as TimerImpl
+  [系統時鐘 SystemClock\n（實作 Clock）] as ClockImpl
 }
 
 package "應用層" {
-  [活動服務\n（實作 002 的 ActivityGateway；\n呼叫狀態機、序列化同一活動的操作）] as Service
-  [倒數排程\n（到期時以傳入時間呼叫關輪）] as Timer
+  [活動服務\n（實作 002 的 ActivityGateway；\n每活動一把鎖序列化操作、鎖內 Idempotency-Key 去重）] as Service
+  [ports：CountdownScheduler、SyncPublisher、Clock\n（Protocol，由外層實作；倒數到期以\nmax(現在, 截止時間) 關輪）] as Ports
   [活動登錄表\n（只存在記憶體，重啟清空）] as Registry
 }
 
@@ -40,12 +42,15 @@ StudentUI --> Api
 TeacherUI <.. Sync : 推送
 StudentUI <.. Sync : 推送
 Api --> Service
-Timer --> Service : 截止時關輪
+TimerImpl ..|> Ports
+Sync ..|> Ports
+ClockImpl ..|> Ports
+TimerImpl --> Service : 截止時呼叫 onDeadline
 Service --> Registry
 Service --> StateMachine
 Service --> Rules
 Service --> View
-Service --> Sync : 狀態變更通知
+Service --> Ports : 經 SyncPublisher 通知狀態變更
 Import --> Service : 查詢階段／老師身分、\n替換題目
 Submit --> Service : 查詢輪次與組別身分
 Ranking --> Service : 確認定案

@@ -483,7 +483,8 @@ description: "001-activity-session 任務清單"
   - 用 `caplog` 擷取一輪完整流程的 log，確認層級是 `INFO`，而且不含任何 `teacherToken`、`deviceToken`、`credential` 的值。
   - 在 `src/` 中用 grep 確認沒有 `print(`。
 - [ ] T081 執行 `ruff check .`、`ruff format --check .`、`mypy src`，全部通過並記錄結果（憲章 v1.0.1 技術限制 2）。
-- [ ] T082 程式碼與圖表一致性驗證：逐一比對 `diagrams/001-activity-session-*.puml` 的組件、類別、方法名稱、時序與實作（例如 `ActivityService` 的方法、`RejectionReason` 的值）。有差異時，先更新圖表並重新轉出 PNG（原則 II）。
+- [x] T082 程式碼與圖表一致性驗證：逐一比對 `diagrams/001-activity-session-*.puml` 的組件、類別、方法名稱、時序與實作（例如 `ActivityService` 的方法、`RejectionReason` 的值）。有差異時，先更新圖表並重新轉出 PNG（原則 II）。
+  - 2026-11-23（US1、US3～US6 範圍）：依 jacky0407 決定，以程式碼與 data-model 為準更新類別圖（Command、Identity 只存雜湊、Round／RoundRules 欄位、ActivityService 簽名、ports 與外層實作）、時序圖（onDeadline、openRound／closeRound 參數、publish(activity)）、組件圖（ports、common.py、鎖內去重）並重新轉出 PNG；US2／US7 尚未實作的項目保留在圖上並標「待 US2／US7」，實作後需再驗證一次。
 - [ ] T083 執行 `pytest` 與 `pytest -m perf`，記錄日期、指令，以及通過、失敗、略過的數字；perf 記錄四種操作的最大延遲（原則 VI、品質關卡 4）。
 - [ ] T084 由非實作者依 [quickstart.md](quickstart.md) 的 21 步人工驗證，記錄在 `specs/001-activity-session/verification.md`：日期、每一步的操作與結果、第 10、12 步的延遲 ms，以及 SC-005「1 分鐘內兩組加入」、SC-010「30 秒內換組」的實際時間（原則 VI）。
 - [ ] T085 [P] 指令或流程與文件不同時，更新 `specs/001-activity-session/quickstart.md`；在 `CLAUDE.md` 的「專案現況」補上 build、lint、test 指令與 `src/lecture_quiz` 三層結構（現在已有程式碼）。

@@ -115,7 +115,8 @@ specs/001-activity-session/
 ```text
 pyproject.toml                      # 相依、ruff、mypy、pytest 設定
 src/lecture_quiz/
-├── main.py                         # 建立 FastAPI app、logging 設定、掛載路由與靜態檔
+├── main.py                         # 建立 FastAPI app、logging 設定、組裝 001 服務、掛載路由與靜態檔
+├── __main__.py                     # python -m lecture_quiz（只監聽 127.0.0.1，日誌輸出到 stdout）
 ├── core/                           # 純函式層：不得匯入 app、adapters、fastapi、asyncio、time
 │   └── activity/
 │       ├── models.py               # Stage、Activity、Group、Round、RoundRules、TeacherIdentity、DeviceIdentity
@@ -126,7 +127,7 @@ src/lecture_quiz/
 │       └── snapshot_view.py        # SnapshotView、ActivitySnapshot
 ├── app/                            # 應用層：只依賴 core 與自己的 ports
 │   └── activity/
-│       ├── ports.py                # Clock、CountdownScheduler、SyncPublisher、ActivityGateway 等 Protocol
+│       ├── ports.py                # Clock、CountdownScheduler、SyncPublisher、ActivityGateway 等 Protocol（由 adapters 實作）
 │       ├── registry.py             # ActivityRegistry（記憶體、去重表、每個活動的鎖）
 │       ├── secrets_gen.py          # 代碼、憑證、token 產生與雜湊
 │       └── service.py              # ActivityService
@@ -134,14 +135,16 @@ src/lecture_quiz/
 │   ├── clock.py                    # SystemClock
 │   ├── countdown.py                # AsyncioCountdownScheduler
 │   ├── web/
-│   │   ├── http_api.py             # 11 個 HTTP 端點、錯誤轉換、請求 log
+│   │   ├── common.py               # 共用骨架（Issue #5）：統一錯誤格式、例外處理、請求 log、Bearer／Idempotency-Key 解析、/api 404 fallback
+│   │   ├── system.py               # 共用骨架：GET /api/health
+│   │   ├── http_api.py             # 001 的 HTTP 端點、Outcome 與 RejectionReason → HTTP
 │   │   ├── ws_sync.py              # WebSocket 連線管理、SyncPublisher 實作
 │   │   └── dev_seed.py             # 開發用 seed API（環境變數啟用；002 合併後移除）
 │   └── static/
 │       ├── teacher.html
 │       ├── student.html
 │       ├── css/app.css
-│       └── js/{api.js, sync.js, identity.js, teacher.js, student.js}
+│       └── js/{api.js, sync.js, identity.js, countdown.js, teacher.js, student.js}
 tests/
 ├── conftest.py                     # FakeClock、ManualScheduler、app 工廠
 ├── unit/core/                      # 狀態機、輸入規則、快照裁切

@@ -13,13 +13,13 @@ participant "倒數排程" as C
 participant "同步推送" as P
 
 == 建立活動 ==
-T -> API : 建立活動（requestId）
-API -> S : create(requestId)
-S -> M : apply(無, 建立, now)
+T -> API : 建立活動（Idempotency-Key）
+API -> S : create(idempotencyKey)
+S -> M : apply(無, 建立, now, 新代碼與 token 雜湊)
 M --> S : 準備中、新代碼、老師身分
 S --> API : 活動代碼、老師身分
 API --> T : 顯示活動代碼
-note right of S : 同一 requestId 重送 → 回傳同一活動
+note right of S : 同一 key 重送 → 回傳同一活動（查表在鎖內）
 
 == 組別加入 ==
 SA -> API : 加入（代碼, " A 組 "）
@@ -66,8 +66,8 @@ end
 
 == 開輪 ==
 T -> API : 開輪（所選題號, 公平模式=關, 倒數 60 秒）
-API -> S : openRound(老師, rules, now)
-S -> M : apply(開輪, now)
+API -> S : openRound(code, 老師, 選題, 模式, 倒數, key)
+S -> M : apply(開輪, now = clock.now())
 alt 已匯入題目、選題合法、階段為準備中或已定案
   M --> S : 搶答中、第 n 輪、規則快照、成功次數基準、截止時間
   S -> C : schedule(代碼, 截止時間)
@@ -83,15 +83,15 @@ end
 == 關輪（手動與倒數同時） ==
 par 老師手動關輪
   T -> API : 關輪
-  API -> S : closeRound(老師, now)
+  API -> S : closeRound(code, 老師, key)
 else 倒數到期
-  C -> S : closeRound(系統, now = max(現在, 截止時間))
+  C -> S : onDeadline(code, 截止時間)\n→ closeRound(系統, now = max(現在, 截止時間))
 end
 S -> M : apply(關輪)（同一活動的操作依序處理）
 M --> S : 第一個：結果未定案，產生一份初始結果
 S -> M : apply(關輪)（第二個）
 M --> S : 已關輪：冪等成功、不改變狀態、不重算（alreadyClosed）
-S -> P : publish（只推送一次變更）
+S -> P : publish(activity)（只推送一次變更）
 P --> T : 本輪結果（未定案）
 P --> SA : 本輪結果（未定案）
 P --> SB : 本輪結果（未定案）
