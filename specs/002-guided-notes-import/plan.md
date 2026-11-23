@@ -80,9 +80,9 @@
 | 假設 | 來源 | 若不成立的修改範圍 |
 |---|---|---|
 | `drive.file` 足以讓 `spreadsheets.get` 讀取 Picker 選到的試算表（也足以讓 005 寫入） | Drive 範圍說明與 `spreadsheets.get` 範圍清單各自支持，沒有單頁明說。**2026-11-23 讀取已由 EricC430 以真實帳號驗證成立（T028，細節未記錄）；寫入（005）尚未驗證** | 授權範圍常數與 `.env.example`；改用敏感範圍時 OAuth 同意畫面要加測試使用者；不影響核心與應用層 |
-| `GridRange` 結束索引為「不含」 | **2026-11-23 已由官方 API 參考文件確認**：索引從 0 起算、半開區間，起點含、終點不含，例如 A3:B4 為 start_row_index 2、end_row_index 4（見 [.NET 版 GridRange 參考](https://googleapis.dev/dotnet/Google.Apis.Sheets.v4/latest/api/Google.Apis.Sheets.v4.Data.GridRange.html)、[Ruby 版](https://googleapis.dev/ruby/google-apis-sheets_v4/v0.38.0/Google/Apis/SheetsV4/GridRange.html)）。T071 回報通過也與此一致；尚未以真實回應 fixture（T072）固定成測試 | 轉接層的座標轉換函式與其測試 |
+| `GridRange` 結束索引為「不含」 | **2026-11-23 已由官方 API 參考文件確認**：索引從 0 起算、半開區間，起點含、終點不含，例如 A3:B4 為 start_row_index 2、end_row_index 4（見 [.NET 版 GridRange 參考](https://googleapis.dev/dotnet/Google.Apis.Sheets.v4/latest/api/Google.Apis.Sheets.v4.Data.GridRange.html)、[Ruby 版](https://googleapis.dev/ruby/google-apis-sheets_v4/v0.38.0/Google/Apis/SheetsV4/GridRange.html)）。T071 回報通過也與此一致；不做真實回應 fixture 測試（T072，2026-11-23 EricC430 決定）；轉接層測試用手寫 JSON | 轉接層的座標轉換函式與其測試 |
 | 將非 Google 試算表交給 `spreadsheets.get` 時的錯誤型態 | 未查證；已用 Drive `mimeType` 先擋，這只是保險 | 轉接層錯誤對應表 |
-| Picker 在本機 `http://localhost` 來源下，可以正常運作；API 金鑰先只限制 API 種類，不設網站來源限制 | Picker 官方指南提到金鑰需允許來源 | 金鑰限制設定與 quickstart 的設定步驟 |
+| Picker 在本機 `http://localhost` 來源下，可以正常運作；API 金鑰先只限制 API 種類，不設網站來源限制 | Picker 官方指南提到金鑰需允許來源。**2026-11-23 EricC430 在真實環境走過 Picker（T028、T071），回報可運作，細節未記錄** | 金鑰限制設定與 quickstart 的設定步驟 |
 
 ## 相依與時程
 

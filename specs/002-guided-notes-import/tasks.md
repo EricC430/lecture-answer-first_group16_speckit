@@ -294,6 +294,7 @@ description: "002-guided-notes-import 任務清單"
 - [X] T071 **真實路徑驗證（SC-009，合併前必做）**：EricC430 以兩份版面不同的真實 Google 試算表，依 quickstart B-1～B-13 各走一次，記錄日期、操作、結果數字與 SC-006 的「確認工作表到看見預覽」秒數（**超過 10 秒記為未通過**，並記錄當時題數與網路狀況），填入 quickstart 紀錄表；憑證只在本機，不貼進 repo、Issue、PR。（依賴 T074）
     - **紀錄（2026-11-23）**：EricC430 回報 B-1～B-13 全數通過，**細節（秒數、題數、逐步結果）依其決定不記錄**；SC-006 的實測秒數因此沒有數字可對照，只有「回報通過」。非實作者的 T076 驗證仍待 jacky0407。
 - [ ] T072 T071 通過後執行 T068 擷取兩份版面的真實回應，新增「JSON → 轉接層 → 解析」的入口測試，確認 `GridRange` 結束索引「不含」的假設，並把假設 1～4 的驗證結果寫回 plan「待真實驗證的假設」。擷取之前不得宣稱入口路徑已驗證。（依賴 T071）
+    - **不做（2026-11-23，EricC430 決定）**：未擷取真實回應，**沒有「JSON → 轉接層 → 解析」的真實 fixture 入口測試**，維持未勾選。`GridRange` 的假設改以官方 API 參考文件確認（見 plan），T071 回報通過與之一致；入口路徑只有手寫 JSON 的 `HttpMockSequence` 測試與使用者回報的真實驗證。`scripts/capture_real_fixture.py` 保留供日後使用。
 - [X] T073 程式碼與圖表一致性驗證：逐一比對 `diagrams/002-guided-notes-import-{component,class,sequence}.puml` 與實作（`ImportService` 的方法、`AuthGateway`／`SheetsReader` 的方法、`ImportRecord` 的欄位、`SpreadsheetInfo.autoSelectSheetId`、時序圖的 inspect／`PUT source`／匯入步驟；`IssueKind` 的值。類別圖與時序圖已於 2026-11-22 依 plan 同步，這裡驗證實作沒有再偏離）。有差異時先更新圖表並重新轉出 PNG（原則 II）。
 - [X] T074 執行全部自動化測試 `pytest -m "not real_google and not perf"`，並以 `-v` 確認核心、應用層、轉接層（`HttpMockSequence`）、HTTP 契約、架構純度、日誌各自有項目、沒有任何一類是 0 筆；記錄日期、指令與通過／失敗／略過數字（原則 VI）。
 - [X] T075 執行 `ruff check .`、`ruff format --check .`、`mypy src`，全部通過並記錄結果（技術限制 2）。
