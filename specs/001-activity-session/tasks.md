@@ -496,18 +496,26 @@ description: "001-activity-session 任務清單"
 
 ## Phase N: Polish & Cross-Cutting Concerns
 
-- [ ] T077 [P] 建立 `tests/SCENARIO_MAP.md`：列出 47 個 `USn-ASm` 與對應的測試函式。用 `grep -rn "Scenario:" tests/` 核對沒有遺漏（原則 VI）。
-- [ ] T078 [P] 在 `tests/integration/test_idempotency.py` 測試 SC-004：建立活動、加入組別、開輪各用相同的 `Idempotency-Key` 重送 20 次，重複的活動、組別、輪次數都是 0，每次回應都相同。
-- [ ] T079 [P] 在 `tests/contract/test_error_safety.py` 測試 SC-008：觸發每一種 `RejectionReason`、404、400 `INVALID_REQUEST`、500，確認回應都有中文 `message`，而且不含 `Traceback`、`File "`、`.py`、任何 token、任何憑證。
-- [ ] T080 [P] 在 `tests/integration/test_logging.py` 檢查日誌（技術限制 3）：
+- [x] T077 [P] 建立 `tests/SCENARIO_MAP.md`：列出 47 個 `USn-ASm` 與對應的測試函式。用 `grep -rn "Scenario:" tests/` 核對沒有遺漏（原則 VI）。
+  - 2026-11-23：已建立 `tests/SCENARIO_MAP.md`，47 個 Scenario 全部有對應測試，未對應：無。
+- [x] T078 [P] 在 `tests/integration/test_idempotency.py` 測試 SC-004：建立活動、加入組別、開輪各用相同的 `Idempotency-Key` 重送 20 次，重複的活動、組別、輪次數都是 0，每次回應都相同。
+  - 2026-11-23：`tests/integration/test_idempotency.py` 通過；三種操作各重送 20 次，重複的活動、組別、輪次數皆為 0。
+- [x] T079 [P] 在 `tests/contract/test_error_safety.py` 測試 SC-008：觸發每一種 `RejectionReason`、404、400 `INVALID_REQUEST`、500，確認回應都有中文 `message`，而且不含 `Traceback`、`File "`、`.py`、任何 token、任何憑證。
+  - 2026-11-23：`tests/contract/test_error_safety.py` 通過；觸發全部 16 種 RejectionReason、404、400，回應皆含中文訊息且無堆疊追蹤、路徑、token、憑證。500 由 `tests/contract/test_http_common.py` 涵蓋。
+- [x] T080 [P] 在 `tests/integration/test_logging.py` 檢查日誌（技術限制 3）：
+  - 2026-11-23：`tests/integration/test_logging.py` 通過；完整流程的 log 都是 INFO、不含 token 與憑證；`src/` 沒有 `print(`。
   - 用 `caplog` 擷取一輪完整流程的 log，確認層級是 `INFO`，而且不含任何 `teacherToken`、`deviceToken`、`credential` 的值。
   - 在 `src/` 中用 grep 確認沒有 `print(`。
-- [ ] T081 執行 `ruff check .`、`ruff format --check .`、`mypy src`，全部通過並記錄結果（憲章 v1.0.1 技術限制 2）。
+- [x] T081 執行 `ruff check .`、`ruff format --check .`、`mypy src`，全部通過並記錄結果（憲章 v1.0.1 技術限制 2）。
+  - 2026-11-23：`ruff check .` All checks passed；`ruff format --check .` 111 files already formatted；`mypy src` no issues found in 26 source files。
 - [x] T082 程式碼與圖表一致性驗證：逐一比對 `diagrams/001-activity-session-*.puml` 的組件、類別、方法名稱、時序與實作（例如 `ActivityService` 的方法、`RejectionReason` 的值）。有差異時，先更新圖表並重新轉出 PNG（原則 II）。
   - 2026-11-23（US1、US3～US6 範圍）：依 jacky0407 決定，以程式碼與 data-model 為準更新類別圖（Command、Identity 只存雜湊、Round／RoundRules 欄位、ActivityService 簽名、ports 與外層實作）、時序圖（onDeadline、openRound／closeRound 參數、publish(activity)）、組件圖（ports、common.py、鎖內去重）並重新轉出 PNG；US2／US7 尚未實作的項目保留在圖上並標「待 US2／US7」，實作後需再驗證一次。
-- [ ] T083 執行 `pytest` 與 `pytest -m perf`，記錄日期、指令，以及通過、失敗、略過的數字；perf 記錄四種操作的最大延遲（原則 VI、品質關卡 4）。
+  - 2026-11-23（US2、US7 與 Clarifications 後）：逐一比對類別圖的 `ActivityService`（`create`、`join`、`leaveGroup`、`deleteGroup`、`resolveDevice`、`markGroupSubmitted`）、`ActivityRegistry.findByTeacher`、`SyncPublisher.disconnectDevice`、`InputRules` 三個新方法、`RejectionReason` 16 個值，與程式碼一致；時序圖的建立（C7、組數上限）、加入（組號）、組別更正流程與實作一致。PNG 待 T095 重新產生。
+- [x] T083 執行 `pytest` 與 `pytest -m perf`，記錄日期、指令，以及通過、失敗、略過的數字；perf 記錄四種操作的最大延遲（原則 VI、品質關卡 4）。
+  - 2026-11-23：`pytest` 347 passed、1 deselected、0 failed；`pytest -m perf` 1 passed（老師 + 6 組 × 2 條連線，各 10 次）：開輪最大 7.5 ms、關輪 9.8 ms、定案 2.7 ms、結束 2.9 ms，皆小於 2000 ms。執行環境為雲端 Linux（Python 3.13），Windows 本機需再跑一次。
 - [ ] T084 由非實作者依 [quickstart.md](quickstart.md) 的 23 步人工驗證，記錄在 `specs/001-activity-session/verification.md`：日期、每一步的操作與結果、第 12、14 步的延遲 ms，以及 SC-005「1 分鐘內兩組加入」、SC-010「30 秒內換組」的實際時間（原則 VI）。
-- [ ] T085 [P] 指令或流程與文件不同時，更新 `specs/001-activity-session/quickstart.md`；在 `CLAUDE.md` 的「專案現況」補上 build、lint、test 指令與 `src/lecture_quiz` 三層結構（現在已有程式碼）。
+- [x] T085 [P] 指令或流程與文件不同時，更新 `specs/001-activity-session/quickstart.md`；在 `CLAUDE.md` 的「專案現況」補上 build、lint、test 指令與 `src/lecture_quiz` 三層結構（現在已有程式碼）。
+  - 2026-11-23：quickstart 已更新為 23 步並改用 `python -m lecture_quiz` 啟動；CLAUDE.md「專案現況」補上 001 結構與組數上限。
 - [ ] T086 用全新 clone 在乾淨的 venv 重跑安裝與 `pytest`，確認不依賴任何本機未提交的檔案（規章第 9 節）。
 - [ ] T087 追蹤開發用 seed API 的移除：在 Issue #6（002）留言，註明「002 合併後的第一個 PR 移除 `src/lecture_quiz/adapters/web/dev_seed.py`、`LECTURE_QUIZ_DEV_SEED` 與 `tests/integration/test_dev_seed.py`」。本子功能內不刪除。
 - [x] T088 確認提案相依的任務狀態：`docs/alignment.md` 2026-11-21 的 6 列已於 2026-11-23 全部獲 OpenSpec 組確認（新增一列決議），結論與提案一致；另依 Clarifications 增加組號、組數上限與 C7，已重跑 clarify → plan → tasks。
