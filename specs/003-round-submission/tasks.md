@@ -124,16 +124,16 @@ description: "003-round-submission 任務清單"
 
 ### Tests for User Story 3（先寫、確認失敗）⚠️
 
-- [ ] T035 [P] [US3] 在 `tests/unit/core/round_submission/test_decide_us3.py` 測試：`round_number_raw` 不等於目前輪次或不是整數 → `STALE_ROUND`；目前還沒有任何輪次（準備中、開放加入）→ `ROUND_CLOSED`，訊息為「本輪尚未開始或已結束」（spec Edge Cases「非搶答中提交」）（`Scenario: US3-AS4` ↔ OpenSpec「舊輪次頁面提交」）；輪次相符但 `accepting` 為假 → `ROUND_CLOSED`（`Scenario: US3-AS2`、`Scenario: US3-AS3`）；`STALE_ROUND` 優先於 `ROUND_CLOSED`、`ROUND_CLOSED` 優先於題號與內容檢查；`SubmissionRules.order` 對相同 `received_at` 依 `sequence` 排序，輸入順序打亂結果相同（`Scenario: US3-AS5` ↔ OpenSpec「同時間戳」）
-- [ ] T036 [P] [US3] 在 `tests/unit/app/round_submission/test_submit_deadline.py` 以 FakeClock 測試：開輪 60 秒，`deadline - 1ms` 接受、`deadline` 與 `deadline + 1ms` 回 `ROUND_CLOSED` 且不保存（`Scenario: US3-AS1`、`Scenario: US3-AS2` ↔ OpenSpec「截止邊界」；SC-004）；無倒數輪次在老師關輪前一直接受、關輪後 `ROUND_CLOSED`（`Scenario: US3-AS3`）；接收序號跨輪持續遞增、被拒不消耗序號（FR-016）；`received_at` 等於鎖內取得的 `now`
-- [ ] T037 [P] [US3] 在 `tests/unit/app/round_submission/test_close_vs_submit.py` 測試關輪與提交以 `asyncio.gather` 同時執行 50 次：每次要嘛提交被保存且關輪後的公開資料包含它，要嘛提交回 `ROUND_CLOSED` 且未保存；不存在「關輪後才保存」的提交（以 store 中每筆的 `received_at < 關輪時間` 且關輪後推送的快照已包含全部保存的提交檢查）（`Scenario: US3-AS6`；FR-019、SC-004）
-- [ ] T038 [P] [US3] 在 `tests/contract/test_http_submissions.py` 補：本文多帶 `clientTime`、`receivedAt`、`groupNumber` 欄位時被忽略，`receivedAt` 仍為後端時間、`groupNumber` 仍為 token 所屬組（`Scenario: US3-AS7`）；`STALE_ROUND`、`ROUND_CLOSED` 回 409 且訊息分別含「輪次已更新，請重新整理」「本輪已結束」
+- [X] T035 [P] [US3] 在 `tests/unit/core/round_submission/test_decide_us3.py` 測試：`round_number_raw` 不等於目前輪次或不是整數 → `STALE_ROUND`；目前還沒有任何輪次（準備中、開放加入）→ `ROUND_CLOSED`，訊息為「本輪尚未開始或已結束」（spec Edge Cases「非搶答中提交」）（`Scenario: US3-AS4` ↔ OpenSpec「舊輪次頁面提交」）；輪次相符但 `accepting` 為假 → `ROUND_CLOSED`（`Scenario: US3-AS2`、`Scenario: US3-AS3`）；`STALE_ROUND` 優先於 `ROUND_CLOSED`、`ROUND_CLOSED` 優先於題號與內容檢查；`SubmissionRules.order` 對相同 `received_at` 依 `sequence` 排序，輸入順序打亂結果相同（`Scenario: US3-AS5` ↔ OpenSpec「同時間戳」）。**實作註記**：「還沒有任何輪次」與「已截止／已關輪」共用 `ROUND_CLOSED` 的同一句訊息「本輪已結束（或尚未開始），不能再送出。」，兩種語意都涵蓋，測試檢查訊息同時含「本輪已結束」與「尚未開始」
+- [X] T036 [P] [US3] 在 `tests/unit/app/round_submission/test_submit_deadline.py` 以 FakeClock 測試：開輪 60 秒，`deadline - 1ms` 接受、`deadline` 與 `deadline + 1ms` 回 `ROUND_CLOSED` 且不保存（`Scenario: US3-AS1`、`Scenario: US3-AS2` ↔ OpenSpec「截止邊界」；SC-004）；無倒數輪次在老師關輪前一直接受、關輪後 `ROUND_CLOSED`（`Scenario: US3-AS3`）；接收序號跨輪持續遞增、被拒不消耗序號（FR-016）；`received_at` 等於鎖內取得的 `now`
+- [X] T037 [P] [US3] 在 `tests/unit/app/round_submission/test_close_vs_submit.py` 測試關輪與提交以 `asyncio.gather` 同時執行 50 次：每次要嘛提交被保存且關輪後的公開資料包含它，要嘛提交回 `ROUND_CLOSED` 且未保存；不存在「關輪後才保存」的提交（以 store 中每筆的 `received_at < 關輪時間` 且關輪後推送的快照已包含全部保存的提交檢查）（`Scenario: US3-AS6`；FR-019、SC-004）
+- [X] T038 [P] [US3] 在 `tests/contract/test_http_submissions.py` 補：本文多帶 `clientTime`、`receivedAt`、`groupNumber` 欄位時被忽略，`receivedAt` 仍為後端時間、`groupNumber` 仍為 token 所屬組（`Scenario: US3-AS7`）；`STALE_ROUND`、`ROUND_CLOSED` 回 409 且訊息分別含「輪次已更新，請重新整理」「本輪已結束」
 
 ### Implementation for User Story 3
 
-- [ ] T039 [US3] 在 `<core>/rules.py` 完成 `decide` 步驟 1（`STALE_ROUND`）與 2（`ROUND_CLOSED`），以及 `SubmissionRules.order(submissions)`（以 `(received_at, sequence)` 排序）；移除 T025 留下的「一律通過」註解（依賴 T035）
-- [ ] T040 [US3] 確認 `<app>/service.py` 把 `SubmissionWindow.round_number`、`accepting` 正確轉進 `RoundContext`；`SubmissionReader.round_submissions`／`all_submissions` 以 `order` 回傳排序結果（依賴 T036、T037、T039）
-- [ ] T041 [US3] 前端：`submission.js` 對 `STALE_ROUND` 顯示「輪次已更新，請重新整理後再作答」並提供重新整理按鈕，對 `ROUND_CLOSED` 顯示「本輪已結束」並停用全部表單
+- [X] T039 [US3] 在 `<core>/rules.py` 完成 `decide` 步驟 1（`STALE_ROUND`）與 2（`ROUND_CLOSED`），以及 `SubmissionRules.order(submissions)`（以 `(received_at, sequence)` 排序）；移除 T025 留下的「一律通過」註解（依賴 T035）
+- [X] T040 [US3] 確認 `<app>/service.py` 把 `SubmissionWindow.round_number`、`accepting` 正確轉進 `RoundContext`；`SubmissionReader.round_submissions`／`all_submissions` 以 `order` 回傳排序結果（依賴 T036、T037、T039）。**實作註記**：兩個讀取方法在此完成並在 `test_submit_deadline.py` 補測試；T050 只剩擴充函式輸出 `published`
+- [X] T041 [US3] 前端：`submission.js` 對 `STALE_ROUND` 顯示「輪次已更新，請重新整理後再作答」並提供重新整理按鈕，對 `ROUND_CLOSED` 顯示「本輪已結束」並停用全部表單
 
 **Checkpoint**: 截止、關輪、舊輪次與排序都由後端一致判定
 

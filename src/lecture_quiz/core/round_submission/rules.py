@@ -1,5 +1,6 @@
 """提交判定（純函式，003 研究 R10、data-model.md「判定順序」）。"""
 
+from collections.abc import Iterable
 from datetime import datetime
 
 from lecture_quiz.core.round_submission.answer_rules import (
@@ -55,7 +56,7 @@ class SubmissionRules:
     ) -> SubmissionDecision:
         """依固定順序判定一筆提交（研究 R10）。
 
-        順序：輪次（US3）→ 是否接受（US3）→ 題號 → 本組已送出（US2）→ 答案 → 接受。
+        順序：輪次 → 是否接受 → 題號 → 本組已送出 → 答案 → 接受。
 
         Args:
             ledger: 目前的提交紀錄。
@@ -67,7 +68,17 @@ class SubmissionRules:
         Returns:
             判定結果；接受時 `submission.sequence == ledger.next_sequence`。
         """
-        # 步驟 1、2（輪次與是否接受）：US3 完成
+        # 步驟 1：還沒有任何輪次 → 本輪尚未開始；輪次識別不是目前輪次 → 舊頁面
+        if context.round_number is None:
+            return _reject(SubmissionRejection.ROUND_CLOSED)
+        if (
+            not _is_int(attempt.round_number_raw)
+            or attempt.round_number_raw != context.round_number
+        ):
+            return _reject(SubmissionRejection.STALE_ROUND)
+        # 步驟 2：不在搶答中、已截止（now >= deadline）或已關輪（FR-014）
+        if not context.accepting:
+            return _reject(SubmissionRejection.ROUND_CLOSED)
         question = attempt.question_number_raw
         if (
             not _is_int(question)
@@ -76,7 +87,6 @@ class SubmissionRules:
         ):
             return _reject(SubmissionRejection.QUESTION_NOT_OPEN)
         assert isinstance(question, int)
-        assert context.round_number is not None
         # 步驟 4：本組本輪本題已有提交時一律回本組已送出，不看內容（FR-007、FR-009）
         existing = ledger.find(context.round_number, question, context.group_number)
         if existing is not None:
@@ -99,6 +109,18 @@ class SubmissionRules:
             sequence=ledger.next_sequence,
         )
         return SubmissionDecision(DecisionKind.ACCEPTED, submission=submission)
+
+    @staticmethod
+    def order(submissions: Iterable[Submission]) -> tuple[Submission, ...]:
+        """依（接收時間, 接收序號）遞增排序（FR-018）；同一時間以序號定先後。
+
+        Args:
+            submissions: 任意順序的提交。
+
+        Returns:
+            排序後的 tuple。
+        """
+        return tuple(sorted(submissions, key=lambda s: (s.received_at, s.sequence)))
 
     @staticmethod
     def describe(decision: SubmissionDecision, attempt: SubmissionAttempt) -> str:

@@ -124,3 +124,42 @@ def test_not_in_group_and_gone(client, opened, manual_scheduler, fake_clock):
     assert response.status_code == 410
     assert response.json()["error"]["code"] == "ACTIVITY_GONE"
     _assert_safe(response, devices[1])
+
+
+def test_client_fields_are_ignored(client, opened):
+    """Scenario: US3-AS7（前端帶的時間與組號被忽略，以後端為準）。"""
+    teacher, devices = opened
+    response = submit(
+        client,
+        teacher.code,
+        devices[1],
+        1,
+        3,
+        ["丙"],
+        clientTime="1999-01-01T00:00:00Z",
+        receivedAt="1999-01-01T00:00:00Z",
+        groupNumber=2,
+    )
+    assert response.status_code == 201, response.text
+    sub = response.json()["submission"]
+    assert sub["receivedAt"].startswith("2026-11-21T09:00:00")
+    assert sub["groupNumber"] == 1
+
+
+def test_stale_round_and_closed_are_409(client, opened):
+    """Scenario: US3-AS4、US3-AS3（舊輪次與已關輪回 409，訊息可理解）。"""
+    teacher, devices = opened
+    stale = submit(client, teacher.code, devices[1], 7, 3, ["丙"])
+    assert stale.status_code == 409
+    assert stale.json()["error"]["code"] == "STALE_ROUND"
+    assert "輪次已更新，請重新整理" in stale.json()["error"]["message"]
+    client.post(
+        f"/api/activities/{teacher.code}/rounds/current/close",
+        json={},
+        headers=teacher.headers,
+    )
+    closed = submit(client, teacher.code, devices[1], 1, 3, ["丙"])
+    assert closed.status_code == 409
+    assert closed.json()["error"]["code"] == "ROUND_CLOSED"
+    assert "本輪已結束" in closed.json()["error"]["message"]
+    _assert_safe(closed, devices[1], teacher.token)

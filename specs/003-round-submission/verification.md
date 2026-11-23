@@ -56,3 +56,18 @@
 | `ruff check .`、`ruff format --check .` | All checks passed!；152 files already formatted |
 | `mypy` | Success: no issues found in 35 source files |
 | `pytest` | **480 passed**, 1 deselected（新增 15 個；001 既有測試未修改） |
+
+## US3（T035～T041）
+
+- 日期：2026-11-23；環境同上。
+- **先寫測試並確認失敗**：T035～T038 先寫；執行這 4 個檔結果 13 failed、16 passed。通過的 16 個包含 US1 的契約測試，以及截止邊界兩個測試：截止當下、截止後 1 毫秒拒絕；截止前 1 毫秒接受。截止邊界早就通過，因為 001 的 `RecordSubmission` 已在鎖內檢查 `now < deadline`，加上步驟 2 後改由 003 判定先擋下。
+- **讀取介面**：`round_submissions`、`all_submissions`（給 004、005）在 T040 完成，補測試時先確認失敗（1 failed）。
+- **關輪與提交競爭**：隨機先後重複 50 次，兩種結果都有出現；接受時關輪推送當下已包含該提交，被拒時未保存。
+- **訊息**：沒有任何輪次時與已截止共用「本輪已結束（或尚未開始），不能再送出。」（tasks.md T035 已註記）。
+- **前端**：`STALE_ROUND` 顯示訊息與「重新整理」按鈕；`ROUND_CLOSED` 停用其餘未送出的表單。`node --check` 通過，尚未在瀏覽器手動操作。
+
+| 指令 | 結果 |
+|---|---|
+| `ruff check .`、`ruff format --check .` | All checks passed!；155 files already formatted |
+| `mypy` | Success: no issues found in 35 source files |
+| `pytest` | **498 passed**, 1 deselected（新增 18 個；001 既有測試未修改） |

@@ -25,6 +25,7 @@ from lecture_quiz.core.activity.results import RejectionReason
 from lecture_quiz.core.round_submission.models import (
     DecisionKind,
     RoundContext,
+    Submission,
     SubmissionAttempt,
     SubmissionDecision,
     SubmissionLedger,
@@ -88,7 +89,7 @@ class _SubmitHandler:
 
 
 class SubmissionService:
-    """003 的應用服務；建立時向 001 註冊快照擴充。"""
+    """003 的應用服務（實作 `SubmissionReader`）；建立時向 001 註冊快照擴充。"""
 
     def __init__(
         self,
@@ -135,6 +136,31 @@ class SubmissionService:
             )
         self._log(code, attempt, decision)
         return Outcome(ok=True, value=decision)
+
+    def round_submissions(self, code: str, round_number: int) -> tuple[Submission, ...]:
+        """某一輪的全部有效提交，依（接收時間, 接收序號）排序（給 004、005）。
+
+        Args:
+            code: 活動代碼。
+            round_number: 輪次編號。
+
+        Returns:
+            排序後的提交；活動不存在或沒有提交時為空 tuple。
+        """
+        ledger = self._store.get(normalize_code_input(code))
+        return SubmissionRules.order(ledger.for_round(round_number))
+
+    def all_submissions(self, code: str) -> tuple[Submission, ...]:
+        """全部輪次的有效提交，依（接收時間, 接收序號）排序（給 004、005）。
+
+        Args:
+            code: 活動代碼。
+
+        Returns:
+            排序後的提交。
+        """
+        ledger = self._store.get(normalize_code_input(code))
+        return SubmissionRules.order(ledger.submissions)
 
     @staticmethod
     def _log(

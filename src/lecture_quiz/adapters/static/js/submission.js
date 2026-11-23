@@ -82,9 +82,15 @@ export function renderAnswerForm({ questionNumber, blanks, onSubmit }) {
       button.disabled = disabled;
       for (const input of inputs) input.disabled = disabled;
     },
-    showError(message) {
+    showError(message, action = null) {
       status.textContent = message;
       status.className = "submit-status error-message";
+      if (action) {
+        const button = el("button", action.label, "secondary");
+        button.type = "button";
+        button.addEventListener("click", action.onClick);
+        status.append(" ", button);
+      }
     },
     showSubmitted(submission, message = "已送出") {
       lock();
