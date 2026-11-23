@@ -27,6 +27,7 @@ from lecture_quiz.core.activity.commands import (
     MarkGroupSubmitted,
     OpenJoining,
     OpenRound,
+    RecordSubmission,
     ReplaceQuestions,
     System,
     Teacher,
@@ -61,6 +62,7 @@ _ALLOWED_STAGES: dict[type, frozenset[Stage]] = {
     LeaveGroup: frozenset({Stage.JOINING, Stage.RESULT_PENDING, Stage.RESULT_FINAL}),
     DeleteGroup: frozenset({Stage.JOINING, Stage.RESULT_PENDING, Stage.RESULT_FINAL}),
     MarkGroupSubmitted: frozenset({Stage.ROUND_OPEN}),
+    RecordSubmission: frozenset({Stage.ROUND_OPEN}),
     OpenRound: frozenset({Stage.JOINING, Stage.RESULT_FINAL}),
     CloseRound: frozenset({Stage.ROUND_OPEN}),
     Finalize: frozenset({Stage.RESULT_PENDING}),
@@ -343,6 +345,26 @@ def _mark_group_submitted(
     return _changed(dataclasses.replace(activity, groups=freeze(groups)))
 
 
+def _record_submission(
+    activity: Activity, command: Command, now: datetime, issued: IssuedSecrets | None
+) -> Transition:
+    """記錄一組的有效提交（給 003，003 研究 R2）。
+
+    截止判定與 `accepts_submission` 相同（`now < deadline`）；成功時一律回報變更，
+    讓 `revision` 加 1。公開狀態不變，所以 `version` 不變（FR-027、FR-030）。
+    """
+    assert isinstance(command, RecordSubmission)
+    current = activity.current_round
+    if current is None or ActivityStateMachine.is_deadline_passed(current, now):
+        return _reject(activity, RejectionReason.STAGE_NOT_ALLOWED)
+    group = activity.groups.get(command.group_number)
+    if group is None:
+        return _reject(activity, RejectionReason.GROUP_NOT_FOUND)
+    groups = dict(activity.groups)
+    groups[group.number] = dataclasses.replace(group, has_submissions=True)
+    return _changed(dataclasses.replace(activity, groups=freeze(groups)))
+
+
 def _open_round(
     activity: Activity, command: Command, now: datetime, issued: IssuedSecrets | None
 ) -> Transition:
@@ -455,6 +477,7 @@ _HANDLERS: dict[type, Handler] = {
     LeaveGroup: _leave_group,
     DeleteGroup: _delete_group,
     MarkGroupSubmitted: _mark_group_submitted,
+    RecordSubmission: _record_submission,
     OpenRound: _open_round,
     ReplaceQuestions: _replace_questions,
     CloseRound: _close_round,

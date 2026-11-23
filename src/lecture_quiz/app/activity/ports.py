@@ -3,9 +3,11 @@
 - 服務層依賴的外部能力：`Clock`、`CountdownScheduler`、`SyncPublisher`（由外層實作）。
 - 提供給 002 的 `ActivityGateway`；`ActivityService` 以結構型別實作它。
 - 共通型別：`Requester`、`Outcome[T]`。
+- 給 003 的擴充點（003 研究 R2、R4）：`SubmissionWindow`、`HandlerStep`、
+  `SubmissionHandler`、`SnapshotExtension` 與 `TeacherViewer`／`GroupViewer`。
 """
 
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Generic, Literal, Protocol, TypeVar
@@ -146,5 +148,122 @@ class ActivityGateway(Protocol):
 
         Returns:
             成功時 `value` 為新版本號；被拒時既有題目完全不變。
+        """
+        ...
+
+
+@dataclass(frozen=True)
+class SubmissionWindow:
+    """`record_submission` 在活動鎖內組成、交給 003 判定的本輪資訊。
+
+    Attributes:
+        group_number: 依裝置 token 判定的組號（FR-012）。
+        stage: 目前階段。
+        round_number: 目前輪次編號；還沒有輪次時為 `None`。
+        open_questions: 本輪開放題；不在搶答中時為空。
+        deadline: 本輪截止時間；不在搶答中或沒有倒數時為 `None`。
+        accepting: 搶答中，且沒有截止時間或 `now < deadline`。
+    """
+
+    group_number: int
+    stage: Stage
+    round_number: int | None
+    open_questions: tuple[int, ...]
+    deadline: datetime | None
+    accepting: bool
+
+
+@dataclass(frozen=True)
+class HandlerStep(Generic[T]):
+    """003 判定的結果：`accept` 要標記並保存；`no_change` 不保存也不推送。
+
+    003 自己的拒絕也以 `no_change` 回傳，拒絕原因放在 `value` 裡，不經過 001 的
+    `RejectionReason`。
+
+    Attributes:
+        kind: `accept` 或 `no_change`。
+        value: 交回給呼叫端的值。
+    """
+
+    kind: Literal["accept", "no_change"]
+    value: T
+
+    @staticmethod
+    def accept(value: T) -> "HandlerStep[T]":
+        """要標記組別並保存的結果。
+
+        Args:
+            value: 交回給呼叫端的值。
+
+        Returns:
+            `kind == "accept"` 的結果。
+        """
+        return HandlerStep("accept", value)
+
+    @staticmethod
+    def no_change(value: T) -> "HandlerStep[T]":
+        """不保存、不推送的結果（本組已送出或 003 的拒絕）。
+
+        Args:
+            value: 交回給呼叫端的值。
+
+        Returns:
+            `kind == "no_change"` 的結果。
+        """
+        return HandlerStep("no_change", value)
+
+
+class SubmissionHandler(Protocol[T]):
+    """003 交給 `record_submission` 的處理器；兩個方法都在活動鎖內被呼叫。"""
+
+    def decide(self, window: SubmissionWindow, now: datetime) -> HandlerStep[T]:
+        """判定這次提交；不得有副作用。
+
+        Args:
+            window: 本輪資訊。
+            now: 鎖內取得的接收時間。
+
+        Returns:
+            判定結果。
+        """
+        ...
+
+    def commit(self) -> None:
+        """`RecordSubmission` 成功後保存提交（仍在鎖內）。"""
+        ...
+
+
+@dataclass(frozen=True)
+class TeacherViewer:
+    """以老師身分檢視快照。"""
+
+
+@dataclass(frozen=True)
+class GroupViewer:
+    """以某一組的裝置身分檢視快照。
+
+    Attributes:
+        group_number: 組號。
+    """
+
+    group_number: int
+
+
+Viewer = TeacherViewer | GroupViewer
+"""快照的檢視者。"""
+
+
+class SnapshotExtension(Protocol):
+    """快照擴充：回傳要併入快照 `extra` 的欄位，可覆寫 001 的欄位。"""
+
+    def __call__(self, activity: Activity, viewer: Viewer) -> Mapping[str, object]:
+        """產生擴充欄位。
+
+        Args:
+            activity: 活動。
+            viewer: 檢視者。
+
+        Returns:
+            要併入的欄位（已是 JSON 格式）。
         """
         ...
