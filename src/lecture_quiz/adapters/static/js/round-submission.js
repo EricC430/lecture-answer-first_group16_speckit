@@ -1,5 +1,6 @@
-// 003 學生頁：本輪開放題的作答表單與送出（US1）。
+// 003 學生頁：本輪開放題的作答表單與送出（US1、US2）。
 // 依快照的 openQuestions 與 questionShapes（每題格數）畫出表單；只有收到成功回應才顯示「已送出」（FR-032）。
+// 快照的 submissions.current.own 有本組已送出的題目時（例如同組另一台裝置送的），該題改為唯讀並顯示答案（US2）。
 
 import { apiRequest } from "./api.js";
 import { currentIdentity, onStudentSnapshot } from "./student.js";
@@ -54,6 +55,16 @@ function render(snapshot) {
     });
     forms.set(key, form);
     list.append(form.element);
+  }
+  markOwnSubmissions(snapshot);
+}
+
+function markOwnSubmissions(snapshot) {
+  const current = snapshot.submissions?.current;
+  if (!current || current.roundNumber !== snapshot.roundNumber) return;
+  for (const submission of current.own ?? []) {
+    const form = forms.get(`${current.roundNumber}:${submission.questionNumber}`);
+    if (form && !form.submitted) form.showSubmitted(submission, "本組已送出");
   }
 }
 

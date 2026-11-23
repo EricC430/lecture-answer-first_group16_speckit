@@ -102,15 +102,15 @@ description: "003-round-submission 任務清單"
 
 ### Tests for User Story 2（先寫、確認失敗）⚠️
 
-- [ ] T029 [P] [US2] 在 `tests/unit/core/round_submission/test_decide_us2.py` 測試：本組本輪本題已有提交時，不論內容是否有效都回 `ALREADY_SUBMITTED` 並附既有提交、ledger 不變（`Scenario: US2-AS4`）；先無效被拒、再有效 → `ACCEPTED`（`Scenario: US2-AS5`）；第 1 輪已提交題 1、第 2 輪題 1 再開 → `ACCEPTED`，第 1 輪紀錄不變（`Scenario: US2-AS3` ↔ OpenSpec「下一輪重新作答」）；他組同題不受影響
-- [ ] T030 [P] [US2] 在 `tests/unit/app/round_submission/test_submit_concurrency.py` 測試：同組兩台裝置以 `asyncio.gather` 同時送同題不同答案，重複 50 次（每次新活動），每次 store 只有 1 筆、另一個結果為 `ALREADY_SUBMITTED` 且附的答案等於被保存的那筆（`Scenario: US2-AS1` ↔ OpenSpec「同組兩裝置競爭」；SC-002）；接受後以相同與不同內容各重送 10 次，筆數維持 1、回傳的 `received_at` 與 `sequence` 與原提交相同（`Scenario: US2-AS2` ↔ OpenSpec「回應遺失後重送」；SC-003）
-- [ ] T031 [P] [US2] 在 `tests/integration/test_us2_submission_once.py` 測試：HTTP 重送回 `200 {"result": "alreadySubmitted", "submission": 原提交}`；同組另一台裝置的 WebSocket 收到含該答案的快照（`Scenario: US2-AS1`）；第 1 輪提交後關輪、定案、該學生離開本組並加入另一組 → 第 1 輪公開資料中該提交仍屬原組（`Scenario: US2-AS6`）；老師刪除有提交的組 → `409 GROUP_HAS_SUBMISSIONS`，搶答中刪除任何組 → `409`（001 拒絕），提交紀錄不變（`Scenario: US2-AS7`）
+- [X] T029 [P] [US2] 在 `tests/unit/core/round_submission/test_decide_us2.py` 測試：本組本輪本題已有提交時，不論內容是否有效都回 `ALREADY_SUBMITTED` 並附既有提交、ledger 不變（`Scenario: US2-AS4`）；先無效被拒、再有效 → `ACCEPTED`（`Scenario: US2-AS5`）；第 1 輪已提交題 1、第 2 輪題 1 再開 → `ACCEPTED`，第 1 輪紀錄不變（`Scenario: US2-AS3` ↔ OpenSpec「下一輪重新作答」）；他組同題不受影響
+- [X] T030 [P] [US2] 在 `tests/unit/app/round_submission/test_submit_concurrency.py` 測試：同組兩台裝置以 `asyncio.gather` 同時送同題不同答案，重複 50 次（每次新活動），每次 store 只有 1 筆、另一個結果為 `ALREADY_SUBMITTED` 且附的答案等於被保存的那筆（`Scenario: US2-AS1` ↔ OpenSpec「同組兩裝置競爭」；SC-002）；接受後以相同與不同內容各重送 10 次，筆數維持 1、回傳的 `received_at` 與 `sequence` 與原提交相同（`Scenario: US2-AS2` ↔ OpenSpec「回應遺失後重送」；SC-003）
+- [X] T031 [P] [US2] 在 `tests/integration/test_us2_submission_once.py` 測試：HTTP 重送回 `200 {"result": "alreadySubmitted", "submission": 原提交}`；同組另一台裝置的 WebSocket 收到含該答案的快照（`Scenario: US2-AS1`）；第 1 輪提交後關輪、定案、該學生離開本組並加入另一組 → 第 1 輪公開資料中該提交仍屬原組（`Scenario: US2-AS6`）；老師刪除有提交的組 → `409 GROUP_HAS_SUBMISSIONS`，搶答中刪除任何組 → `409`（001 拒絕），提交紀錄不變（`Scenario: US2-AS7`）。**實作調整**：「同組另一台 WebSocket 收到答案」需要 US4 的快照提交資料，移到 T043（`Scenario: US4-AS6` 同一檢查）；「離組後仍屬原組」需要 US5 的公開資料，移到 T048 一併測
 
 ### Implementation for User Story 2
 
-- [ ] T032 [US2] 在 `<core>/rules.py` 完成 `decide` 步驟 4：`ledger.find(round, question, group)` 存在時回 `ALREADY_SUBMITTED`（位置在題號檢查之後、內容檢查之前，研究 R10）（依賴 T029）
-- [ ] T033 [US2] 在 `<app>/service.py` 的 handler 對 `ALREADY_SUBMITTED` 回 `HandlerStep.no_change(decision)`；`<web>/submission_api.py` 對它回 `200 {"result": "alreadySubmitted", ...}`；日誌 `result=alreadySubmitted`（依賴 T030、T031、T032）
-- [ ] T034 [US2] 前端：`<static>/js/submission.js` 對 `alreadySubmitted` 顯示「本組已送出」與既有答案（`textContent`），該題表單改為唯讀；`student.js` 收到快照中本組已送出的題目時同樣改為唯讀並顯示答案
+- [X] T032 [US2] 在 `<core>/rules.py` 完成 `decide` 步驟 4：`ledger.find(round, question, group)` 存在時回 `ALREADY_SUBMITTED`（位置在題號檢查之後、內容檢查之前，研究 R10）（依賴 T029）
+- [X] T033 [US2] 在 `<app>/service.py` 的 handler 對 `ALREADY_SUBMITTED` 回 `HandlerStep.no_change(decision)`；`<web>/submission_api.py` 對它回 `200 {"result": "alreadySubmitted", ...}`；日誌 `result=alreadySubmitted`（依賴 T030、T031、T032）
+- [X] T034 [US2] 前端：`<static>/js/submission.js` 對 `alreadySubmitted` 顯示「本組已送出」與既有答案（`textContent`），該題表單改為唯讀；`student.js` 收到快照中本組已送出的題目時同樣改為唯讀並顯示答案。**實作調整**：依 US1 的模組約定寫在 `js/round-submission.js`，讀 `submissions.current.own`（US4 提供後生效）
 
 **Checkpoint**: 每組每題每輪只有一筆
 
@@ -148,7 +148,7 @@ description: "003-round-submission 任務清單"
 ### Tests for User Story 4（先寫、確認失敗）⚠️
 
 - [ ] T042 [P] [US4] 在 `tests/unit/core/round_submission/test_view_open_round.py` 測試 `SubmissionView`：本輪開放中 `for_group(ledger, activity, 1)` 的 `submissions.current` 只有 `own`（甲組的題號、答案、接收時間），整份序列化結果中找不到乙組組號、答案、時間、提交數或 `order`（`Scenario: US4-AS1` ↔ OpenSpec「檢查學生資料回應」、`Scenario: US4-AS3`）；`questionShapes` 只含本輪開放題；`for_teacher` 每題列出全部已送組、依排序鍵給 `order`（1 起算），沒有任何 `rank`／暫定勝者欄位（`Scenario: US4-AS5`；`TEACHER_SEES_PROVISIONAL_RANKING_DURING_ROUND = False`）；可見性常數 `TEACHER_SEES_PROVISIONAL_RANKING_DURING_ROUND = False`、`STUDENT_SEES_OWN_SUCCESS_DURING_ROUND = True`、`STUDENT_SEES_JUDGED_WRONG = True` 集中在 `<core>/view.py` 頂端
-- [ ] T043 [P] [US4] 在 `tests/integration/test_submission_visibility.py` 測試：搶答中乙組提交後，甲組 WebSocket 在 1 秒內沒有收到任何訊息（ping 除外），甲組 `GET /snapshot` 的 `version` 與 `changedAt` 不變、內容找不到乙組資料（`Scenario: US4-AS2` ↔ OpenSpec「檢查學生資料回應」；FR-022、SC-005，仿 `tests/integration/test_fr030_student_push.py`）；甲組快照 `ownGroup.successCount` 照 001 可見（Q-22）；不存在可依組號查詢提交的端點（`GET /api/activities/{code}/submissions`、`GET .../groups/2/submissions` 回 404 或 405）；老師 WebSocket 在提交後收到含該組答案與 `order` 的快照（`Scenario: US4-AS4` ↔ OpenSpec「老師即時看板」）；甲組裝置 A 提交後裝置 B 收到含本組答案的快照（`Scenario: US4-AS6`）
+- [ ] T043 [P] [US4] 在 `tests/integration/test_submission_visibility.py` 測試：搶答中乙組提交後，甲組 WebSocket 在 1 秒內沒有收到任何訊息（ping 除外），甲組 `GET /snapshot` 的 `version` 與 `changedAt` 不變、內容找不到乙組資料（`Scenario: US4-AS2` ↔ OpenSpec「檢查學生資料回應」；FR-022、SC-005，仿 `tests/integration/test_fr030_student_push.py`）；甲組快照 `ownGroup.successCount` 照 001 可見（Q-22）；不存在可依組號查詢提交的端點（`GET /api/activities/{code}/submissions`、`GET .../groups/2/submissions` 回 404 或 405）；老師 WebSocket 在提交後收到含該組答案與 `order` 的快照（`Scenario: US4-AS4` ↔ OpenSpec「老師即時看板」）；甲組裝置 A 提交後裝置 B 收到含本組答案的快照（`Scenario: US4-AS6`、`Scenario: US2-AS1` 推送部分，由 T031 移入）
 
 ### Implementation for User Story 4
 
@@ -169,7 +169,7 @@ description: "003-round-submission 任務清單"
 ### Tests for User Story 5（先寫、確認失敗）⚠️
 
 - [ ] T047 [P] [US5] 在 `tests/unit/core/round_submission/test_view_published.py` 測試：關輪（`RESULT_PENDING`）後 `for_group` 的 `published` 包含本輪全部組的提交、答案、`order`（`Scenario: US5-AS1` ↔ OpenSpec「結果公布與後續輪次」）；無人提交的題 `noSubmission: true`（`Scenario: US5-AS2`）；每筆有 `judgedWrong: false`，且 `STUDENT_SEES_JUDGED_WRONG` 為真時學生版也有此欄位（`Scenario: US5-AS5`；Q-26）；第 2 輪開放中，甲組的 `published` 有第 1 輪全部資料、`current` 只有甲組自己的第 2 輪提交（`Scenario: US5-AS3`）
-- [ ] T048 [P] [US5] 在 `tests/integration/test_us5_published.py` 測試：關輪後所有學生 WebSocket 收到 `version + 1` 的快照且含公開提交（`Scenario: US5-AS1`）；第 2 輪中乙組提交時甲組收不到訊息、甲組快照仍有第 1 輪公開資料（`Scenario: US5-AS3`）；關輪後的快照 `version` 嚴格大於搶答中的快照，前端 `sync.js` 依 001 規則丟棄較舊版本（`Scenario: US5-AS4` ↔ OpenSpec「延遲回應」；版本遞增在此驗證，前端丟棄行為沿用 001 測試與 quickstart 第 12 步）；`SubmissionReader.round_submissions` 與 `all_submissions` 回傳排序後的不可變 tuple（FR-036）
+- [ ] T048 [P] [US5] 在 `tests/integration/test_us5_published.py` 測試：關輪後所有學生 WebSocket 收到 `version + 1` 的快照且含公開提交（`Scenario: US5-AS1`）；第 2 輪中乙組提交時甲組收不到訊息、甲組快照仍有第 1 輪公開資料（`Scenario: US5-AS3`）；關輪後的快照 `version` 嚴格大於搶答中的快照，前端 `sync.js` 依 001 規則丟棄較舊版本（`Scenario: US5-AS4` ↔ OpenSpec「延遲回應」；版本遞增在此驗證，前端丟棄行為沿用 001 測試與 quickstart 第 12 步）；`SubmissionReader.round_submissions` 與 `all_submissions` 回傳排序後的不可變 tuple（FR-036）；第 1 輪提交後關輪、定案、該學生離開本組並加入另一組 → 第 1 輪公開資料中該提交仍屬原組（`Scenario: US2-AS6`，由 T031 移入）
 
 ### Implementation for User Story 5
 

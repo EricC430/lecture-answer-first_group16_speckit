@@ -42,3 +42,17 @@
 | `ruff check .` | All checks passed! |
 | `mypy` | Success: no issues found in 35 source files |
 | `pytest` | **465 passed**, 1 deselected（新增 44 個；001 既有測試未修改） |
+
+## US2（T029～T034）
+
+- 日期：2026-11-23；環境同上。
+- **先寫測試並確認失敗**：T029～T031 先寫；執行這 3 個檔結果 10 failed、5 passed。通過的 5 個不依賴 US2 程式：題號檢查優先、先無效再有效、下一輪重新作答、他組不受影響、刪組規則（001 既有行為）。
+- **範圍調整**：T031 的「同組另一台 WebSocket 收到答案」（US2-AS1 推送部分）與「離組後提交仍屬原組」（US2-AS6）需要快照中的提交資料，分別移到 US4 的 T043 與 US5 的 T048；tasks.md 已註記。
+- **競爭測試**：同組兩台裝置以 `asyncio.gather` 同時送同題，重複 50 次，每次都只保存 1 筆、只推送 1 次，另一方回本組已送出且附同一筆提交。
+- **前端**：`js/round-submission.js` 依快照 `submissions.current.own` 把本組已送出的題目改為唯讀（US4 提供資料後生效）；`node --check` 通過，尚未在瀏覽器手動操作。
+
+| 指令 | 結果 |
+|---|---|
+| `ruff check .`、`ruff format --check .` | All checks passed!；152 files already formatted |
+| `mypy` | Success: no issues found in 35 source files |
+| `pytest` | **480 passed**, 1 deselected（新增 15 個；001 既有測試未修改） |

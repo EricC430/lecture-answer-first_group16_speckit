@@ -76,14 +76,19 @@ class SubmissionRules:
         ):
             return _reject(SubmissionRejection.QUESTION_NOT_OPEN)
         assert isinstance(question, int)
-        # 步驟 4（本組已送出）：US2 完成
+        assert context.round_number is not None
+        # 步驟 4：本組本輪本題已有提交時一律回本組已送出，不看內容（FR-007、FR-009）
+        existing = ledger.find(context.round_number, question, context.group_number)
+        if existing is not None:
+            return SubmissionDecision(
+                DecisionKind.ALREADY_SUBMITTED, submission=existing
+            )
         try:
             answers = AnswerRules.check(
                 attempt.answers_raw, context.blanks_per_question[question]
             )
         except InvalidAnswerError as error:
             return _reject(error.rejection, error.blank_numbers, error.expected_blanks)
-        assert context.round_number is not None
         submission = Submission(
             activity_code=code,
             round_number=context.round_number,
