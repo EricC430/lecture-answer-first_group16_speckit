@@ -116,10 +116,14 @@ onStudentSnapshot(renderLeave);
 async function leaveGroup() {
   const { code, token } = currentIdentity();
   if (!code || !token) return;
+  const button = $("leave-group");
+  if (button.disabled) return;
+  button.disabled = true; // 送出期間停用，避免連按（PR #15 第二次審查問題 3）
   const result = await apiRequest("POST", `/api/activities/${encodeURIComponent(code)}/groups/leave`, {
     token,
     body: {},
   });
+  button.disabled = false;
   // 成功時伺服端會送出 unauthorized（LEFT_GROUP），由同步處理回到加入畫面並顯示提示；
   // 推送可能比 HTTP 回應先到，所以成功時不要清掉那則提示
   if (!result.ok) showError($("student-error"), result.error);

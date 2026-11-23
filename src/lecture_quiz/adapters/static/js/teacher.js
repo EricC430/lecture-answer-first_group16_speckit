@@ -33,13 +33,30 @@ export function onTeacherSnapshot(render) {
 }
 
 /** 以目前老師身分呼叫 API；失敗時在活動區塊顯示錯誤。 */
+let actionInFlight = false;
+
+/**
+ * 以目前老師身分呼叫 API；失敗時在活動區塊顯示錯誤。
+ * 送出期間停用活動區塊的所有按鈕並忽略新的操作，避免連按時第二次請求回 409、
+ * 把成功後的畫面蓋成錯誤（PR #15 第二次審查問題 3）。
+ */
 export async function teacherAction(method, path, body) {
-  const result = await apiRequest(method, `/api/activities/${encodeURIComponent(state.code)}${path}`, {
-    token: state.token,
-    body,
-  });
-  showError($("activity-error"), result.ok ? null : result.error);
-  return result;
+  if (actionInFlight) return { ok: false, skipped: true };
+  actionInFlight = true;
+  const disabled = [...$("activity-section").querySelectorAll("button:not(:disabled)")];
+  for (const button of disabled) button.disabled = true;
+  try {
+    const result = await apiRequest(
+      method,
+      `/api/activities/${encodeURIComponent(state.code)}${path}`,
+      { token: state.token, body },
+    );
+    showError($("activity-error"), result.ok ? null : result.error);
+    return result;
+  } finally {
+    for (const button of disabled) button.disabled = false;
+    actionInFlight = false;
+  }
 }
 
 function render(snapshot) {
