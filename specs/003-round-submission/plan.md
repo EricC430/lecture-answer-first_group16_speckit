@@ -54,13 +54,13 @@
 | II 圖表生成（NON-NEGOTIABLE） | 三張圖已在 specify 產出；plan 調整鎖內流程與快照擴充後同步更新並重新轉出 PNG；implement 後要做「程式碼 ↔ 圖」一致性檢查（tasks 列為必做） | ✅ |
 | III Guided Notes 動態定位 | 子空格數只從 `QuestionShapeSource`（002 的成功匯入結果）取得，核心不出現任何固定格數或題數；測試用兩份版面的格數配置（A：4 題 [2,2,1,1]；B：5 題 [1,3,1,2,1]），002 合併後以兩份真實學習單匯入再提交 | ✅ |
 | IV 後端為唯一事實來源 | 組別由 001 依裝置 token 判定；接收時間由後端 `Clock` 在鎖內取得一次，同時用於截止判定與記錄；接收序號在活動內嚴格遞增；同一組同題重送只會得到既有提交；排序規則（時間, 序號）確定性 | ✅ |
-| V 資料可見性與安全 | 學生版擴充只含本組資料，搶答中不含成功次數與排名（Q-22）；他組提交不改學生快照內容，hub 不推送（FR-030）；沒有「以組號查詢提交」的端點；前端一律 `textContent`；驗證失敗不保存、不推送、不改版本；錯誤訊息不含 token、路徑、堆疊；日誌只記代碼、輪次、題號、組號、結果 | ✅ |
+| V 資料可見性與安全 | 學生版擴充只含本組資料，搶答中不含排名與他組成功次數（Q-22；本組成功次數沿用 001 可見）；他組提交不改學生快照內容，hub 不推送（FR-030）；沒有「以組號查詢提交」的端點；前端一律 `textContent`；驗證失敗不保存、不推送、不改版本；錯誤訊息不含 token、路徑、堆疊；日誌只記代碼、輪次、題號、組號、結果 | ✅ |
 | VI 驗收情境驅動測試 | 每個 Acceptance Scenario 與 OpenSpec Scenario 都有測試並在 `tests/SCENARIO_MAP.md` 對照；003 不呼叫 Google；真實路徑驗證＝002 合併後用兩份真實學習單匯入→提交→關輪；非實作者（EricC430）依 quickstart 人工驗證 | ✅ |
 | VII 簡單與本機運作 | 不新增套件、不新增資料庫；對 001 的修改限於兩個小擴充點（`record_submission`、快照擴充），見 Complexity Tracking | ✅（附理由） |
 | 技術限制：架構（NON-NEGOTIABLE） | `core/round_submission/` 只匯入標準函式庫與 `core/` 內模組；`tests/architecture/test_core_is_pure.py` 已涵蓋整個 `core/` | ✅ |
 | 技術限制：日誌、風格 | `logging` INFO；Google docstring、型別提示；ruff、ruff format、mypy 全過才提交 | ✅ |
 
-**Post-design 重新檢查（Phase 1 後）**：data-model、contracts 與 quickstart 都沒有引入新的違反項目；兩個 001 擴充點都不改 001 既有行為（`mark_group_submitted` 保留，既有測試不需改）。唯一需要決定的是研究 R9（Q-22 與 001 學生快照的成功次數），預設依 003 spec 在搶答中隱藏，屬於 001 學生快照的小改動，需同步 001 spec 一句話。
+**Post-design 重新檢查（Phase 1 後）**：data-model、contracts 與 quickstart 都沒有引入新的違反項目；兩個 001 擴充點都不改 001 既有行為（`mark_group_submitted` 保留，既有測試不需改）。研究 R9（Q-22 與 001 學生快照的成功次數）已由 jacky0407 決定沿用 001（本組成功次數可見），001 學生快照不需修改。
 
 ## Project Structure
 
@@ -122,7 +122,7 @@ tests/
 └── perf/test_submission_latency.py
 ```
 
-**Structure Decision**：沿用 001 的三層 src layout；003 新增 `core/round_submission/`、`app/round_submission/`、`adapters/web/submission_api.py`，在 `main.py` 的「子功能 router」區塊加一行掛載。對 001 只做研究 R2、R4、R9 所列的擴充。
+**Structure Decision**：沿用 001 的三層 src layout；003 新增 `core/round_submission/`、`app/round_submission/`、`adapters/web/submission_api.py`，在 `main.py` 的「子功能 router」區塊加一行掛載。對 001 只做研究 R2、R4 所列的擴充。
 
 ## Complexity Tracking
 

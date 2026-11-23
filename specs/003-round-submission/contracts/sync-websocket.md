@@ -58,7 +58,7 @@
 
 - `current.open` 為真時（本輪開放中），`current` 只有 `own`（本組），**沒有**他組的答案、狀態、時間、數量或先後（FR-021）。
 - `questionShapes` 只有本輪開放題。
-- 搶答中 `ownGroup.successCount` 為 `null`（Q-22，研究 R9）；其他階段照 001。
+- `ownGroup.successCount` 照 001，搶答中也可見（Q-22，研究 R9）；學生快照沒有任何排名或他組成功次數。
 - 關輪後本輪移到 `published`，所有組可見；`judgedWrong` 由 004 提供（Q-26：學生可見）。
 
 ## 前端排序

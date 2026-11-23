@@ -47,7 +47,7 @@
 | 常數 | 預設 | 來源 |
 |---|---|---|
 | `TEACHER_SEES_PROVISIONAL_RANKING_DURING_ROUND` | `False` | Q-21 提議 |
-| `STUDENT_SEES_OWN_SUCCESS_DURING_ROUND` | `False` | Q-22 提議（研究 R9） |
+| `STUDENT_SEES_OWN_SUCCESS_DURING_ROUND` | `True` | Q-22 提議（研究 R9：沿用 001，本組成功次數可見；改為 `False` 時由 003 擴充把 `ownGroup.successCount` 設為 `null`） |
 | `STUDENT_SEES_JUDGED_WRONG` | `True` | Q-26 提議 |
 
 | 檢視 | 本輪開放中 | 已公開輪次（研究 R11） |

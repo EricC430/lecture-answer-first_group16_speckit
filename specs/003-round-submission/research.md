@@ -71,9 +71,10 @@ Technical Context 沒有 NEEDS CLARIFICATION；以下是設計決策。每項格
 
 ## R9 Q-22 與 001 學生快照的成功次數
 
-- **現況**：001 學生快照的 `ownGroup.successCount` 一直顯示本組成功次數；003 spec FR-021（Q-22 提議）要求搶答中學生**看不到**本組成功次數。
-- **決策（預設，待 jacky0407 確認）**：依 003 spec，在 `ROUND_OPEN` 時學生快照的 `ownGroup.successCount` 為 `null`，其他階段照舊；以 `view.py` 中的可見性常數 `STUDENT_SEES_OWN_SUCCESS_DURING_ROUND = False` 控制，由 003 的快照擴充覆寫 `ownGroup`（擴充函式可覆寫 001 欄位，覆寫規則寫在 001 擴充契約）。同步在 001 spec 對應段落補一句。
-- **替代方案**：修改 Q-22 提議，改成「本組成功次數可見」（不需改 001，若 jacky0407 偏好就改 spec 與 alignment 那一列）。
+- **現況**：001 學生快照的 `ownGroup.successCount` 一直顯示本組成功次數；003 原本的 Q-22 提議是「搶答中看不到本組成功次數」，兩者衝突。
+- **決策（2026-11-23 jacky0407 選 B）**：修正 Q-22 提議為「搶答中學生可看本組成功次數（沿用 001），看不到排名與他組任何資訊」。001 不需修改；003 spec Clarifications、US4-AS3、FR-021 與 alignment.md 同步修正。`view.py` 的 `STUDENT_SEES_OWN_SUCCESS_DURING_ROUND = True`；OpenSpec 組若要求隱藏，改為 `False`，由 003 快照擴充覆寫 `ownGroup.successCount = null`。
+- **理由**：OpenSpec 原文只要求學生看不到他組資料，沒有要求隱藏本組資料；沿用 001 改動最小。
+- **替代方案**：搶答中隱藏本組成功次數（要改 001 學生快照與 001 spec，否決）。
 
 ## R10 判定順序與拒絕原因
 

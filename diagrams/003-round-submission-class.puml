@@ -71,7 +71,7 @@ package "core.round_submission（純函式）" {
   }
   class SubmissionView {
     TEACHER_SEES_PROVISIONAL_RANKING_DURING_ROUND = False
-    STUDENT_SEES_OWN_SUCCESS_DURING_ROUND = False
+    STUDENT_SEES_OWN_SUCCESS_DURING_ROUND = True
     STUDENT_SEES_JUDGED_WRONG = True
     {static} for_teacher(ledger, activity): dict
     {static} for_group(ledger, activity, group_number): dict
