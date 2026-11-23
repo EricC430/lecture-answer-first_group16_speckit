@@ -511,8 +511,10 @@ description: "001-activity-session 任務清單"
 - [x] T082 程式碼與圖表一致性驗證：逐一比對 `diagrams/001-activity-session-*.puml` 的組件、類別、方法名稱、時序與實作（例如 `ActivityService` 的方法、`RejectionReason` 的值）。有差異時，先更新圖表並重新轉出 PNG（原則 II）。
   - 2026-11-23（US1、US3～US6 範圍）：依 jacky0407 決定，以程式碼與 data-model 為準更新類別圖（Command、Identity 只存雜湊、Round／RoundRules 欄位、ActivityService 簽名、ports 與外層實作）、時序圖（onDeadline、openRound／closeRound 參數、publish(activity)）、組件圖（ports、common.py、鎖內去重）並重新轉出 PNG；US2／US7 尚未實作的項目保留在圖上並標「待 US2／US7」，實作後需再驗證一次。
   - 2026-11-23（US2、US7 與 Clarifications 後）：逐一比對類別圖的 `ActivityService`（`create`、`join`、`leaveGroup`、`deleteGroup`、`resolveDevice`、`markGroupSubmitted`）、`ActivityRegistry.findByTeacher`、`SyncPublisher.disconnectDevice`、`InputRules` 三個新方法、`RejectionReason` 16 個值，與程式碼一致；時序圖的建立（C7、組數上限）、加入（組號）、組別更正流程與實作一致。PNG 待 T095 重新產生。
+  - 2026-11-23（審查修正後）：類別圖補上 `Activity.revision`、`ActivitySnapshot.revision` 與 WebSocketHub 的推送規則（內容相同不送、並行、1 秒逾時），三張 PNG 已由 T095 在本機重新產生。
 - [x] T083 執行 `pytest` 與 `pytest -m perf`，記錄日期、指令，以及通過、失敗、略過的數字；perf 記錄四種操作的最大延遲（原則 VI、品質關卡 4）。
   - 2026-11-23：`pytest` 347 passed、1 deselected、0 failed；`pytest -m perf` 1 passed（老師 + 6 組 × 2 條連線，各 10 次）：開輪最大 7.5 ms、關輪 9.8 ms、定案 2.7 ms、結束 2.9 ms，皆小於 2000 ms。執行環境為雲端 Linux（Python 3.13），Windows 本機需再跑一次。
+  - 2026-11-23（Windows 11 本機、Python 3.11.5，含 T096～T101 修正後）：`pytest` 362 passed、1 deselected、0 failed；`pytest -m perf` 1 passed：開輪最大 6.9 ms、關輪 4.8 ms、定案 4.5 ms、結束 5.0 ms。
 - [ ] T084 由非實作者依 [quickstart.md](quickstart.md) 的 23 步人工驗證，記錄在 `specs/001-activity-session/verification.md`：日期、每一步的操作與結果、第 12、14 步的延遲 ms，以及 SC-005「1 分鐘內兩組加入」、SC-010「30 秒內換組」的實際時間（原則 VI）。
 - [x] T085 [P] 指令或流程與文件不同時，更新 `specs/001-activity-session/quickstart.md`；在 `CLAUDE.md` 的「專案現況」補上 build、lint、test 指令與 `src/lecture_quiz` 三層結構（現在已有程式碼）。
   - 2026-11-23：quickstart 已更新為 23 步並改用 `python -m lecture_quiz` 啟動；CLAUDE.md「專案現況」補上 001 結構與組數上限。
@@ -521,7 +523,17 @@ description: "001-activity-session 任務清單"
 - [x] T087 追蹤開發用 seed API 的移除：在 Issue #6（002）留言，註明「002 合併後的第一個 PR 移除 `src/lecture_quiz/adapters/web/dev_seed.py`、`LECTURE_QUIZ_DEV_SEED` 與 `tests/integration/test_dev_seed.py`」。本子功能內不刪除。
   - 2026-11-23：已在 Issue #6 留言（issuecomment-7094090227）。
 - [x] T088 確認提案相依的任務狀態：`docs/alignment.md` 2026-11-21 的 6 列已於 2026-11-23 全部獲 OpenSpec 組確認（新增一列決議），結論與提案一致；另依 Clarifications 增加組號、組數上限與 C7，已重跑 clarify → plan → tasks。
-- [ ] T095 在有 `plantuml.jar` 的環境（本機 Windows）執行 `java -jar plantuml.jar "./diagrams/001-*.puml"`，重新產生三張 PNG 並目視檢查（原則 II；2026-11-23 的 `.puml` 修改是在無法執行 PlantUML 的雲端環境完成）。
+- [x] T095 在有 `plantuml.jar` 的環境（本機 Windows）執行 `java -jar plantuml.jar "./diagrams/001-*.puml"`，重新產生三張 PNG 並目視檢查（原則 II；2026-11-23 的 `.puml` 修改是在無法執行 PlantUML 的雲端環境完成）。
+  - 2026-11-23：本機 Windows 以 `java -jar plantuml.jar -charset UTF-8 "./diagrams/001-*.puml"` 重新產生三張 PNG，已目視確認內容與 `.puml` 一致。
+
+## 審查修正（PR #15 第二、三次審查，2026-11-23）
+
+- [x] T096 超長組號不得變成 500（第三次審查問題 1；FR-031、SC-008）：`normalize_group_number` 去掉前導零後先比位數再轉整數；`tests/unit/core/test_input_rules_group_number.py` 補 4～100000 位數與全形數字，`tests/contract/test_error_safety.py` 補加入（400）與刪除（404 `GROUP_NOT_FOUND`，依契約 #5）兩個端點。已確認還原修正時測試會失敗。
+- [x] T097 去重查表與記錄必須在鎖內，且測試要能抓到回歸（第二、三次審查）：`tests/unit/app/test_idempotency_inside_lock.py` 以會檢查鎖狀態的 registry 驗證 `recall`／`remember`／`recall_create`／`remember_create` 都在鎖內呼叫。已確認把查表搬到鎖外時測試會失敗。
+- [x] T098 `mark_group_submitted` 契約（第三次審查問題 3；jacky0407 決定）：`contracts/service-interfaces.md` 規定 003 先標記、成功後才寫入答案，被拒就不寫入；修正原本把保證寫成 001 單方面提供的敘述。
+- [x] T099 學生版只推與自己有關的變更（第三次審查問題 2；FR-027、FR-030；jacky0407 決定）：`Activity.version`／`changed_at` 只在學生可見的共同狀態改變時遞增，新增 `revision`（只在老師快照）；WebSocketHub 對每條連線內容相同時不送；`sync.js` 老師快照以 `(version, revision)` 排序。spec FR-027／FR-030、data-model、sync-websocket、http-api 已同步；測試 `tests/unit/core/test_public_version.py`、`tests/integration/test_fr030_student_push.py`，並把 4 個依舊語意的測試改為新語意。
+- [x] T100 推送並行與逾時（第二次審查問題 2）：`WebSocketHub.publish` 以 `asyncio.gather` 並行送出，每條連線 `asyncio.wait_for` 1 秒，失敗或逾時只關閉該連線。
+- [x] T101 前端連按防護（第二次審查問題 3）：`teacher.js` 的 `teacherAction` 送出期間停用活動區塊所有按鈕並忽略新操作；`student.js` 的「離開本組」送出期間停用。
 
 ---
 

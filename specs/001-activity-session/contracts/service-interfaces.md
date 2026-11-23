@@ -28,7 +28,7 @@
 |---|---|
 | `resolve_device(code, device_token) -> Outcome[DeviceContext]` | 回傳 `group_number`、`stage`、`round_number`、`open_questions`、`deadline`；所屬組別一律由後端判定（FR-012） |
 | `accepts_submission(code, now) -> bool` | `stage == ROUND_OPEN`，而且沒有截止時間，或 `now < deadline`；用 `ActivityStateMachine.is_deadline_passed` 判斷 |
-| `mark_group_submitted(code, group_number) -> Outcome[int]` | 標記該組有提交紀錄，用於「刪除空組」的判定（alignment 2026-11-23 B5）。只在 `ROUND_OPEN` 生效；與刪除組別在同一把活動鎖內處理，不會出現「答案已記錄但組別被刪除」 |
+| `mark_group_submitted(code, group_number) -> Outcome[int]` | 標記該組有提交紀錄，用於「刪除空組」的判定（alignment 2026-11-23 B5）。只在 `ROUND_OPEN` 生效；與刪除組別在同一把活動鎖內處理，所以「標記」與「刪除」只會有一個先生效。**003 必須先呼叫本方法，成功後才寫入答案；被拒（例如 `GROUP_NOT_FOUND`、`STAGE_NOT_ALLOWED`）就不寫入**。照這個順序，才不會出現「答案已記錄但組別被刪除」（2026-11-23 依 PR #15 第三次審查第 3 項修正：原文把這個保證寫成 001 單方面提供，但 001 只保證標記與刪除互斥，寫入答案的順序要由 003 遵守） |
 
 ## 給 004（順位與定案）
 
