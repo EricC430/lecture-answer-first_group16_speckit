@@ -21,6 +21,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **001-activity-session 已實作**（`feature/5-001-activity-session`，PR #15）：`src/lecture_quiz/core/activity/`（純函式狀態機、輸入規則、快照裁切）、`app/activity/`（`ActivityService`、registry、ports）、`adapters/web/{http_api,ws_sync}.py`、`adapters/static/{teacher,student}.html`。組別以組號識別（`Group.number: int`），`Activity.max_groups` 為組數上限；給 002～005 的服務介面見 `specs/001-activity-session/contracts/service-interfaces.md`。
 
+**003-round-submission 規劃中**（`feature/7-003-round-submission`，PR #16）：spec、plan、research、data-model、contracts、quickstart 在 `specs/003-round-submission/`。提交資料存在 003 自己的記憶體 store；判定、標記、保存經 001 新增的 `ActivityService.record_submission` 在同一把活動鎖內完成，提交資料以 001 的快照擴充機制推送；每題子空格數由 002 實作 `QuestionShapeSource`。Q-20／21／22／26 先依 SpecKit 組提議實作（alignment 2026-11-23），OpenSpec 回覆核對前 003 實作不合併 main。
+
 子功能依序為 `001-activity-session` → `002-guided-notes-import` → `003-round-submission` → `004-ranking-review` → `005-result-export`（各自另開 Issue）。
 
 回覆與文件一律使用台灣繁體中文。
