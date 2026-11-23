@@ -50,7 +50,7 @@
 
 | 原則 | 檢查 | 結果 |
 |---|---|---|
-| I 跨組行為一致（NON-NEGOTIABLE） | spec 的 Traceability 涵蓋 round-submission 全部 6 個 Requirement、13 個 Scenario；Q-20／21／22／26 為 SpecKit 組提議，記入 alignment.md 2026-11-23「003 提交待確認事項」，先依提議實作、OpenSpec 回覆後核對，核對完成前 003 實作不合併 main | ✅（附條件：合併前完成核對） |
+| I 跨組行為一致（NON-NEGOTIABLE） | spec 的 Traceability 涵蓋 round-submission 全部 6 個 Requirement、13 個 Scenario；Q-20／21／22／26 原為 SpecKit 組提議，OpenSpec 組已於 2026-11-23 全部同意（alignment.md「003 提交待確認事項：OpenSpec 組同意」列） | ✅ |
 | II 圖表生成（NON-NEGOTIABLE） | 三張圖已在 specify 產出；plan 調整鎖內流程與快照擴充後同步更新並重新轉出 PNG；implement 後要做「程式碼 ↔ 圖」一致性檢查（tasks 列為必做） | ✅ |
 | III Guided Notes 動態定位 | 子空格數只從 `QuestionShapeSource`（002 的成功匯入結果）取得，核心不出現任何固定格數或題數；測試用兩份版面的格數配置（A：4 題 [2,2,1,1]；B：5 題 [1,3,1,2,1]），002 合併後以兩份真實學習單匯入再提交 | ✅ |
 | IV 後端為唯一事實來源 | 組別由 001 依裝置 token 判定；接收時間由後端 `Clock` 在鎖內取得一次，同時用於截止判定與記錄；接收序號在活動內嚴格遞增；同一組同題重送只會得到既有提交；排序規則（時間, 序號）確定性 | ✅ |

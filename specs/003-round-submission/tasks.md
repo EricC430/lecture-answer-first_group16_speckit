@@ -175,7 +175,7 @@ description: "003-round-submission 任務清單"
 
 - [ ] T049 [US5] 在 `<core>/view.py` 實作「已公開輪次」部分（研究 R11：輪次編號小於目前輪次，或等於目前輪次且階段不是 `ROUND_OPEN`）：`published` 依輪次遞增，每題含 `noSubmission`、`entries`（`groupNumber`、`answers`、`receivedAt`、`order`、`judgedWrong`）；`current` 在本輪已關閉時為 `None`（依賴 T047）
 - [ ] T050 [US5] 在 `<app>/service.py` 完成 `round_submissions`、`all_submissions`（`SubmissionReader`，給 004、005），擴充函式輸出 `published`（依賴 T048、T049）
-- [ ] T051 [US5] 前端：`submission.js` 新增 `renderPublished(container, published)`（每輪每題列出各組答案與先後，`noSubmission` 顯示「未成功」，`judgedWrong` 顯示「判錯」標記，全部 `textContent`）；老師頁與學生頁在 `RESULT_PENDING`／`RESULT_FINAL`／`ENDED` 與之後的輪次都顯示歷史
+- [ ] T051 [US5] 前端：`submission.js` 新增 `renderPublished(container, published)`（每輪每題列出各組答案與先後，`noSubmission` 顯示「未成功」，`judgedWrong` 為真顯示「答錯」，全部 `textContent`；「搶答失敗」需要 004 提供的勝者資訊，004 完成前不顯示，未被判錯的候選只列出先後）；老師頁與學生頁在 `RESULT_PENDING`／`RESULT_FINAL`／`ENDED` 與之後的輪次都顯示歷史
 
 **Checkpoint**: 公開與歷史正確，新輪保密
 
@@ -213,7 +213,7 @@ description: "003-round-submission 任務清單"
 - [ ] T063 檢查日誌與機敏資料：全文搜尋 `src/` 無 `print(`；日誌不記 token、答案；`git status` 與 `git diff --staged` 無 `.env`、憑證、`.venv`、課程說明或提案草稿（憲章技術限制 3、原則 V）
 - [ ] T064 非實作者人工驗證：EricC430 依 `quickstart.md` 17 步操作，記錄日期、操作、實際結果與通過／失敗到 `verification.md`（憲章原則 VI）
 - [ ] T065 真實路徑驗證（**002 合併後**）：002 的 `ImportService` 實作 `QuestionShapeSource` 並在 `main.py` 取代 `DevQuestionShapeSource`／`NullQuestionShapeSource`；以兩份真實 Google 學習單（版面 A：課程範本；版面 B：起始列欄不同、含三格題組）各匯入一次，完成 quickstart「真實路徑驗證」3 步，記錄到 `verification.md`（不貼試算表網址與憑證）（憲章原則 III、VI）
-- [ ] T066 OpenSpec 核對（**合併 main 前必做**）：取得 OpenSpec 組對 Q-20、Q-21、Q-22、Q-26 的回覆，更新 `docs/alignment.md`（確認人欄位）；結論不同時修改 `<core>/answer_rules.py` 或 `<core>/view.py` 的常數、spec 對應 FR、圖與測試，重跑 T062（alignment 2026-11-23「003 提交待確認事項」與「003 Q-22 提議修正」列）
+- [x] T066 OpenSpec 核對：OpenSpec 組 2026-11-23 全部同意 Q-20、Q-21、Q-22（修正版）、Q-26 與「答錯／搶答失敗」顯示方式；已更新 `docs/alignment.md`、spec、plan，常數不需修改
 
 ---
 
@@ -228,7 +228,7 @@ description: "003-round-submission 任務清單"
 - **US4（Phase 6）**：依賴 US1（需要有提交）；可與 US2、US3 平行（不同檔案：`view.py`）
 - **US5（Phase 7）**：依賴 US4 的 `view.py`
 - **US6（Phase 8）**：依賴 US1、US4 的前端檔案
-- **Polish（Phase 9）**：依賴全部 User Story；T065 另外依賴 002 合併；T066 依賴 OpenSpec 回覆，且是合併 main 的前提
+- **Polish（Phase 9）**：依賴全部 User Story；T065 另外依賴 002 合併；T066 已完成（2026-11-23）
 
 ### User Story Dependencies
 
@@ -290,7 +290,7 @@ Task: "T009 tests/unit/app/round_submission/test_store.py"
 2. US4（可見性與老師看板）→ US5（公開與歷史）：畫面完整
 3. US6（倒數與安全顯示）
 4. Polish：效能、日誌、兩份版面、SCENARIO_MAP、圖表一致性、人工驗證
-5. 002 合併後做 T065；OpenSpec 回覆後做 T066，才合併 main
+5. 002 合併後做 T065（T066 OpenSpec 核對已完成）
 
 ### 時程提醒
 

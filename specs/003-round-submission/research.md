@@ -66,7 +66,7 @@ Technical Context 沒有 NEEDS CLARIFICATION；以下是設計決策。每項格
 ## R8 答案規則（Q-20 提議，集中可調）
 
 - **決策**：`core/round_submission/answer_rules.py` 集中：`MAX_ANSWER_CHARS = 500`（以 Python 字元數計）；判空時去除的空白＝`str.strip()` 的空白（含全形空白 U+3000、Tab、換行）；保存原文；允許 `\n`、`\r\n`。答案不是字串 → `INVALID_ANSWER`；格數不符 → `WRONG_BLANK_COUNT`（附需要格數）；有空格 → `BLANK_EMPTY`（附全部空格的格號）；超過上限 → `ANSWER_TOO_LONG`（附格號）。同時有空格與超長時，先回報空格。
-- **理由**：OpenSpec 回覆後只需改這一個檔案與對應測試。
+- **理由**：OpenSpec 組 2026-11-23 已同意；若日後再改，只需改這一個檔案與對應測試。
 - **替代方案**：字數以位元組計（中文 3 位元組，與使用者感受不符，否決）。
 
 ## R9 Q-22 與 001 學生快照的成功次數
