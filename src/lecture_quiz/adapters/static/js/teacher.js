@@ -220,6 +220,21 @@ function renderGroups(snapshot) {
 
 onTeacherSnapshot(renderGroups);
 
+// ── US7：刪除沒有作答紀錄的組別（alignment 2026-11-23 B5）──
+
+onGroupRow((td, group, snapshot) => {
+  const terminal = snapshot.stage === "ENDED" || snapshot.stage === "CANCELLED";
+  if (group.hasSubmissions || terminal) return;
+  const button = document.createElement("button");
+  button.type = "button";
+  button.textContent = "刪除";
+  button.addEventListener("click", () => {
+    if (!window.confirm(`確定要刪除第 ${group.number} 組嗎？該組裝置會回到加入畫面。`)) return;
+    teacherAction("DELETE", `/groups/${group.number}`);
+  });
+  td.append(button);
+});
+
 function init() {
   $("create-activity").addEventListener("click", createActivity);
   $("open-round-panel").addEventListener("submit", openRound);

@@ -83,7 +83,7 @@ description: "001-activity-session 任務清單"
   - `Activity(code, stage, version, changed_at, teacher, max_groups, question_numbers, solved_questions, groups, devices, rounds)`，含 `current_round`、`unsolved_questions` 衍生屬性。
   - 集合欄位一律使用 `tuple`、`frozenset`、`MappingProxyType`。
   - 每個公開類別都有 Google 風格 docstring。
-- [ ] T008 [P] 部分完成；US2、US7 時一併完成（`CreateActivity(max_groups_raw)`、`JoinGroup(number_raw, credential_raw)`、`LeaveGroup`、`DeleteGroup(number_raw)`、`MarkGroupSubmitted(group_number)`）。在 `src/lecture_quiz/core/activity/commands.py` 建立：
+- [x] T008 [P] 2026-11-23 隨 US2、US7 完成（`CreateActivity(max_groups_raw)`、`JoinGroup(number_raw, credential_raw)`、`LeaveGroup`、`DeleteGroup(number_raw)`、`MarkGroupSubmitted(group_number)`）。在 `src/lecture_quiz/core/activity/commands.py` 建立：
   - Actor 型別：`Teacher(token_hash)`、`Device(token_hash)`、`System`、`Anonymous`。
   - Command 型別：`CreateActivity(max_groups_raw)`、`JoinGroup(number_raw, credential_raw)`、`LeaveGroup`、`DeleteGroup(number_raw)`、`OpenRound(question_numbers, fair_mode, countdown_raw)`、`CloseRound`、`Finalize(outcome)`、`EndActivity`、`CancelActivity`、`ReplaceQuestions(question_numbers)`、`MarkGroupSubmitted(group_number)`。
   - `FinalizeOutcome(solved_questions: frozenset[int], success_increments: Mapping[int, int])`（key 為組號）。
@@ -405,7 +405,7 @@ description: "001-activity-session 任務清單"
 
 ### Implementation for User Story 6
 
-- [ ] T063 [US6] 部分完成（`disconnect_device` 在 US7 時完成；其餘項目已在 T020 完成並由 T060、T061 驗證）。**轉接層**：在 `src/lecture_quiz/adapters/web/ws_sync.py` 完成：
+- [x] T063 [US6] 2026-11-23 隨 US7 完成 `disconnect_device`（其餘項目已在 T020 完成並由 T060、T061 驗證）。**轉接層**：在 `src/lecture_quiz/adapters/web/ws_sync.py` 完成：
   - 只有 `changed` 時才推送。
   - 推送時逐一連線送出，任一連線失敗時只關閉該連線，並記錄 `INFO`（不含 token）。
   - 支援 `disconnect_device(code, token_hash, reason)`，給離開本組與刪除組別使用。
@@ -464,7 +464,7 @@ description: "001-activity-session 任務清單"
 
 ### Tests for User Story 7 (REQUIRED) ⚠️
 
-- [ ] T071 [P] [US7] 在 `tests/unit/core/test_state_machine_group_correction.py` 測試（alignment 2026-11-23 B4、B5）：
+- [x] T071 [P] [US7] 在 `tests/unit/core/test_state_machine_group_correction.py` 測試（alignment 2026-11-23 B4、B5）：
   - `Scenario: US7-AS1`：在 `PREPARING`、`RESULT_PENDING`、`RESULT_FINAL` 執行 `LeaveGroup`，只移除該裝置；組別、其他裝置與 `success_count` 不變。
   - `Scenario: US7-AS2`：離開後可以加入另一組。
   - `Scenario: US7-AS3`：在 `ROUND_OPEN` 離開時回傳 `NO_GROUP_SWITCH_DURING_ROUND`。
@@ -473,7 +473,7 @@ description: "001-activity-session 任務清單"
   - 另外測試：刪除不存在的組號回傳 `GROUP_NOT_FOUND`；`Anonymous` 或不在任何組的裝置離開時回傳 `NOT_IN_GROUP`；學生刪除組別回傳 `NOT_TEACHER`。
   - `Scenario: US7-AS6`：刪除 `has_submissions=True` 的組時回傳 `GROUP_HAS_SUBMISSIONS`，`activity` 不變。
   - 另外測試：`MarkGroupSubmitted` 只在 `ROUND_OPEN` 時生效。
-- [ ] T072 [P] [US7] 在 `tests/integration/test_us7_group_correction.py` 以 HTTP 加 WebSocket 測試 `Scenario: US7-AS1`～`US7-AS6`：
+- [x] T072 [P] [US7] 在 `tests/integration/test_us7_group_correction.py` 以 HTTP 加 WebSocket 測試 `Scenario: US7-AS1`～`US7-AS6`：
   - 離開時，該裝置的 WebSocket 收到 `unauthorized`、`reason == "LEFT_GROUP"`。
   - 刪除組別時，原組裝置收到 `reason == "GROUP_DELETED"`。
   - 在 `ROUND_OPEN` 刪除空組成功。
@@ -481,14 +481,14 @@ description: "001-activity-session 任務清單"
 
 ### Implementation for User Story 7
 
-- [ ] T073 [US7] **核心**：在 `src/lecture_quiz/core/activity/state_machine.py` 實作 `LeaveGroup`、`DeleteGroup`、`MarkGroupSubmitted`，允許的階段照 spec「不改變階段的組別操作」表；`LeaveGroup` 在 `ROUND_OPEN` 回傳 `NO_GROUP_SWITCH_DURING_ROUND`；`results.py` 新增 `NOT_IN_GROUP`、`GROUP_NOT_FOUND`。
-- [ ] T074 [US7] **服務層**：在 `src/lecture_quiz/app/activity/service.py` 實作：
+- [x] T073 [US7] **核心**：在 `src/lecture_quiz/core/activity/state_machine.py` 實作 `LeaveGroup`、`DeleteGroup`、`MarkGroupSubmitted`，允許的階段照 spec「不改變階段的組別操作」表；`LeaveGroup` 在 `ROUND_OPEN` 回傳 `NO_GROUP_SWITCH_DURING_ROUND`；`results.py` 新增 `NOT_IN_GROUP`、`GROUP_NOT_FOUND`。
+- [x] T074 [US7] **服務層**：在 `src/lecture_quiz/app/activity/service.py` 實作：
   - `leave_group(code, requester)`。
   - `delete_group(code, requester, number_raw)`：組號交給核心正規化。
   - 給 003 的 `mark_group_submitted(code, group_number)`。
   - 成功後呼叫 `SyncPublisher.disconnect_device`（`ports.py` 的 `SyncPublisher` 新增此方法）。
-- [ ] T075 [US7] **轉接層**：在 `src/lecture_quiz/adapters/web/http_api.py` 實作 `POST /activities/{code}/groups/leave` 與 `DELETE /activities/{code}/groups/{number}`。
-- [ ] T076 [US7] **轉接層**：在 `student.html`、`student.js` 加入「離開本組」按鈕（搶答中停用並說明原因）；在 `teacher.html`、`teacher.js` 的組別清單，對 `hasSubmissions == false` 的組顯示「刪除」按鈕。
+- [x] T075 [US7] **轉接層**：在 `src/lecture_quiz/adapters/web/http_api.py` 實作 `POST /activities/{code}/groups/leave` 與 `DELETE /activities/{code}/groups/{number}`。
+- [x] T076 [US7] **轉接層**：在 `student.html`、`student.js` 加入「離開本組」按鈕（搶答中停用並說明原因）；在 `teacher.html`、`teacher.js` 的組別清單，對 `hasSubmissions == false` 的組顯示「刪除」按鈕。
 
 **Checkpoint**: 全部 User Story 完成
 

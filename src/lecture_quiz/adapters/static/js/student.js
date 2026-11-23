@@ -101,8 +101,33 @@ async function joinGroup(event) {
   startSync(code, result.data.deviceToken);
 }
 
+// ── US7：離開本組（搶答中停用，alignment 2026-11-23 B4）──
+
+function renderLeave(snapshot) {
+  const roundOpen = snapshot.stage === "ROUND_OPEN";
+  const terminal = snapshot.stage === "ENDED" || snapshot.stage === "CANCELLED";
+  $("leave-group").hidden = terminal;
+  $("leave-group").disabled = roundOpen;
+  $("leave-hint").hidden = !roundOpen || terminal;
+}
+
+onStudentSnapshot(renderLeave);
+
+async function leaveGroup() {
+  const { code, token } = currentIdentity();
+  if (!code || !token) return;
+  const result = await apiRequest("POST", `/api/activities/${encodeURIComponent(code)}/groups/leave`, {
+    token,
+    body: {},
+  });
+  // 成功時伺服端會送出 unauthorized（LEFT_GROUP），由同步處理回到加入畫面並顯示提示；
+  // 推送可能比 HTTP 回應先到，所以成功時不要清掉那則提示
+  if (!result.ok) showError($("student-error"), result.error);
+}
+
 function init() {
   $("student-join").addEventListener("submit", joinGroup);
+  $("leave-group").addEventListener("click", leaveGroup);
   const code = normalizeCode(new URLSearchParams(location.search).get("code"));
   $("join-code").value = code;
   if (!code) return;

@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
-from lecture_quiz.app.activity.ports import Requester
+from lecture_quiz.app.activity.ports import DisconnectReason, Requester
 from lecture_quiz.app.activity.secrets_gen import normalize_code_input
 from lecture_quiz.app.activity.service import ActivityService
 from lecture_quiz.core.activity.commands import Anonymous, Device
@@ -101,6 +101,26 @@ class WebSocketHub:
                 self._unregister(activity.code, conn)
                 with contextlib.suppress(Exception):
                     await conn.websocket.close()
+
+    async def disconnect_device(
+        self, code: str, token_hash: str, reason: DisconnectReason
+    ) -> None:
+        """通知裝置已失去組別身分（離開本組或組別被刪除），並關閉它的連線。
+
+        Args:
+            code: 活動代碼。
+            token_hash: 裝置 token 的雜湊。
+            reason: `LEFT_GROUP` 或 `GROUP_DELETED`。
+        """
+        for conn in list(self._connections.get(code, ())):
+            requester = conn.requester
+            if not isinstance(requester, Device) or requester.token_hash != token_hash:
+                continue
+            self._unregister(code, conn)
+            with contextlib.suppress(Exception):
+                await conn.send({"type": "unauthorized", "reason": reason})
+                await conn.websocket.close(code=CLOSE_UNAUTHORIZED)
+            logger.info("裝置失去組別身分 activity=%s reason=%s", code, reason)
 
     async def serve(self, websocket: WebSocket, raw_code: str) -> None:
         """處理一條 WebSocket 連線的完整生命週期。

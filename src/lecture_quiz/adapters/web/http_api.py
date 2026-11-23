@@ -2,8 +2,6 @@
 
 共用的錯誤格式、例外處理與請求日誌在 `adapters/web/common.py`；這裡只負責
 把服務層的 `Outcome` 轉成 HTTP 回應，以及 `RejectionReason` → 狀態碼。
-
-離開本組（#4）、刪除組別（#5）待 US7 實作。
 """
 
 from typing import Annotated, TypeVar
@@ -177,6 +175,28 @@ def create_router(app: FastAPI) -> APIRouter:
                 "version": joined.version,
             },
         )
+
+    @router.post("/activities/{code}/groups/leave")
+    async def leave_group(
+        request: Request, code: str, token: Token, key: IdempotencyKey
+    ) -> JsonDict:
+        """離開本組（#4）；搶答中回 409 NO_GROUP_SWITCH_DURING_ROUND。"""
+        code = normalize_code_input(code)
+        outcome = await service().leave_group(code, requester_for(code, token), key)
+        version = unwrap(request, code, token, outcome)
+        return ok(request, code, version, {"version": version})
+
+    @router.delete("/activities/{code}/groups/{number}")
+    async def delete_group(
+        request: Request, code: str, number: str, token: Token, key: IdempotencyKey
+    ) -> JsonDict:
+        """刪除沒有提交紀錄的組別（#5）；組號原樣交給核心正規化。"""
+        code = normalize_code_input(code)
+        outcome = await service().delete_group(
+            code, requester_for(code, token), number, key
+        )
+        version = unwrap(request, code, token, outcome)
+        return ok(request, code, version, {"version": version})
 
     @router.post("/activities/{code}/rounds", status_code=201)
     async def open_round(

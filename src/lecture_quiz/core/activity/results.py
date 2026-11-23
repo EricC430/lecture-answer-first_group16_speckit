@@ -7,6 +7,7 @@ from lecture_quiz.core.activity.commands import (
     CancelActivity,
     CloseRound,
     Command,
+    DeleteGroup,
     EndActivity,
     Finalize,
     JoinGroup,
@@ -34,6 +35,7 @@ class RejectionReason(StrEnum):
     TEACHER_HAS_ACTIVE_ACTIVITY = "TEACHER_HAS_ACTIVE_ACTIVITY"
     ALREADY_IN_GROUP = "ALREADY_IN_GROUP"
     NOT_IN_GROUP = "NOT_IN_GROUP"
+    GROUP_NOT_FOUND = "GROUP_NOT_FOUND"
 
     @property
     def http_status(self) -> int:
@@ -62,6 +64,7 @@ _HTTP_STATUS = {
     RejectionReason.TEACHER_HAS_ACTIVE_ACTIVITY: 409,
     RejectionReason.ALREADY_IN_GROUP: 409,
     RejectionReason.NOT_IN_GROUP: 403,
+    RejectionReason.GROUP_NOT_FOUND: 404,
 }
 
 _MESSAGES = {
@@ -87,6 +90,7 @@ _MESSAGES = {
     ),
     RejectionReason.ALREADY_IN_GROUP: "這台裝置已經在某一組，請先離開本組。",
     RejectionReason.NOT_IN_GROUP: "這台裝置目前沒有加入任何組別。",
+    RejectionReason.GROUP_NOT_FOUND: "找不到這個組別。",
 }
 
 
@@ -188,6 +192,10 @@ def _describe_group_rejection(
                 f"第 {number} 組已有同學加入；若你是這一組的成員，"
                 "請向同組同學查看本組加入憑證，否則請確認組號。"
             )
+    if reason is RejectionReason.GROUP_NOT_FOUND and isinstance(command, DeleteGroup):
+        number = _parse_number(command.number_raw, activity.max_groups)
+        if number is not None:
+            return f"找不到第 {number} 組。"
     if reason is RejectionReason.ALREADY_IN_GROUP and isinstance(command, JoinGroup):
         token_hash = getattr(command.actor, "token_hash", None)
         device = activity.devices.get(token_hash) if token_hash else None

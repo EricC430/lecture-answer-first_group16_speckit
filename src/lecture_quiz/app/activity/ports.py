@@ -8,7 +8,7 @@
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Generic, Protocol, TypeVar
+from typing import Generic, Literal, Protocol, TypeVar
 
 from lecture_quiz.core.activity.commands import Anonymous, Device, Teacher
 from lecture_quiz.core.activity.models import Activity, Stage
@@ -21,6 +21,9 @@ Requester = Teacher | Device | Anonymous
 
 DeadlineCallback = Callable[[str, datetime], Awaitable[None]]
 """倒數到期時的回呼：`(活動代碼, 截止時間)`。"""
+
+DisconnectReason = Literal["LEFT_GROUP", "GROUP_DELETED"]
+"""裝置失去組別身分的原因（contracts/sync-websocket.md 的 `unauthorized.reason`）。"""
 
 
 @dataclass(frozen=True)
@@ -89,6 +92,18 @@ class SyncPublisher(Protocol):
 
         Args:
             activity: 變更後的活動。
+        """
+        ...
+
+    async def disconnect_device(
+        self, code: str, token_hash: str, reason: DisconnectReason
+    ) -> None:
+        """通知裝置已失去組別身分，並關閉它的所有連線。
+
+        Args:
+            code: 活動代碼。
+            token_hash: 裝置 token 的雜湊。
+            reason: 離開本組或組別被刪除。
         """
         ...
 

@@ -18,10 +18,13 @@ from lecture_quiz.core.activity.commands import (
     CloseRound,
     Command,
     CreateActivity,
+    DeleteGroup,
     Device,
     EndActivity,
     Finalize,
     JoinGroup,
+    LeaveGroup,
+    MarkGroupSubmitted,
     OpenRound,
     ReplaceQuestions,
     System,
@@ -49,6 +52,9 @@ _NON_TERMINAL = frozenset(s for s in Stage if not s.is_terminal)
 # 「階段 × 操作」相容表（spec 兩張表）。CloseRound 另外處理「已關輪」的冪等成功。
 _ALLOWED_STAGES: dict[type, frozenset[Stage]] = {
     JoinGroup: _NON_TERMINAL,
+    LeaveGroup: frozenset({Stage.PREPARING, Stage.RESULT_PENDING, Stage.RESULT_FINAL}),
+    DeleteGroup: _NON_TERMINAL,
+    MarkGroupSubmitted: frozenset({Stage.ROUND_OPEN}),
     OpenRound: frozenset({Stage.PREPARING, Stage.RESULT_FINAL}),
     CloseRound: frozenset({Stage.ROUND_OPEN}),
     Finalize: frozenset({Stage.RESULT_PENDING}),
@@ -59,6 +65,7 @@ _ALLOWED_STAGES: dict[type, frozenset[Stage]] = {
 
 # 只有本活動老師能執行的操作（FR-004）。CloseRound 也允許 System（倒數）。
 _TEACHER_ONLY = (
+    DeleteGroup,
     OpenRound,
     CloseRound,
     Finalize,
@@ -151,6 +158,9 @@ class ActivityStateMachine:
             ):
                 return _reject(activity, RejectionReason.NOT_TEACHER)
 
+        if isinstance(command, LeaveGroup) and not _is_member(activity, command.actor):
+            return _reject(activity, RejectionReason.NOT_IN_GROUP)
+
         if not _stage_allowed(activity, command):
             return _stage_rejection(activity, command)
 
@@ -166,6 +176,10 @@ class ActivityStateMachine:
         return transition
 
 
+def _is_member(activity: Activity, actor: object) -> bool:
+    return isinstance(actor, Device) and actor.token_hash in activity.devices
+
+
 def _stage_allowed(activity: Activity, command: Command) -> bool:
     return activity.stage in _ALLOWED_STAGES.get(type(command), frozenset())
 
@@ -174,6 +188,8 @@ def _stage_rejection(activity: Activity, command: Command) -> Transition:
     """階段不相容時的結果；部分組合有專屬的拒絕原因或冪等成功。"""
     if isinstance(command, OpenRound) and activity.stage is Stage.ROUND_OPEN:
         return _reject(activity, RejectionReason.RULES_LOCKED)
+    if isinstance(command, LeaveGroup) and activity.stage is Stage.ROUND_OPEN:
+        return _reject(activity, RejectionReason.NO_GROUP_SWITCH_DURING_ROUND)
     if isinstance(command, CloseRound):
         current = activity.current_round
         if current is not None and current.closed:
@@ -234,6 +250,55 @@ def _join_group(
         activity, groups=freeze(groups), devices=freeze(devices)
     )
     return _changed(updated, issued)
+
+
+def _leave_group(
+    activity: Activity, command: Command, now: datetime, issued: IssuedSecrets | None
+) -> Transition:
+    """離開本組：只移除該裝置；組別、其他裝置、提交與成功次數不變（FR-034）。"""
+    assert isinstance(command, LeaveGroup) and isinstance(command.actor, Device)
+    devices = dict(activity.devices)
+    del devices[command.actor.token_hash]
+    return _changed(dataclasses.replace(activity, devices=freeze(devices)))
+
+
+def _delete_group(
+    activity: Activity, command: Command, now: datetime, issued: IssuedSecrets | None
+) -> Transition:
+    """刪除沒有提交紀錄的組別與其所有裝置；組號可再使用（FR-035）。"""
+    assert isinstance(command, DeleteGroup)
+    try:
+        number = InputRules.normalize_group_number(
+            command.number_raw, activity.max_groups
+        )
+    except InvalidInputError:
+        return _reject(activity, RejectionReason.GROUP_NOT_FOUND)
+    group = activity.groups.get(number)
+    if group is None:
+        return _reject(activity, RejectionReason.GROUP_NOT_FOUND)
+    if group.has_submissions:
+        return _reject(activity, RejectionReason.GROUP_HAS_SUBMISSIONS)
+    groups = {n: g for n, g in activity.groups.items() if n != number}
+    devices = {h: d for h, d in activity.devices.items() if d.group_number != number}
+    updated = dataclasses.replace(
+        activity, groups=freeze(groups), devices=freeze(devices)
+    )
+    return _changed(updated)
+
+
+def _mark_group_submitted(
+    activity: Activity, command: Command, now: datetime, issued: IssuedSecrets | None
+) -> Transition:
+    """標記組別有提交紀錄（給 003；與刪除組別在同一把鎖內依序處理）。"""
+    assert isinstance(command, MarkGroupSubmitted)
+    group = activity.groups.get(command.group_number)
+    if group is None:
+        return _reject(activity, RejectionReason.GROUP_NOT_FOUND)
+    if group.has_submissions:
+        return _unchanged(activity)
+    groups = dict(activity.groups)
+    groups[group.number] = dataclasses.replace(group, has_submissions=True)
+    return _changed(dataclasses.replace(activity, groups=freeze(groups)))
 
 
 def _open_round(
@@ -344,6 +409,9 @@ def _cancel_activity(
 
 _HANDLERS: dict[type, Handler] = {
     JoinGroup: _join_group,
+    LeaveGroup: _leave_group,
+    DeleteGroup: _delete_group,
+    MarkGroupSubmitted: _mark_group_submitted,
     OpenRound: _open_round,
     ReplaceQuestions: _replace_questions,
     CloseRound: _close_round,

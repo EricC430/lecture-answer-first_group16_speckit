@@ -95,6 +95,39 @@ class JoinGroup:
 
 
 @dataclass(frozen=True)
+class LeaveGroup:
+    """學生裝置離開本組（US7，alignment 2026-11-23 B4）。"""
+
+    actor: Actor
+
+
+@dataclass(frozen=True)
+class DeleteGroup:
+    """老師刪除沒有提交紀錄的組別（US7，alignment 2026-11-23 B5）。
+
+    Attributes:
+        actor: 操作者。
+        number_raw: 組號的原始輸入，由 `InputRules.normalize_group_number` 正規化。
+    """
+
+    actor: Actor
+    number_raw: object
+
+
+@dataclass(frozen=True)
+class MarkGroupSubmitted:
+    """標記組別已有提交紀錄（由 003 在接受提交時呼叫，只在搶答中生效）。
+
+    Attributes:
+        actor: 操作者（系統）。
+        group_number: 組號。
+    """
+
+    actor: Actor
+    group_number: int
+
+
+@dataclass(frozen=True)
 class OpenRound:
     """開輪。
 
@@ -161,6 +194,9 @@ class ReplaceQuestions:
 Command = (
     CreateActivity
     | JoinGroup
+    | LeaveGroup
+    | DeleteGroup
+    | MarkGroupSubmitted
     | OpenRound
     | CloseRound
     | Finalize

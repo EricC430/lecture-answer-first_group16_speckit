@@ -22,6 +22,7 @@ from typing import TypeVar
 from lecture_quiz.app.activity.ports import (
     Clock,
     CountdownScheduler,
+    DisconnectReason,
     Outcome,
     Requester,
     SyncPublisher,
@@ -42,11 +43,14 @@ from lecture_quiz.core.activity.commands import (
     CloseRound,
     Command,
     CreateActivity,
+    DeleteGroup,
     Device,
     EndActivity,
     Finalize,
     FinalizeOutcome,
     JoinGroup,
+    LeaveGroup,
+    MarkGroupSubmitted,
     OpenRound,
     ReplaceQuestions,
     System,
@@ -473,6 +477,76 @@ class ActivityService:
         )
         return Outcome(ok=True, value=context)
 
+    async def leave_group(
+        self, code: str, requester: Requester, idempotency_key: str | None = None
+    ) -> Outcome[int]:
+        """學生裝置離開本組（US7）；成功後通知該裝置的連線並關閉。
+
+        Args:
+            code: 活動代碼。
+            requester: 已解析的身分（必須是本活動的裝置）。
+            idempotency_key: 前端送來的 key。
+
+        Returns:
+            新版本號；搶答中回傳 `NO_GROUP_SWITCH_DURING_ROUND`。
+        """
+        departed: list[str] = []
+        outcome = await self._execute(
+            code,
+            LeaveGroup(requester),
+            idempotency_key,
+            lambda t, a: a.version,
+            on_removed_devices=departed.extend,
+        )
+        await self._disconnect(code, departed, "LEFT_GROUP")
+        return outcome
+
+    async def delete_group(
+        self,
+        code: str,
+        requester: Requester,
+        number_raw: object,
+        idempotency_key: str | None = None,
+    ) -> Outcome[int]:
+        """老師刪除沒有提交紀錄的組別（US7）；原組裝置收到 GROUP_DELETED。
+
+        Args:
+            code: 活動代碼。
+            requester: 已解析的身分。
+            number_raw: 組號的原始輸入。
+            idempotency_key: 前端送來的 key。
+
+        Returns:
+            新版本號，或拒絕原因。
+        """
+        removed: list[str] = []
+        outcome = await self._execute(
+            code,
+            DeleteGroup(requester, number_raw),
+            idempotency_key,
+            lambda t, a: a.version,
+            on_removed_devices=removed.extend,
+        )
+        await self._disconnect(code, removed, "GROUP_DELETED")
+        return outcome
+
+    async def mark_group_submitted(self, code: str, group_number: int) -> Outcome[int]:
+        """標記組別已有提交紀錄（給 003）；與刪除組別在同一把鎖內依序處理。
+
+        Args:
+            code: 活動代碼。
+            group_number: 組號。
+
+        Returns:
+            版本號；不在搶答中或組別不存在時回傳拒絕原因。
+        """
+        return await self._execute(
+            code,
+            MarkGroupSubmitted(System(), group_number),
+            None,
+            lambda t, a: a.version,
+        )
+
     async def replace_questions(
         self, code: str, requester: Requester, question_numbers: tuple[int, ...]
     ) -> Outcome[int]:
@@ -661,6 +735,7 @@ class ActivityService:
         now: datetime | None = None,
         issued: IssuedSecrets | None = None,
         on_change: Callable[[Activity], None] | None = None,
+        on_removed_devices: Callable[[list[str]], None] | None = None,
     ) -> Outcome[T]:
         code = normalize_code_input(code)
         if self._registry.get(code) is None:
@@ -689,6 +764,14 @@ class ActivityService:
                     changed_activity = result_activity
                     if on_change is not None:
                         on_change(result_activity)
+                    if on_removed_devices is not None:
+                        on_removed_devices(
+                            [
+                                h
+                                for h in activity.devices
+                                if h not in result_activity.devices
+                            ]
+                        )
                 outcome: Outcome[T] = Outcome(
                     ok=True, value=build(transition, result_activity)
                 )
@@ -706,6 +789,17 @@ class ActivityService:
         if changed_activity is not None:
             await self._publish(changed_activity)
         return outcome
+
+    async def _disconnect(
+        self, code: str, token_hashes: list[str], reason: DisconnectReason
+    ) -> None:
+        for token_hash in token_hashes:
+            try:
+                await self._publisher.disconnect_device(
+                    normalize_code_input(code), token_hash, reason
+                )
+            except Exception:
+                logger.exception("通知裝置失去身分失敗 activity=%s", code)
 
     async def _publish(self, activity: Activity) -> None:
         try:

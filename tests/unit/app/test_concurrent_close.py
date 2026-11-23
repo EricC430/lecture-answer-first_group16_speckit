@@ -15,6 +15,9 @@ class CountingPublisher:
     async def publish(self, activity):
         self.published.append(activity.version)
 
+    async def disconnect_device(self, code, token_hash, reason):
+        pass
+
 
 async def one_race(teacher_first: bool):
     clock = FakeClock()
