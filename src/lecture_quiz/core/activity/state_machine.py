@@ -137,7 +137,8 @@ class ActivityStateMachine:
             issued: 服務層產生的新秘密（活動代碼、token 雜湊等）。
 
         Returns:
-            `Transition`。成功且有變化時，`version` 加 1、`changed_at = now`。
+            `Transition`。成功且有變化時 `revision` 加 1；學生可見的共同狀態也改變時，
+            `version` 加 1、`changed_at = now`（FR-027、FR-030）。
 
         Raises:
             ValueError: 建立活動時缺少 `issued`，或其他操作時 `activity` 為 `None`。
@@ -169,11 +170,24 @@ class ActivityStateMachine:
             return _reject(activity, RejectionReason.STAGE_NOT_ALLOWED)
         transition = handler(activity, command, now, issued)
         if transition.ok and transition.changed and transition.activity is not None:
-            bumped = dataclasses.replace(
-                transition.activity, version=activity.version + 1, changed_at=now
-            )
+            new = transition.activity
+            bumped = dataclasses.replace(new, revision=activity.revision + 1)
+            if _public_state(new) != _public_state(activity):
+                bumped = dataclasses.replace(
+                    bumped, version=activity.version + 1, changed_at=now
+                )
             return dataclasses.replace(transition, activity=bumped)
         return transition
+
+
+def _public_state(activity: Activity) -> tuple[object, ...]:
+    """學生也看得到的共同狀態；只有它改變時才遞增 `version`（FR-030）。"""
+    return (
+        activity.stage,
+        activity.rounds,
+        activity.question_numbers,
+        activity.solved_questions,
+    )
 
 
 def _is_member(activity: Activity, actor: object) -> bool:

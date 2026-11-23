@@ -139,10 +139,11 @@ def test_student_messages_never_contain_other_groups(client, teacher):
     ctx, ws, first = _connect(client, teacher.code, mine)
     try:
         received = [first]
+        # 他組加入不會推送給本組學生（FR-030），下一則訊息就是開輪
         join_group(client, teacher.code, 2)
-        received.append(ws.receive_json())
         _post(client, teacher, "/rounds", {})
         received.append(ws.receive_json())
+        assert received[-1]["version"] == first["version"] + 1
         received.append(
             client.get(
                 f"/api/activities/{teacher.code}/snapshot",

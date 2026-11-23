@@ -29,7 +29,8 @@
 | `code` | `str` | 6 碼，字元集 `ABCDEFGHJKLMNPQRSTUVWXYZ23456789`；不與存續中活動重複（由服務層保證） |
 | `max_groups` | `int` | 組數上限 N，1～99；建立時指定，之後不變（alignment 2026-11-23 A2） |
 | `stage` | `Stage` | 見狀態轉移 |
-| `version` | `int` | 從 1 開始，每次成功的狀態變更加 1；無變化的成功（例如重複關輪）不加 |
+| `version` | `int` | 學生可見的狀態版本，從 1 開始；只在階段、輪次、題號或已成功題改變時加 1。組別加入、離開、刪除與提交標記不加，學生無法由版本跳動推知他組動態（FR-027、FR-030）（2026-11-23，jacky0407 依 PR #15 第三次審查決定） |
+| `revision` | `int` | 從 1 開始，每次有變化的成功操作都加 1；只出現在老師快照，供老師頁在同一個 `version` 內排序 |
 | `changed_at` | `datetime` | 最近一次狀態變更的時間（R2 量測起點） |
 | `teacher` | `TeacherIdentity` | 建立時產生，不可變 |
 | `question_numbers` | `tuple[int, ...]` | 由 002 的成功匯入提供；未匯入時為空 |

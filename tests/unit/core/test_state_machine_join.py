@@ -41,7 +41,9 @@ def test_new_group_number_creates_group_and_device():
     assert group.join_credential == CRED
     assert group.success_count == 0
     assert activity.devices["1" * 64].group_number == 3
-    assert activity.version == 2
+    # 加入組別只改 revision；學生可見的 version 不變（FR-030）
+    assert activity.version == 1
+    assert activity.revision == 2
 
 
 def test_existing_group_with_correct_credential_adds_device():

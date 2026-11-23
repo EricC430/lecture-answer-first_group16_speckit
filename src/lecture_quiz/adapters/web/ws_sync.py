@@ -38,6 +38,7 @@ class _Connection:
     websocket: WebSocket
     requester: Requester
     send_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
+    last_snapshot: dict[str, object] | None = None
 
     @property
     def role(self) -> str:
@@ -47,19 +48,42 @@ class _Connection:
         async with self.send_lock:
             await self.websocket.send_json(message)
 
+    async def send_snapshot(self, snapshot: dict[str, object]) -> bool:
+        """送出快照；內容與上次送出的完全相同時不送（FR-030）。
+
+        學生版快照不含他組資料，`version` 也只在學生可見的狀態改變時遞增，
+        所以他組的加入、離開、刪除與提交不會讓學生收到任何訊息。
+
+        Returns:
+            是否真的送出。
+        """
+        if snapshot == self.last_snapshot:
+            return False
+        await self.send(snapshot)
+        self.last_snapshot = snapshot
+        return True
+
 
 class WebSocketHub:
     """管理所有活動的 WebSocket 連線，並把狀態變更推送出去。"""
 
-    def __init__(self, auth_timeout: float = 5.0, ping_interval: float = 10.0) -> None:
+    def __init__(
+        self,
+        auth_timeout: float = 5.0,
+        ping_interval: float = 10.0,
+        send_timeout: float = 1.0,
+    ) -> None:
         """建立 hub。
 
         Args:
             auth_timeout: 等待第一則 auth 訊息的秒數。
             ping_interval: 送 ping 的間隔秒數。
+            send_timeout: 推送給單一連線的逾時秒數；逾時就關閉該連線，
+                避免一條卡住的連線拖慢其他連線與老師的請求（PR #15 第二次審查）。
         """
         self._auth_timeout = auth_timeout
         self._ping_interval = ping_interval
+        self._send_timeout = send_timeout
         self._service: ActivityService | None = None
         self._connections: dict[str, set[_Connection]] = {}
 
@@ -83,24 +107,34 @@ class WebSocketHub:
         return len(self._connections.get(code, ()))
 
     async def publish(self, activity: Activity) -> None:
-        """把最新狀態推送到該活動的每一條連線，各自依角色裁切。
+        """把最新狀態並行推送到該活動的每一條連線，各自依角色裁切。
+
+        內容與該連線上次收到的相同時不送（學生不會因他組動態收到訊息，FR-030）。
+        單一連線送出失敗或超過 `send_timeout` 時，只關閉那條連線。
 
         Args:
             activity: 變更後的活動。
         """
-        for conn in list(self._connections.get(activity.code, ())):
-            view = ActivityService.snapshot_for(activity, conn.requester)
-            if view is None:
-                continue
-            try:
-                await conn.send(view.to_json())
-            except Exception:
-                logger.info(
-                    "推送失敗，關閉該連線 activity=%s role=%s", activity.code, conn.role
-                )
-                self._unregister(activity.code, conn)
-                with contextlib.suppress(Exception):
-                    await conn.websocket.close()
+        conns = list(self._connections.get(activity.code, ()))
+        await asyncio.gather(*(self._push(activity, conn) for conn in conns))
+
+    async def _push(self, activity: Activity, conn: _Connection) -> None:
+        view = ActivityService.snapshot_for(activity, conn.requester)
+        if view is None:
+            return
+        try:
+            await asyncio.wait_for(
+                conn.send_snapshot(view.to_json()), self._send_timeout
+            )
+        except Exception:
+            logger.info(
+                "推送失敗或逾時，關閉該連線 activity=%s role=%s",
+                activity.code,
+                conn.role,
+            )
+            self._unregister(activity.code, conn)
+            with contextlib.suppress(Exception):
+                await asyncio.wait_for(conn.websocket.close(), self._send_timeout)
 
     async def disconnect_device(
         self, code: str, token_hash: str, reason: DisconnectReason
@@ -154,7 +188,7 @@ class WebSocketHub:
         try:
             snapshot = self._service.snapshot(code, requester)
             if snapshot.ok and snapshot.value is not None:
-                await conn.send(snapshot.value.to_json())
+                await conn.send_snapshot(snapshot.value.to_json())
             while True:
                 await websocket.receive_text()
                 # 認證後的任何訊息都忽略；不記錄內容，避免把 token 寫入日誌

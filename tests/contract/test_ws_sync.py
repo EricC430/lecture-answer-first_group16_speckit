@@ -55,7 +55,12 @@ def test_teacher_receives_snapshot_with_teacher_fields(client):
         ws.send_json({"type": "auth", "token": teacher.token})
         snap = ws.receive_json()
     assert COMMON_FIELDS <= set(snap)
-    assert set(snap) == COMMON_FIELDS | {"groups", "maxGroups", "questionNumbers"}
+    assert set(snap) == COMMON_FIELDS | {
+        "groups",
+        "maxGroups",
+        "questionNumbers",
+        "revision",
+    }
     assert snap["role"] == "teacher"
     assert snap["version"] == 1
 
@@ -119,7 +124,9 @@ def test_state_change_is_pushed_and_extra_messages_ignored(client, caplog):
         ws.send_json({"type": "auth", "token": "ignored-after-auth"})
         join_group(client, teacher.code, 1)
         snap = ws.receive_json()
-    assert snap["version"] == 2
+    # 老師收到新快照：version 不變（學生不可見的變更），revision 加 1（FR-030）
+    assert snap["version"] == 1
+    assert snap["revision"] == 2
     assert [g["number"] for g in snap["groups"]] == [1]
     assert any("多餘訊息" in r.getMessage() for r in caplog.records)
     assert all("ignored-after-auth" not in r.getMessage() for r in caplog.records)

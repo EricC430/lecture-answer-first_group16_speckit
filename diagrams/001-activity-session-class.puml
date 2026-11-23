@@ -18,11 +18,12 @@ package "核心（純資料與純函式）" {
     code : 活動代碼（6 碼，排除 0、O、1、I）
     maxGroups : 組數上限 N（1～99，建立後不變）
     stage : Stage
-    version : 狀態版本（遞增）
+    version : 學生可見的狀態版本（只在階段、輪次、題號、已成功題改變時遞增）
     teacher : TeacherIdentity
     questionNumbers : 題號清單（由 002 提供）
     solvedQuestions : 已成功題號（由 004 定案後提供）
-    changedAt : 最近一次變更時間
+    changedAt : 最近一次學生可見變更的時間
+    revision : 修訂號（任何變更都遞增，只給老師版）
     groups : 組號 → Group
     devices : DeviceIdentity 清單（key 為 token 雜湊）
     rounds : Round 清單
@@ -139,6 +140,7 @@ package "核心（純資料與純函式）" {
     ownGroup : 只含自己組號、本組憑證、成功次數（學生版）
     maxGroups : 組數上限（老師版）
     groups : 全部組別與憑證，依組號排序（老師版）
+    revision : 修訂號（老師版）
     unsolvedQuestions : 結束時列出
   }
 }
@@ -197,7 +199,8 @@ package "應用層" {
 package "外層轉接層" {
   class AsyncioCountdownScheduler
   class WebSocketHub {
-    +publish(activity) : 依各連線角色以 SnapshotView 裁切
+    +publish(activity) : 依各連線角色以 SnapshotView 裁切；
+內容與上次相同不送、並行送出、單一連線 1 秒逾時
     +disconnectDevice(code, tokenHash, reason) : 送 unauthorized（LEFT_GROUP／GROUP_DELETED）並關閉
     +serve(websocket, code)
   }

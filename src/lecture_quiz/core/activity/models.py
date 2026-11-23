@@ -147,8 +147,9 @@ class Activity:
     Attributes:
         code: 6 碼活動代碼。
         stage: 目前階段。
-        version: 狀態版本，從 1 開始，每次真正變更加 1。
-        changed_at: 最近一次狀態變更時間。
+        version: 學生可見的狀態版本，從 1 開始；只在階段、輪次、題號或已成功題
+            改變時加 1（FR-027、FR-030）。
+        changed_at: 最近一次學生可見變更的時間（2 秒同步的量測起點）。
         teacher: 老師身分。
         max_groups: 組數上限 N（1～99），建立後不變。
         question_numbers: 題號（由 002 的成功匯入提供）。
@@ -156,6 +157,8 @@ class Activity:
         groups: 組別，key 為組號。
         devices: 學生裝置，key 為裝置 token 的雜湊。
         rounds: 輪次，最後一個是目前輪次。
+        revision: 任何變更都加 1，只出現在老師快照（組別加入、離開、刪除、提交標記
+            只改這個值，學生無法由版本跳動推知他組動態）。
     """
 
     code: str
@@ -169,6 +172,7 @@ class Activity:
     groups: Mapping[int, Group] = field(default_factory=lambda: freeze({}))
     devices: Mapping[str, DeviceIdentity] = field(default_factory=lambda: freeze({}))
     rounds: tuple[Round, ...] = ()
+    revision: int = 1
 
     @property
     def current_round(self) -> Round | None:

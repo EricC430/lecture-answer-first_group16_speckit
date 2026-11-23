@@ -19,7 +19,8 @@ def test_join_returns_device_token_number_credential_version(client):
     assert body["groupNumber"] == 3
     assert len(body["credential"]) == 6
     assert len(body["deviceToken"]) >= 40
-    assert body["version"] == 2
+    # 加入組別不改變學生可見的狀態，version 不變（FR-030）
+    assert body["version"] == 1
 
 
 def test_code_is_case_and_space_insensitive(client):
