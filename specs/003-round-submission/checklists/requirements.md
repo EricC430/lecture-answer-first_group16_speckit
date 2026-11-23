@@ -13,7 +13,7 @@
 
 ## Requirement Completeness
 
-- [ ] No [NEEDS CLARIFICATION] markers remain
+- [x] No [NEEDS CLARIFICATION] markers remain
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)
@@ -32,7 +32,7 @@
 ## Notes
 
 - 驗證日期 2026-11-23（第 1 次即通過，除下列項目）。
-- **[NEEDS CLARIFICATION] 仍有 4 項**：Q-20（答案長度、多行、空白保存）、Q-21（搶答中老師看板暫估順位）、Q-22（搶答中學生可見的額外資訊）、Q-26（判錯標記學生端可見性）。這四項依 `docs/alignment.md` 屬於「待與 OpenSpec 組確認」，依 CLAUDE.md 規定必須標記並引用編號、不得自行假設，因此超過 Spec Kit 預設的 3 項上限。確認後移入 alignment.md 決議紀錄，再以 `/speckit-clarify` 寫回 spec。
+- **[NEEDS CLARIFICATION] 已清除（2026-11-23 `/speckit-clarify`）**：Q-20、Q-21、Q-22、Q-26 依 SpecKit 組提議寫回 spec（jacky0407 同意），並記入 `docs/alignment.md` 決議紀錄，OpenSpec 組確認人仍為「待確認」。spec 相關條文都標註「待 OpenSpec 組確認」；**確認前不得合併實作**，對方結論不同時改寫 spec、圖與測試。
 - FR-013 提到「先向 001 標記」、Assumptions 提到 001 的 `contracts/service-interfaces.md`，屬於跨子功能的依賴說明，不是實作細節。
 - 002 目前的契約（PR #11）沒有直接提供「每題子空格數」給 003；需在 003 plan 與 002 協調（見 Assumptions）。
 - 圖表（組件、類別、時序）已產出並轉出 PNG；類別圖的型別名稱是給 plan 的藍圖，spec 本文不依賴它們。

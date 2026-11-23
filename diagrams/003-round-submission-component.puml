@@ -23,7 +23,7 @@ package "應用層" {
 
 package "核心（純函式：不依賴網路、Web 框架、系統時鐘）" {
   [提交判定 SubmissionRules\n（紀錄 + 本輪資訊 + 嘗試 + 傳入時間 + 下一序號\n→ 接受／本組已送出／拒絕原因）] as Rules
-  [答案正規化與檢查\n（判空去首尾空白、格數檢查）] as AnswerRules
+  [答案正規化與檢查\n（判空去首尾空白但保存原文、每格 500 字、格數檢查）] as AnswerRules
   [提交檢視裁切 SubmissionView\n（老師版／學生版／關輪公開版；依接收時間與序號排序）] as View
 }
 

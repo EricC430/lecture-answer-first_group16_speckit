@@ -45,6 +45,7 @@ package "core.round_submission（純函式）" {
     QUESTION_NOT_OPEN
     WRONG_BLANK_COUNT
     BLANK_EMPTY
+    ANSWER_TOO_LONG
     INVALID_ANSWER
   }
   class SubmissionDecision <<frozen>> {
