@@ -16,6 +16,9 @@ py -3.11 -m venv .venv
 pip install -e ".[dev]"
 ```
 
+- 人工驗證只跑不改程式，也可以改用一般安裝 `pip install ".[dev]"`（不加 `-e`）；之後若改了 `src/`，要重新安裝才會生效。
+- 專案路徑含中文（例如「中央大學」）且使用 Python 3.11／3.12 時，可編輯安裝需要多一步處理，見 `docs/DEVELOPMENT.md`「專案路徑含中文時」。
+
 ## 自動化檢查（每次提交前）
 
 ```powershell

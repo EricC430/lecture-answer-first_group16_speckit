@@ -14,7 +14,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 效能：狀態變更 2 秒內反映到所有畫面（001 採 WebSocket 只推送、HTTP 負責操作）；效能驗證為老師 + 6 組、每組 2 條連線（001 研究 R2）；組數上限由老師建立活動時指定（1～99，alignment 2026-11-23 A2）。
 - **架構（NON-NEGOTIABLE）**：核心邏輯（學習單解析、提交判定、順位計算）是不依賴網路、框架與系統時鐘的純函式，時間由呼叫端傳入；Google、API、畫面在外層轉接層，相依只能由外層指向核心。
 
-**共用骨架**（Issue #5，`chore/5-project-skeleton`）：`pyproject.toml`、`src/lecture_quiz/{core,app,adapters}/`、`main.py`、共用 HTTP 錯誤／日誌（`adapters/web/common.py`）、前端共用 `static/js/{api,sync,identity}.js`、`tests/conftest.py`（`FakeClock`）、`tests/architecture/test_core_is_pure.py`。完整說明與子功能擴充約定見 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)。指令（Windows，先 `py -3.11 -m venv .venv`，再 `.venv\Scripts\python -m pip install -e ".[dev]"`）：
+**共用骨架**（Issue #5，`chore/5-project-skeleton`）：`pyproject.toml`、`src/lecture_quiz/{core,app,adapters}/`、`main.py`、共用 HTTP 錯誤／日誌（`adapters/web/common.py`）、前端共用 `static/js/{api,sync,identity}.js`、`tests/conftest.py`（`FakeClock`）、`tests/architecture/test_core_is_pure.py`。完整說明與子功能擴充約定見 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)。指令（Windows，先 `py -3.11 -m venv .venv`，再 `.venv\Scripts\python -m pip install -e ".[dev]"`；專案路徑含中文時要改 `.pth`、只跑不改時可用一般安裝 `pip install ".[dev]"`，三種做法見 DEVELOPMENT.md「專案路徑含中文時」，不要用 `PYTHONUTF8`）：
 
 - lint／格式：`ruff check .`、`ruff format --check .`；型別：`mypy`（只檢查 `src/`）；測試：`pytest`（預設排除 `perf`；單一測試：`pytest tests/contract/test_http_common.py::test_health`）。
 - 啟動：`python -m lecture_quiz`（只監聽 127.0.0.1:8000）。

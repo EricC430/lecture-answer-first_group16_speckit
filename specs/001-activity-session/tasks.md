@@ -519,7 +519,7 @@ description: "001-activity-session 任務清單"
 - [x] T085 [P] 指令或流程與文件不同時，更新 `specs/001-activity-session/quickstart.md`；在 `CLAUDE.md` 的「專案現況」補上 build、lint、test 指令與 `src/lecture_quiz` 三層結構（現在已有程式碼）。
   - 2026-11-23：quickstart 已更新為 23 步並改用 `python -m lecture_quiz` 啟動；CLAUDE.md「專案現況」補上 001 結構與組數上限。
 - [x] T086 用全新 clone 在乾淨的 venv 重跑安裝與 `pytest`，確認不依賴任何本機未提交的檔案（規章第 9 節）。
-  - 2026-11-23：從 GitHub 全新 clone `feature/5-001-activity-session`（`a1c9596`），在乾淨的 venv 以一般安裝 `pip install ".[dev]"`（不加 `-e`）後執行：ruff 通過、mypy 通過、`pytest` 347 passed。一般安裝不會產生含路徑的 `.pth`，可作為專案路徑含中文時的安裝方式。
+  - 2026-11-23：從 GitHub 全新 clone `feature/5-001-activity-session`（`a1c9596`），在乾淨的 venv 以一般安裝 `pip install ".[dev]"`（不加 `-e`）後執行：ruff 通過、mypy 通過、`pytest` 347 passed。一般安裝不會產生含路徑的 `.pth`，適合只跑不改的驗證情境；平常開發仍以可編輯安裝加改 `.pth` 為首選，一般安裝改了 `src/` 後要重新安裝才會生效（三種做法見 `docs/DEVELOPMENT.md`「專案路徑含中文時」，2026-11-23 統一說法）。
 - [x] T087 追蹤開發用 seed API 的移除：在 Issue #6（002）留言，註明「002 合併後的第一個 PR 移除 `src/lecture_quiz/adapters/web/dev_seed.py`、`LECTURE_QUIZ_DEV_SEED` 與 `tests/integration/test_dev_seed.py`」。本子功能內不刪除。
   - 2026-11-23：已在 Issue #6 留言（issuecomment-7094090227）。
 - [x] T088 確認提案相依的任務狀態：`docs/alignment.md` 2026-11-21 的 6 列已於 2026-11-23 全部獲 OpenSpec 組確認（新增一列決議），結論與提案一致；另依 Clarifications 增加組號、組數上限與 C7，已重跑 clarify → plan → tasks。
