@@ -55,7 +55,7 @@ Technical Context 沒有 NEEDS CLARIFICATION；以下是設計決策。每項格
 
 ## R7 HTTP API 形狀
 
-- **決策**：`POST /api/activities/{code}/submissions`，`Authorization: Bearer <裝置 token>`，本文 `{"roundNumber": int, "questionNumber": int, "answers": [str, ...]}`（`extra="forbid"`，前端送的時間欄位一律不接受）。
+- **決策**：`POST /api/activities/{code}/submissions`，`Authorization: Bearer <裝置 token>`，本文 `{"roundNumber": int, "questionNumber": int, "answers": [str, ...]}`（多送的欄位一律忽略，前端時間不影響判定）。
   - 接受：`201`，`{"result": "accepted", "submission": {...}}`。
   - 本組已送出（含重送）：`200`，`{"result": "alreadySubmitted", "submission": {...既有}}`。
   - 拒絕：沿用 001 的錯誤格式（`common.py`），`error.code` 為 `SubmissionRejection` 值。

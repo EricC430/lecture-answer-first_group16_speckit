@@ -10,8 +10,7 @@
 |---|---|---|
 | `Submission` | `activity_code: str`、`round_number: int`、`question_number: int`、`group_number: int`、`answers: tuple[str, ...]`、`received_at: datetime`、`sequence: int` | 一組在某一輪對某一題的第一筆有效提交。`answers[i]` 是第 i+1 格的**原文**（Q-20）。不含裝置 token。建立後不可修改 |
 | `SubmissionAttempt` | `round_number_raw: object`、`question_number_raw: object`、`answers_raw: object` | 學生送出的原始內容，由 `decide` 驗證；被拒時不保存 |
-| `SubmissionWindow` | `group_number: int`、`stage: Stage`、`round_number: int \| None`、`open_questions: tuple[int, ...]`、`deadline: datetime \| None`、`accepting: bool` | 001 在鎖內組成（研究 R2）；`accepting` = 搶答中且（無截止時間或 `now < deadline`） |
-| `RoundContext` | `window: SubmissionWindow`、`blanks_per_question: Mapping[int, int]` | `decide` 的完整輸入；格數來自 `QuestionShapeSource` |
+| `RoundContext` | `group_number: int`、`round_number: int \| None`、`open_questions: tuple[int, ...]`、`accepting: bool`、`blanks_per_question: Mapping[int, int]` | `decide` 的完整輸入；由服務層從 001 的 `SubmissionWindow` 與 `QuestionShapeSource` 組成（核心不匯入 app 層型別） |
 | `SubmissionLedger` | `submissions: tuple[Submission, ...]`、`next_sequence: int = 1` | 一個活動的全部提交；`find(round, question, group)`、`for_round(round)`、`with_added(sub)`（回傳新 ledger，`next_sequence + 1`） |
 | `DecisionKind` | `ACCEPTED`、`ALREADY_SUBMITTED`、`REJECTED` | |
 | `SubmissionRejection` | 見下表 | `StrEnum`，每個值有 HTTP 狀態碼與預設訊息 |
@@ -72,7 +71,7 @@
 |---|---|---|
 | `core/activity/commands.py` | `RecordSubmission(actor, group_number)` | 只允許 `System` |
 | `core/activity/state_machine.py` | `_record_submission` | 只在 `ROUND_OPEN`、`now < deadline`（有截止時）且組別存在時成功；設 `has_submissions = True`，**每次都算變更**（`revision + 1`；公開狀態不變，`version` 不變） |
-| `app/activity/ports.py` | `SubmissionHandler[T]`（`decide(window, now) -> HandlerStep[T]`、`commit() -> None`）、`SnapshotExtension`、`TeacherViewer`、`GroupViewer` | |
+| `app/activity/ports.py` | `SubmissionWindow`（`group_number`、`stage`、`round_number`、`open_questions`、`deadline`、`accepting`；`accepting` = 搶答中且（無截止時間或 `now < deadline`））、`HandlerStep[T]`、`SubmissionHandler[T]`（`decide(window, now) -> HandlerStep[T]`、`commit() -> None`）、`SnapshotExtension`、`TeacherViewer`、`GroupViewer` | |
 | `app/activity/service.py` | `record_submission(code, device_token, handler)`、`add_snapshot_extension(ext)`；`snapshot_for` 改為實例方法 | 見研究 R2 步驟 1～7 |
 | `adapters/web/ws_sync.py` | `_push` 改呼叫 `self._service.snapshot_for` | |
 

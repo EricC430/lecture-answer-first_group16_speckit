@@ -18,16 +18,11 @@ package "core.round_submission（純函式）" {
     received_at: datetime
     sequence: int
   }
-  class SubmissionWindow <<frozen>> {
+  class RoundContext <<frozen>> {
     group_number: int
-    stage: Stage
     round_number: int | None
     open_questions: tuple[int, ...]
-    deadline: datetime | None
     accepting: bool
-  }
-  class RoundContext <<frozen>> {
-    window: SubmissionWindow
     blanks_per_question: Mapping[int, int]
   }
   class SubmissionLedger <<frozen>> {
@@ -77,7 +72,6 @@ package "core.round_submission（純函式）" {
     {static} for_group(ledger, activity, group_number): dict
   }
   SubmissionLedger o-- "0..*" Submission
-  RoundContext *-- SubmissionWindow
   SubmissionDecision --> DecisionKind
   SubmissionDecision --> SubmissionRejection
   SubmissionRules ..> SubmissionLedger
@@ -127,6 +121,14 @@ package "001 app.activity（擴充）" {
     accepts_submission(code, now): bool
     mark_group_submitted(code, group_number): Outcome[int]
   }
+  class SubmissionWindow <<frozen>> {
+    group_number: int
+    stage: Stage
+    round_number: int | None
+    open_questions: tuple[int, ...]
+    deadline: datetime | None
+    accepting: bool
+  }
   interface SubmissionHandler <<Protocol>> {
     decide(window, now): HandlerStep[T]
     commit(): None
@@ -154,6 +156,7 @@ package "002（實作 003 的連接埠）" {
 }
 
 Handler ..|> SubmissionHandler
+Handler ..> SubmissionWindow : 轉成 RoundContext
 SubmissionService ..|> SnapshotExtension : snapshot_extension
 SubmissionService --> ActivityService : record_submission、註冊擴充
 ActivityService --> Clock
