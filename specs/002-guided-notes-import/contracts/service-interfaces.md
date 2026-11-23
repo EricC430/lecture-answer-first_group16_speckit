@@ -8,9 +8,9 @@
 
 | 方法 | 002 的用法 |
 |---|---|
-| `stage(code) -> Stage \| None` | 入口處判斷是否在準備中；活動不存在時為空；用來回 `ROUND_STARTED`／`ACTIVITY_CANCELLED`／`STAGE_NOT_PREPARING` |
-| `is_teacher(code, requester) -> bool` | 非老師一律拒絕 |
-| `replace_questions(code, requester, question_numbers: tuple[int, ...]) -> Outcome[int]` | 解析成功後呼叫；**只傳題號清單**；成功回傳新 `version`；被拒時 001 的題目完全不變 |
+| `stage(code) -> Stage \| None`（**同步**，依已合併的 001 `ports.py`） | 入口處判斷是否在第一輪開始前（`PREPARING` 或 `JOINING` 才允許）；活動不存在時為空；用來回 `ROUND_STARTED`／`ACTIVITY_CANCELLED`／`STAGE_NOT_PREPARING` |
+| `is_teacher(code, requester) -> bool`（**同步**） | 非老師一律拒絕 |
+| `replace_questions(code, requester, question_numbers: tuple[int, ...]) -> Outcome[int]`（**async**） | 解析成功後呼叫；**只傳題號清單**；成功回傳新 `version`；被拒時 001 的題目完全不變 |
 
 ## 002 定義的連接埠（由外層轉接層實作）
 
@@ -46,7 +46,7 @@
 | 讀取與寫入 Google | 005 透過同一個 `AuthGateway`／`SheetsReader` 取得授權（授權範圍 `drive.file` 已涵蓋寫入，⚠ 待真實驗證）；寫入方法由 005 自己的連接埠定義，**002 不提供任何寫入** |
 
 - 005 只能讀 `ImportRecord`；不得修改它。
-- 重新匯入只會發生在準備中；寫回發生在搶答結束後，所以 `ImportRecord` 在寫回期間不會變動。
+- 重新匯入只會發生在第一輪開始前（001 的準備中與開放加入）；寫回發生在搶答結束後，所以 `ImportRecord` 在寫回期間不會變動。
 
 ## 純函式邊界（給架構測試）
 

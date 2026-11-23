@@ -46,7 +46,7 @@ description: "002-guided-notes-import 任務清單"
 
 **Purpose**: 確認骨架就緒，追加相依與目錄
 
-- [ ] T001 **前置關卡（等相依完成再開始）**：確認以下兩項都已完成，在 `main` 或 002 所接續的 001 分支上都可以，**未完成就停止並回報，不開工、不自行建立**：(1) 001 的骨架 PR（目前為 #14）已合併，且 002 分支已從該基底接續；(2) 001 的 `ActivityService` 已實作 002 契約測試與真實驗證會用到的功能：建立活動與老師 token（001 US1）、`replace_questions`（001 tasks T043 對應的實作）、開輪與取消（001 US3、US4，US6 測試需要）。骨架檢查： `pyproject.toml`（含 Ruff、mypy 設定）、`src/lecture_quiz/{core,app,adapters}/`、`src/lecture_quiz/main.py` 的 `create_app`、`tests/conftest.py`、`tests/architecture/test_core_is_pure.py` 都存在。任一項缺少就**停止並回報**，不自行建立（骨架凍結）。
+- [ ] T001 **前置關卡（等相依完成再開始）**：確認以下兩項都已完成，在 `main` 或 002 所接續的 001 分支上都可以，**未完成就停止並回報，不開工、不自行建立**：(1) 001 的骨架 PR（#14，2026-11-23 已合併）已合併，且 002 分支已從該基底接續；(2) 001 的 `ActivityService` 已實作 002 契約測試與真實驗證會用到的功能：建立活動與老師 token（001 US1）、`replace_questions`（001 tasks T043 對應的實作）、開輪與取消（001 US3、US4，US6 測試需要）。骨架檢查： `pyproject.toml`（含 Ruff、mypy 設定）、`src/lecture_quiz/{core,app,adapters}/`、`src/lecture_quiz/main.py` 的 `create_app`、`tests/conftest.py`、`tests/architecture/test_core_is_pure.py` 都存在。任一項缺少就**停止並回報**，不自行建立（骨架凍結）。
 - [ ] T002 [P] 確認 `diagrams/002-guided-notes-import-{component,class,sequence}.puml` 與對應 PNG 都存在，且 PNG 不舊於 `.puml`；不符時先執行 `java -jar plantuml.jar "./diagrams/002-*.puml"`（原則 II）。
 - [ ] T003 在 `pyproject.toml` 相依列表**最後**追加 `google-api-python-client`、`google-auth`、`google-auth-oauthlib`（核心相依，不放選用 extra）；版本以 `pip index versions <套件>` 查證後釘選並記錄在 PR 描述，不憑記憶。註冊 pytest marker `real_google`，並讓預設 `addopts` 排除它：`addopts` 合併為單一表達式 `-m "not perf and not real_google"`（001 已有 `-m 'not perf'`；命令列再給 `-m` 會**覆蓋**它，所以指令一律用 `not real_google and not perf`）。
 - [ ] T004 [P] 建立套件與測試目錄，各放空的 `__init__.py`：`<core>/`、`<app>/`、`src/lecture_quiz/adapters/google/`、`tests/unit/core/guided_notes_import/`、`tests/unit/app/guided_notes_import/`、`tests/unit/adapters/google/`、`tests/contract/guided_notes_import/`、`tests/fixtures/`、`tests/real_google/`。
@@ -78,10 +78,10 @@ description: "002-guided-notes-import 任務清單"
 ### 應用層
 
 - [ ] T010 [P] 在 `<app>/models.py` 建立：`SourceRef(spreadsheet_id, sheet_id)`、`SheetInfo(sheet_id, title)`、`SpreadsheetInfo(spreadsheet_id, title, sheets, auto_select_sheet_id)`、`SourceSelection(source, sheet_title)`、`ImportRecord(source, sheet_title, blanks, structure, question_numbers)`、`ImportPreview(question_numbers, blanks_per_question, total_questions, total_blanks)`、`ImportOutcome(ok, preview, issues, rejection)`、`ImportRejection` 列舉（`NOT_AUTHORIZED`、`AUTH_DENIED`、`AUTH_EXPIRED`、`PERMISSION_DENIED`、`NOT_A_SPREADSHEET`、`SHEET_NOT_FOUND`、`SOURCE_NOT_SELECTED`、`READ_FAILED`、`VALIDATION_FAILED`、`ACTIVITY_NOT_FOUND`、`NOT_TEACHER`、`ROUND_STARTED`、`ACTIVITY_CANCELLED`、`STAGE_NOT_PREPARING`、`GATEWAY_REJECTED`、`GOOGLE_NOT_CONFIGURED`、`INVALID_REQUEST`）、與 001 `Outcome` 同形的 `Result[T]`（`ok`、`value`、`rejection`）。服務不拋業務錯誤。`ACTIVITY_GONE`（410）不是獨立列舉值：它是 `ACTIVITY_NOT_FOUND` 在 HTTP 層、請求帶 token 時依 001 慣例的對外代碼與狀態碼，由 `<web>` 的錯誤轉換決定（見 [contracts/http-api.md](contracts/http-api.md)）。
-- [ ] T011 [P] 在 `<app>/ports.py` 以 `typing.Protocol` 定義 `AuthGateway`（`start_authorization`、`complete_authorization`、`is_authorized`、`picker_credentials`）與 `SheetsReader`（`inspect`、`read`），簽章照 [contracts/service-interfaces.md](contracts/service-interfaces.md)；所有跨出應用層的 I/O 為 `async`。`Clock` 與 `ActivityGateway`（`stage`、`is_teacher`、`replace_questions`）沿用 001，不重複定義。
+- [ ] T011 [P] 在 `<app>/ports.py` 以 `typing.Protocol` 定義 `AuthGateway`（`start_authorization`、`complete_authorization`、`is_authorized`、`picker_credentials`）與 `SheetsReader`（`inspect`、`read`），簽章照 [contracts/service-interfaces.md](contracts/service-interfaces.md)；所有跨出應用層的 I/O 為 `async`（`ActivityGateway` 除外：依已合併的 001 `src/lecture_quiz/app/activity/ports.py`，`stage`、`is_teacher` 是**同步**方法，只有 `replace_questions` 是 `async`；002 的 Fake 與呼叫端照此，不得 `await` 同步方法）。`Clock` 與 `ActivityGateway`（`stage`、`is_teacher`、`replace_questions`）沿用 001，不重複定義。
 - [ ] T012 [P] 在 `<app>/store.py` 建立 `ImportStore`：依活動代碼為 key 的 `sessions`、`selections`、`records`、`locks`（每個活動一把 `asyncio.Lock`，與 001 活動鎖分開）；只在記憶體，不持久化（原則 VII）。
 - [ ] T013 在 `<app>/messages.py` 建立固定中文訊息對照表（每個 `ImportRejection` 一則，`IssueKind` 的修正建議於 T053 補齊），儲存格引用截斷在 40 字元；在 `tests/unit/app/guided_notes_import/test_messages.py` 測試每個代碼都有訊息，且訊息不含 token、授權碼、`state`、client secret、檔案路徑、堆疊字樣（FR-022、SC-005；`Edge: 輸入驗證失敗`）。（依賴 T010）
-- [ ] T014 [P] 建立 `tests/unit/app/guided_notes_import/fakes.py`：`FakeAuthGateway`、`FakeSheetsReader`（可注入快照、授權狀態、各種拒絕）、`FakeActivityGateway`（行為依 001 契約：`stage`、`is_teacher`、`replace_questions` 只允許老師在準備中、成功回傳新 `version`、被拒時題目不變；可注入「解析後、寫入前階段改變」）。檔頭標明為測試替身。
+- [ ] T014 [P] 建立 `tests/unit/app/guided_notes_import/fakes.py`：`FakeAuthGateway`、`FakeSheetsReader`（可注入快照、授權狀態、各種拒絕）、`FakeActivityGateway`（行為依 001 契約：`stage`、`is_teacher`、`replace_questions` 只允許老師在 `PREPARING` 與 `JOINING`（第一輪開始前）、成功回傳新 `version`、被拒時題目不變；可注入「解析後、寫入前階段改變」）。檔頭標明為測試替身。
 - [ ] T015 [P] 在 `<google>/config.py` 讀取五個環境變數，**空字串視為未設定**，缺任何一項時匯入相關操作回 `GOOGLE_NOT_CONFIGURED`，不退回離線路徑、不假裝成功；`config.py` 只讀 `os.environ`，`.env` 由啟動指令載入（`uvicorn ... --env-file .env`，`uvicorn[standard]` 內含 python-dotenv；實作時以已安裝版本的 `uvicorn --help` 確認此選項）；授權範圍常數（`drive.file`）與 `state` 有效期限各只定義在這個檔案。在 `tests/unit/adapters/google/test_config.py` 測試：缺值、空字串、全部齊備三種情況。
 - [ ] T016 擴充 `tests/conftest.py`（只追加）：`make_app` 增加選用參數 `auth_gateway`、`sheets_reader`（預設為 Fake），讓契約測試使用 001 的真實 `ActivityService`、`teacher` fixture 與 `FakeClock`，只替換 Google 相關連接埠。（依賴 T014）
 
@@ -263,7 +263,7 @@ description: "002-guided-notes-import 任務清單"
 
 ### Tests for User Story 6 (REQUIRED — one or more per Acceptance Scenario) ⚠️
 
-- [ ] T061 [P] [US6] 在 `tests/unit/app/guided_notes_import/test_lock_after_round.py` 測試：001 階段為搶答中、結果未定案、結果已定案、已結束時，`select_source` 與 `import_sheet` 都回 `ROUND_STARTED`，`ImportRecord` 與既有提交不變（`Scenario: US6-AS1`）；002 不提供任何修改題號、空格數、答案位置的端點（對 `main.py` 路由表掃描），且透過 001 `replace_questions` 的修改被拒、題目定義不變（`Scenario: US6-AS2`）；已取消回 `ACTIVITY_CANCELLED`，其他非準備中階段回 `STAGE_NOT_PREPARING`（`Edge: 活動不在「準備中」`）。
+- [ ] T061 [P] [US6] 在 `tests/unit/app/guided_notes_import/test_lock_after_round.py` 測試：001 階段為搶答中、結果未定案、結果已定案、已結束時，`select_source` 與 `import_sheet` 都回 `ROUND_STARTED`，`ImportRecord` 與既有提交不變（`Scenario: US6-AS1`）；002 不提供任何修改題號、空格數、答案位置的端點（對 `main.py` 路由表掃描），且透過 001 `replace_questions` 的修改被拒、題目定義不變（`Scenario: US6-AS2`）；已取消回 `ACTIVITY_CANCELLED`，`STAGE_NOT_PREPARING` 只保留給無法辨識的階段（防禦用）；**`PREPARING` 與 `JOINING` 兩個階段都允許** `select_source` 與 `import_sheet`，兩者各測一次成功與重新匯入（`Scenario: US5-AS2`；`Edge: 活動不在「準備中」`；alignment 2026-11-23「開放加入」）。
 - [ ] T062 [P] [US6] 在 `tests/contract/guided_notes_import/test_identity_gate.py` 測試每個端點（#1、#3～#8）：非老師、其他活動的老師、不存在的活動代碼都被拒絕且不更動任何題目（`Edge: 非老師的請求`、`Edge: 活動代碼不存在`；FR-025）；活動不存在時依 001 慣例，無 token 回 404 `ACTIVITY_NOT_FOUND`、帶 token 回 410 `ACTIVITY_GONE`；解析成功但 001 因階段剛好改變而拒絕 → `GATEWAY_REJECTED`、001 題目與 002 保存的資料都不變。
 
 ### Implementation for User Story 6
@@ -274,7 +274,7 @@ description: "002-guided-notes-import 任務清單"
 
 **前端**
 
-- [ ] T064 [US6] 在 `<static>/js/import.js` 依 001 的活動快照在階段不是準備中時停用匯入區塊，並顯示「搶答已開始，題目不可更動」（已取消時顯示「活動已取消」）。
+- [ ] T064 [US6] 在 `<static>/js/import.js` 依 001 的活動快照在階段不是「準備中」或「開放加入」時停用匯入區塊，並顯示「搶答已開始，題目不可更動」（已取消時顯示「活動已取消」）。
 
 **Checkpoint**: 所有 User Story 完成
 

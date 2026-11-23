@@ -123,7 +123,7 @@ package "外層轉接層" {
     +isAuthorized(code) : bool
     +pickerCredentials(code) : 選檔用短效憑證
   }
-  interface ActivityGateway <<由 001 ActivityService 實作，皆為 async>> {
+  interface ActivityGateway <<由 001 ActivityService 實作；stage、isTeacher 為同步，replaceQuestions 為 async>> {
     +stage(code) : 階段（活動不存在時為空）
     +isTeacher(code, requester) : bool
     +replaceQuestions(code, requester, questionNumbers) : Outcome（成功時回傳新 version）
@@ -133,7 +133,7 @@ package "外層轉接層" {
 note bottom of ActivityGateway
   契約：001 的 service-interfaces.md。
   replaceQuestions 只收題號清單（tuple[int, ...]），
-  只允許老師在「準備中」呼叫；被拒時既有題目完全不變。
+  只允許老師在第一輪開始前（準備中、開放加入）呼叫；被拒時既有題目完全不變。
   來源映射與匯入時結構由 002 自己依活動代碼保存。
 end note
 

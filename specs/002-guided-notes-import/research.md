@@ -154,7 +154,7 @@
 **決定**：
 
 - **順序（FR-027）**：匯入服務依下列順序執行，且整段持有**該活動的匯入鎖**：
-  1. 向 001 取得 `stage(code)` 與 `is_teacher(code, requester)`；不在準備中或非老師就拒絕。
+  1. 向 001 取得 `stage(code)` 與 `is_teacher(code, requester)`；只有 `PREPARING` 與 `JOINING`（第一輪開始前，alignment 2026-11-23「開放加入」）允許；`CANCELLED` → `ACTIVITY_CANCELLED`；`ROUND_OPEN`／`RESULT_PENDING`／`RESULT_FINAL`／`ENDED` → `ROUND_STARTED`；非老師就拒絕。
   2. 讀取 Sheets（唯讀）→ 解析。任何失敗就回傳，**什麼都不寫**。
   3. 呼叫 001 的 `replace_questions(code, requester, 題號清單)`。被拒絕就整份拒絕，002 保存的資料也不變。
   4. 001 接受後，才以新的 `ImportRecord` **整份取代**舊的（來源映射與匯入時結構）。

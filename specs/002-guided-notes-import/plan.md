@@ -14,7 +14,7 @@
 
 ## Summary
 
-老師在活動準備中，用 Google 帳號授權、以 Google Picker 選一份 Google 試算表與一張工作表，系統唯讀取回工作表，**依「題號」「作答」文字表頭與合併範圍動態定位**，辨識單題與題組（題號縱向合併或相鄰重複），算出每題的精確答案格，整份驗證通過才交給 001 取代題目，並保存來源映射與匯入時結構供 005 寫回。
+老師在活動準備中（001 的準備中或開放加入，第一輪開始前），用 Google 帳號授權、以 Google Picker 選一份 Google 試算表與一張工作表，系統唯讀取回工作表，**依「題號」「作答」文字表頭與合併範圍動態定位**，辨識單題與題組（題號縱向合併或相鄰重複），算出每題的精確答案格，整份驗證通過才交給 001 取代題目，並保存來源映射與匯入時結構供 005 寫回。
 
 技術做法：
 
@@ -87,7 +87,8 @@
 ## 相依與時程
 
 - **相依 001**：`ActivityGateway`（`stage`、`is_teacher`、`replace_questions`）契約已對齊（Issue #6）。001 尚在 `feature/5-001-activity-session` 分支，未合併。
-- **骨架 PR 凍結**（jacky0407 於 Issue #5 約定，2026-11-21 留言）：骨架 PR 計畫命名為 `chore/5-project-skeleton`，但**截至 2026-11-22 遠端沒有這個分支，也沒有對應 PR**（001 分支也還沒有 `pyproject.toml`、`src/`），實際分支名稱與時間以 jacky0407 為準。骨架 PR 合併前，002 **不得**建立 `pyproject.toml`、`main.py`、`src/`；合併後從 main 接續。因此本 plan 只產出文件，不產生程式碼。**2026-11-22 更新**：骨架 PR 已開為 #14（尚未合併），001 的 PR 為草稿 #15。決定**等相依完成再開始實作**：`/speckit-implement` 前要確認骨架 PR 已合併，且 001 的活動建立、老師 token、`replace_questions`、開輪與取消已完成（在 main 或 001 分支皆可）；骨架 PR 只涵蓋 001 的 T001～T022，不含這些功能（tasks T001）。
+- **2026-11-23 現況**：骨架 PR #14 與 001 的 PR #15 都已合併到 `main`，001 已含 `ActivityGateway`（`src/lecture_quiz/app/activity/ports.py`：`stage`、`is_teacher` 為同步，`replace_questions` 為 async）與新增的「開放加入」階段（`PREPARING`、`JOINING` 都可匯入）。002 已合併 `origin/main`。下一段是 2026-11-22 當時的歷史紀錄。
+- **（歷史，2026-11-22）骨架 PR 凍結**（jacky0407 於 Issue #5 約定，2026-11-21 留言）：骨架 PR 計畫命名為 `chore/5-project-skeleton`，但**截至 2026-11-22 遠端沒有這個分支，也沒有對應 PR**（001 分支也還沒有 `pyproject.toml`、`src/`），實際分支名稱與時間以 jacky0407 為準。骨架 PR 合併前，002 **不得**建立 `pyproject.toml`、`main.py`、`src/`；合併後從 main 接續。因此本 plan 只產出文件，不產生程式碼。**2026-11-22 更新**：骨架 PR 已開為 #14（尚未合併），001 的 PR 為草稿 #15。決定**等相依完成再開始實作**：`/speckit-implement` 前要確認骨架 PR 已合併，且 001 的活動建立、老師 token、`replace_questions`、開輪與取消已完成（在 main 或 001 分支皆可）；骨架 PR 只涵蓋 001 的 T001～T022，不含這些功能（tasks T001）。
 - **共用檔案約定**：`main.py` 只加一行 router；`teacher.html` 只加一個區塊；`pyproject.toml` 相依追加在最後；`docs/alignment.md` 只追加在最後。
 - **001 的開發用 seed API**（`LECTURE_QUIZ_DEV_SEED=1`）：001 的 plan 規定「002 合併後的第一個 PR 移除」。tasks 要包含確認或移除這個 API 的任務（與 jacky0407 協調，因為檔案屬 001）。
 - **後續**：005 依 `ImportRecord` 與同一個 `AuthGateway`／`SheetsReader` 寫回。
