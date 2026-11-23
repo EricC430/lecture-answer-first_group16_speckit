@@ -112,4 +112,4 @@
 | P-19 | 跨子功能 | 每題格數由 002 實作 `QuestionShapeSource`（與 EricC430 口頭約定）；002 合併前只能用 dev seed | T065 真實路徑驗證要等 002 合併 | 待辦（002） |
 | P-20 | 跨子功能 | 「搶答失敗」要等 004 提供勝者；全部判錯顯示「未成功」也由 004 決定 | 已寫在 tasks Notes 的 004 交接 | 待辦（004） |
 | P-21 | 環境 | 在本機執行 `pytest -p no:logging` 會讓用到 `caplog` 的 12 個測試報錯（不是程式問題） | 驗證一律用不加參數的 `pytest` | 已記錄 |
-
+| P-22 | US1～US4 | 類別圖與程式的小差異：可見性常數在程式是 `view.py` 的模組常數，圖畫成 `SubmissionView` 的屬性；`SubmissionRules.describe` 不在圖上；`SubmissionView.for_group` 多了 `student_sees_own_success` 參數（方便測試 Q-22 改為假） | 留給 Polish 的圖表一致性任務一併更新類別圖並重新輸出 PNG | 待辦（Polish） |
