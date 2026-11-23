@@ -47,11 +47,17 @@
         <p><button type="button" id="new-join" hidden>加入其他活動</button></p>
       </div>
     </section>
+    <section id="round-submission-section" data-feature="003-round-submission" hidden>
+      <h2>作答</h2>
+      <p class="muted">同一組每一題每一輪只算第一次送出；題組要填滿每一格才能送出。</p>
+      <div id="answer-forms"></div>
+    </section>
     <!-- ── 子功能區塊結束 ── -->
   </main>
   <div id="sync-status" aria-live="polite"></div>
   <!-- ── 子功能 script 開始（每個子功能一行）── -->
   <script type="module" src="js/student.js"></script>
+  <script type="module" src="js/round-submission.js"></script>
   <!-- ── 子功能 script 結束 ── -->
 </body>
 </html>

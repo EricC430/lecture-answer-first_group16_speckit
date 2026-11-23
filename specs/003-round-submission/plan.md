@@ -92,7 +92,7 @@ src/lecture_quiz/
 │       ├── __init__.py
 │       ├── models.py                # Submission、SubmissionAttempt、RoundContext、SubmissionLedger
 │       ├── answer_rules.py          # Q-20：判空、字數上限、保存原文
-│       ├── rules.py                 # SubmissionRules.decide、order、SubmissionRejection
+│       ├── rules.py                 # SubmissionRules.decide、order、describe（SubmissionRejection 等型別定義在 models.py）
 │       └── view.py                  # SubmissionView（老師版／學生版／公開版）、可見性規則（Q-21／22／26）
 ├── app/
 │   ├── activity/                    # 001（小改）
@@ -111,7 +111,8 @@ src/lecture_quiz/
     └── static/
         ├── student.html / js/student.js   # 作答表單、本組提交、公開結果
         ├── teacher.html / js/teacher.js   # 提交看板
-        └── js/submission.js               # 作答表單與看板共用的繪製函式（textContent）
+        ├── js/submission.js               # 作答表單與看板共用的繪製函式（textContent）
+        └── js/round-submission.js         # 學生端接線（onStudentSnapshot），依 DEVELOPMENT.md 一個子功能一個 module
 
 tests/
 ├── unit/core/round_submission/      # decide 各順序、AnswerRules、排序、View 裁切

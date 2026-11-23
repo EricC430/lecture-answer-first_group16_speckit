@@ -172,15 +172,14 @@ def seed_questions(
 ) -> None:
     """以 replace_questions 放入題號 1..count（研究 R8：自動化測試直接呼叫服務）.
 
-    `blanks` 為各題子空格數（003）；省略時每題 1 格。只有 app 使用
-    `FakeQuestionShapeSource` 時才會設定格數。
+    `blanks` 為各題子空格數（003）；省略時不設定格數（001 的測試不受 003 快照欄位
+    影響）。只有 app 使用 `FakeQuestionShapeSource` 時才會設定。
     """
     if blanks is not None:
         assert len(blanks) == count
     shapes = client.app.state.question_shape_source
-    if isinstance(shapes, FakeQuestionShapeSource):
-        sizes = blanks if blanks is not None else [1] * count
-        shapes.set(teacher.code, {n: sizes[n - 1] for n in range(1, count + 1)})
+    if blanks is not None and isinstance(shapes, FakeQuestionShapeSource):
+        shapes.set(teacher.code, {n: blanks[n - 1] for n in range(1, count + 1)})
     service = service_of(client)
     requester = service.resolve_requester(teacher.code, teacher.token)
     outcome = call(
