@@ -62,7 +62,7 @@
 
 | 檢查項 | 結果 | 依據 |
 |---|---|---|
-| **I 跨組行為一致** | ✅ 通過 | spec 的 Traceability 涵蓋 6 條 Requirement 與 10 個 Scenario。所有偏離與新增行為（組號、組數上限、組別加入憑證、倒數、取消與結束、離開本組、刪除空組、一位老師一個活動）都已記入 `docs/alignment.md`，OpenSpec 組於 2026-11-23 全部確認 |
+| **I 跨組行為一致** | ✅ 通過 | spec 的 Traceability 涵蓋 6 條 Requirement 與 12 個 Scenario。所有偏離與新增行為（組號、組數上限、組別加入憑證、倒數、取消與結束、離開本組、刪除空組、一位老師一個活動）都已記入 `docs/alignment.md`，OpenSpec 組於 2026-11-23 全部確認 |
 | **II 圖表生成** | ✅ 通過 | 以三張圖為藍圖。本 plan 為圖表補上 `code` 參數，以及給 003／004／005 的介面方法，已同步更新類別圖並重新轉出 PNG。tasks 必須有「程式碼與圖表一致性驗證」任務 |
 | **III Guided Notes 動態定位** | ✅ 通過（不適用解析） | 本子功能不解析學習單。`replace_questions` 只接收 002 成功匯入的題號；被拒時，既有題目完全不變（[service-interfaces](contracts/service-interfaces.md)）。不需要「兩份版面學習單」測試 |
 | **IV 後端為唯一事實來源** | ✅ 通過 | 身分由後端 token 雜湊判定（研究 R5）；階段、關輪只一次由鎖與 `round.closed` 雙重保證（研究 R6）；重送以 `Idempotency-Key` 去重；狀態機是確定性純函式 |
@@ -171,4 +171,5 @@ tests/
 1. ~~補回憲章（Ruff、mypy）~~：已由 PR #13 合併為憲章 v1.0.1。
 2. ~~開會確認提案~~：OpenSpec 組 2026-11-23 全部同意（alignment 2026-11-23）。
 3. ~~協調 002 介面~~：EricC430 已於 Issue #6 同意 `code` 參數與只傳題號，PR #11 已更新 002 類別圖。
-4. **下一步**：執行 `/speckit-tasks` 更新 tasks.md（US1 的 N 與 C7、US2、US7），再執行 `/speckit-analyze`。
+4. ~~更新 tasks 並分析~~：已執行 `/speckit-tasks`、`/speckit-analyze`，US1～US7 與 Polish 已實作。
+5. **下一步**：處理 PR #15 的審查意見，由 EricC430 依 quickstart 執行人工驗證（T084）。

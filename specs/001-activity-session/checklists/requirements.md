@@ -31,10 +31,10 @@
 
 ## Constitution Alignment（專案補充）
 
-- [x] 原則 I：6 條 OpenSpec Requirement、10 個 Scenario 全部出現在 Traceability 表；提案與新增行為都已記入 `docs/alignment.md`（2026-11-21，共 6 列），並在表中引用
-- [x] 原則 I：上述 6 列的 OpenSpec 組確認人仍為「待確認」 — **合併實作前必須取得確認**；spec 與 plan 可先依提案進行
+- [x] 原則 I：6 條 OpenSpec Requirement、12 個 Scenario 全部出現在 Traceability 表；偏離與新增行為都已記入 `docs/alignment.md`（2026-11-23 A1～C10），並在表中引用
+- [x] 原則 I：上述偏離與新增行為已由 OpenSpec 組於 2026-11-23 全部確認（alignment.md A1～C10）
 - [x] 原則 II：`diagrams/001-activity-session-{component,class,sequence}.puml` 已建立，並已納入組別更正流程
-- [x] 原則 II：PNG 已轉出 — **尚未完成**：本機沒有 `plantuml.jar`，待取得後執行 `java -jar plantuml.jar "./diagrams/*.puml"`
+- [x] 原則 II：PNG 已轉出（本機 Windows 以 `java -jar plantuml.jar -charset UTF-8 "./diagrams/*.puml"` 產生，見 tasks T095）
 - [x] 原則 III：開輪條件依 002 的成功匯入結果判定；匯入被拒時保留既有題目（Assumptions）
 - [x] 原則 IV：身分、階段、關輪一次、重送去重皆由後端判定（FR-012、FR-019、FR-033）
 - [x] 原則 V：權限（FR-004、FR-005）、資料可見性（FR-007、FR-030）、輸入驗證與錯誤訊息（FR-031、Edge Cases）
