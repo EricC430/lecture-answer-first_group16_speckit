@@ -27,7 +27,7 @@ description: "002-guided-notes-import 任務清單"
 
 **⚠ 骨架凍結**（見 [plan.md](plan.md)「相依與時程」）：jacky0407 的骨架 PR 合併前，002 **不得**建立 `pyproject.toml`、`main.py`、`src/`；且 001 的活動建立、老師 token、`replace_questions`、開輪與取消完成之前也不開工（2026-11-22 決定：等相依完成再開始，不以 Fake 先行）。T001 是整份清單的前置關卡。
 
-**⚠ 共用檔案追加約定**：`main.py` 只加一行 router；`<static>/teacher.html` 只加一個區塊；`pyproject.toml` 相依追加在最後；`docs/alignment.md` 只追加在最後；`tests/conftest.py` 只追加 fixture 與參數，不改 001 既有簽章的預設行為。
+**⚠ 共用檔案追加約定**：`main.py` 只做最小追加（一行 router，加上 `create_app` 的兩個選用注入參數，見 T026）；`<static>/teacher.html` 只加一個區塊；`pyproject.toml` 相依追加在最後；`__main__.py` 只在 `uvicorn.run` 追加 `env_file=".env"`（T015）；`docs/alignment.md` 只追加在最後；`tests/conftest.py` 只追加 fixture 與參數，不改 001 既有簽章的預設行為。
 
 **⚠ 待真實驗證的假設**（[plan.md](plan.md) 表格）：`drive.file` 足以讀取 Picker 選到的試算表、`GridRange` 結束索引為「不含」、非試算表的錯誤型態、Picker 在 `localhost` 的運作。驗證前不得宣稱成立；T028 是第一個里程碑。
 
@@ -82,8 +82,8 @@ description: "002-guided-notes-import 任務清單"
 - [ ] T012 [P] 在 `<app>/store.py` 建立 `ImportStore`：依活動代碼為 key 的 `sessions`、`selections`、`records`、`locks`（每個活動一把 `asyncio.Lock`，與 001 活動鎖分開）；只在記憶體，不持久化（原則 VII）。
 - [ ] T013 在 `<app>/messages.py` 建立固定中文訊息對照表（每個 `ImportRejection` 一則，`IssueKind` 的修正建議於 T053 補齊），儲存格引用截斷在 40 字元；在 `tests/unit/app/guided_notes_import/test_messages.py` 測試每個代碼都有訊息，且訊息不含 token、授權碼、`state`、client secret、檔案路徑、堆疊字樣（FR-022、SC-005；`Edge: 輸入驗證失敗`）。（依賴 T010）
 - [ ] T014 [P] 建立 `tests/unit/app/guided_notes_import/fakes.py`：`FakeAuthGateway`、`FakeSheetsReader`（可注入快照、授權狀態、各種拒絕）、`FakeActivityGateway`（行為依 001 契約：`stage`、`is_teacher`、`replace_questions` 只允許老師在 `PREPARING` 與 `JOINING`（第一輪開始前）、成功回傳新 `version`、被拒時題目不變；可注入「解析後、寫入前階段改變」）。檔頭標明為測試替身。
-- [ ] T015 [P] 在 `<google>/config.py` 讀取五個環境變數，**空字串視為未設定**，缺任何一項時匯入相關操作回 `GOOGLE_NOT_CONFIGURED`，不退回離線路徑、不假裝成功；`config.py` 只讀 `os.environ`，`.env` 由啟動指令載入（`uvicorn ... --env-file .env`，`uvicorn[standard]` 內含 python-dotenv；實作時以已安裝版本的 `uvicorn --help` 確認此選項）；授權範圍常數（`drive.file`）與 `state` 有效期限各只定義在這個檔案。在 `tests/unit/adapters/google/test_config.py` 測試：缺值、空字串、全部齊備三種情況。
-- [ ] T016 擴充 `tests/conftest.py`（只追加）：`make_app` 增加選用參數 `auth_gateway`、`sheets_reader`（預設為 Fake），讓契約測試使用 001 的真實 `ActivityService`、`teacher` fixture 與 `FakeClock`，只替換 Google 相關連接埠。（依賴 T014）
+- [ ] T015 [P] 在 `<google>/config.py` 讀取五個環境變數，**空字串視為未設定**，缺任何一項時匯入相關操作回 `GOOGLE_NOT_CONFIGURED`，不退回離線路徑、不假裝成功；`config.py` 只讀 `os.environ`，`.env` 由 `python -m lecture_quiz` 載入：在 001 的 `src/lecture_quiz/__main__.py` 的 `uvicorn.run(...)` **只追加** `env_file=".env"`（已查證 uvicorn 0.54.0 的 `Config` 有此參數並呼叫 `load_dotenv`；`.env` 不存在時的行為實作時實測，不憑記憶）；**不要**改用 `uvicorn ... --env-file`，因為會繞過 `__main__.py` 的 `log_config=None`、`access_log=False`，uvicorn 預設 access log 會把 `/api/oauth/callback?code=…&state=…` 的授權碼與 `state` 寫進日誌（FR-022、技術限制 3）；授權範圍常數（`drive.file`）與 `state` 有效期限各只定義在這個檔案。在 `tests/unit/adapters/google/test_config.py` 測試：缺值、空字串、全部齊備三種情況；在 `tests/unit/adapters/google/test_launch.py` 以替身取代 `uvicorn.run`，斷言 `__main__.main()` 傳入 `env_file=".env"`、`log_config=None`、`access_log=False`（防止啟動方式退回會記錄授權碼的設定；`Edge: 輸入驗證失敗`、FR-022）。
+- [ ] T016 擴充 `tests/conftest.py`（只追加）：新增預設為 Fake 的 `fake_auth_gateway`、`fake_sheets_reader` fixture，並讓契約測試透過既有的 `make_app(**kwargs)`（001 會把多餘參數轉給 `create_app`）傳入 `import_auth_gateway=`、`import_sheets_reader=`，使用 001 的真實 `ActivityService`、`teacher` fixture 與 `FakeClock`，只替換 Google 相關連接埠。不改 001 既有 fixture 的預設行為。（依賴 T014；`create_app` 的參數由 T026 加入）
 
 **Checkpoint**: 型別、連接埠、Fake 與測試輔助就緒，可以開始 User Story
 
@@ -116,7 +116,7 @@ description: "002-guided-notes-import 任務清單"
 - [ ] T023 [P] [US1] 在 `<google>/errors.py` 實作 `HttpError`／逾時 → `ImportRejection` 的對應（T019 的規則）。
 - [ ] T024 [US1] 在 `<google>/auth.py` 實作 `GoogleAuthGateway`：授權碼流程（`google-auth-oauthlib`）、一次性且有期限的 `state`、token 只存記憶體（`ImportStore.sessions`）、`picker_credentials` 只回短效 `drive.file` token；不記錄 token、授權碼、`state`、client secret。（依賴 T015、T023）
 - [ ] T025 [P] [US1] 在 `<google>/sheets_reader.py` 實作 `GoogleSheetsReader.inspect`：Drive `files.get` 取 `mimeType`，再以 `spreadsheets.get` 與欄位遮罩取工作表清單；以 `asyncio.to_thread` 呼叫同步的 Google 程式庫；只用讀取方法（FR-023）。
-- [ ] T026 [US1] 在 `<web>` 實作端點 #1～#6（含 #2 `/oauth/callback`）、錯誤轉換（依 http-api 的錯誤碼與狀態碼表，訊息取自 `messages.py`）與請求日誌（只記活動代碼、端點名稱、結果代碼）；在 `main.py` **只加一行** `include_router`。（依賴 T022、T024、T025）
+- [ ] T026 [US1] 在 `<web>` 實作端點 #1～#6（含 #2 `/oauth/callback`）、錯誤轉換（依 http-api 的錯誤碼與狀態碼表，訊息取自 `messages.py`）與請求日誌（只記活動代碼、端點名稱、結果代碼）；在 `<web>` 提供 `create_router(app)`（依 `docs/DEVELOPMENT.md` 的約定，寫法參考 `adapters/web/system.py`），並在 `main.py` 做兩個最小追加：`api.include_router(guided_notes_import.create_router(app))` 一行，以及 `create_app` 新增兩個選用參數 `import_auth_gateway=None`、`import_sheets_reader=None`（省略時以 `<google>/config.py` 建立真實轉接器並存入 `app.state`，測試傳入 Fake；這是對共用檔案比「一行 router」多一點的追加，PR 描述註明）。（依賴 T022、T024、T025）
 
 **前端**
 
@@ -124,7 +124,7 @@ description: "002-guided-notes-import 任務清單"
 
 **真實驗證里程碑**
 
-- [ ] T028 [US1] **里程碑 0（待驗證假設 1）**：以真實 Google 帳號與一份真實試算表，依 [quickstart.md](quickstart.md) 前置條件設定好 `.env`，用 `uvicorn lecture_quiz.main:app --host 127.0.0.1 --port 8000 --env-file .env` 啟動後走完「授權 → Picker 選檔 → `inspect`」，確認 `drive.file` 足以讀取 Picker 選到的試算表。把日期、操作與結果填入 quickstart 紀錄表；若讀取失敗，依 [research.md](research.md) R1 的 fallback 評估改用敏感範圍，並在 plan「待真實驗證的假設」註明；**未做之前不得宣稱授權範圍成立**。（依賴 T026、T027）
+- [ ] T028 [US1] **里程碑 0（待驗證假設 1）**：以真實 Google 帳號與一份真實試算表，依 [quickstart.md](quickstart.md) 前置條件設定好 `.env`，用 `python -m lecture_quiz`（001 的啟動方式；埠號預設 8000）啟動後走完「授權 → Picker 選檔 → `inspect`」，確認 `drive.file` 足以讀取 Picker 選到的試算表。把日期、操作與結果填入 quickstart 紀錄表；若讀取失敗，依 [research.md](research.md) R1 的 fallback 評估改用敏感範圍，並在 plan「待真實驗證的假設」註明；**未做之前不得宣稱授權範圍成立**。（依賴 T026、T027）
 
 **Checkpoint**: 老師可以授權、選檔並選定工作表；失敗時題目不變
 
@@ -298,7 +298,7 @@ description: "002-guided-notes-import 任務清單"
 - [ ] T076 由非實作者（jacky0407）依 [quickstart.md](quickstart.md) B 區做人工驗證，記錄日期、每一步操作與結果於 quickstart 紀錄表並簽名（原則 VI）。
 - [ ] T077 追蹤 001 的開發用 seed API（`adapters/web/dev_seed.py`、`LECTURE_QUIZ_DEV_SEED`、`tests/integration/test_dev_seed.py`、前端「放入假題目」按鈕）：依 001 plan 在 002 合併後的第一個 PR 移除；因檔案屬 001，先與 jacky0407 協調是在本 PR 一併移除還是另開 PR，並在 PR 描述記錄結論。
 - [ ] T078 更新 `CLAUDE.md`「專案現況」：補上 `pytest -m real_google` 的手動執行方式與 002 的三層路徑；再用全新 clone 在乾淨的 venv 重跑安裝與 `pytest`，確認不依賴任何本機未提交的檔案（規章第 9 節）。
-- [ ] T079 開 PR 前確認：文末 Scenario 對照表的 28 個項目都有已通過的測試；spec 的 Traceability 與 `docs/alignment.md` 沒有新增偏離項；quickstart 紀錄表沒有空白的已執行項目；PR 描述列出尚未驗證的假設（若有）；品質關卡 7：`git status` 與 `git diff` 確認沒有夾帶 `.env`、憑證、token、`期末專題說明.md`、`project_proposal_draft.md` 或其他不追蹤的檔案。
+- [ ] T079 開 PR 前確認：文末 Scenario 對照表的 28 個項目都有已通過的測試；spec 的 Traceability 與 `docs/alignment.md` 沒有新增偏離項；quickstart 紀錄表沒有空白的已執行項目；PR 描述列出尚未驗證的假設（若有），並註明已知限制：US1-AS5「取消選檔」是前端行為，沒有自動化測試，僅以人工驗證 B-3 涵蓋（2026-11-23 接受）；品質關卡 7：`git status` 與 `git diff` 確認沒有夾帶 `.env`、憑證、token、`期末專題說明.md`、`project_proposal_draft.md` 或其他不追蹤的檔案。
 
 ---
 

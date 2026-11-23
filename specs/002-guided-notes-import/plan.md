@@ -21,7 +21,7 @@
 - **核心**：`core/guided_notes_import/` 的 `parse(snapshot) -> ParseResult` 是純函式，輸入不可變的工作表快照，沒有任何時間或 I/O；錯誤全部收集後一起回報，任何錯誤就不產生題目（原子）。
 - **應用層**：`ImportService` 以「每個活動一把匯入鎖」序列化，順序固定為「查階段與身分 → 讀取 → 解析 → 001 `replace_questions` → 才保存來源映射與結構」，001 拒絕時 002 完全不變。
 - **外層**：後端以授權碼流程持有 token（只在記憶體）；範圍只用非敏感的 `drive.file`；Sheets 與 Drive 以官方程式庫唯讀存取；Picker 只在前端選檔，後端重新驗證類型。
-- **前端**：沿用 001 的原生 JavaScript，`teacher.html` 加一個區塊，邏輯放 `static/js/import.js`。
+- **前端**：沿用 001 的原生 JavaScript，`teacher.html` 加一個區塊，邏輯放 `adapters/static/js/import.js`。
 
 ## Technical Context
 

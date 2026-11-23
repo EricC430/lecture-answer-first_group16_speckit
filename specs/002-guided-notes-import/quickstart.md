@@ -17,7 +17,7 @@
    > | 授權的重新導向 URI | `http://localhost:8000/api/oauth/callback` |
    > | `.env` 的 `OAUTH_REDIRECT_URI` | 與上一列**完全相同**（含 `http`、埠號、路徑，結尾不加斜線） |
    > | 瀏覽器開啟系統的網址 | `http://localhost:8000/teacher.html`（**不要用 `127.0.0.1`**，否則瀏覽器儲存的老師身分與回呼網址不是同一個來源，授權回來後會找不到老師身分） |
-   > | 啟動後端的指令 | `uvicorn lecture_quiz.main:app --host 127.0.0.1 --port 8000 --env-file .env`（確切模組路徑以 001 骨架為準；`--env-file` 才會把 `.env` 載入環境變數，`uvicorn[standard]` 內含所需的 python-dotenv，以已安裝版本的 `uvicorn --help` 確認） |
+   > | 啟動後端的指令 | `python -m lecture_quiz`（001 的啟動方式，埠號預設 8000，可用 `LECTURE_QUIZ_PORT` 改）。**不要直接用 `uvicorn lecture_quiz.main:app`**：它不會載入 `.env`，且 uvicorn 預設的 access log 會把 `/api/oauth/callback?code=…&state=…` 的授權碼與 `state` 寫進日誌；`python -m lecture_quiz` 已關閉 access log。`.env` 由 `__main__.py` 載入（tasks T015） |
    >
    > 依 [Google 官方文件](https://developers.google.com/identity/protocols/oauth2/web-server)：重新導向 URI 一般要用 HTTPS，但 **localhost 是例外，可以用 `http`**；URI 要與設定**完全一致**（`http`／`https`、大小寫、結尾斜線）；網域不得是原始 IP（localhost 例外）。
 
@@ -34,7 +34,7 @@
       - 建立後會顯示**用戶端 ID**與**用戶端密鑰**：分別是 `GOOGLE_CLIENT_ID`、`GOOGLE_CLIENT_SECRET`。密鑰只貼到本機 `.env`，**不要貼到聊天、Issue、PR 或任何追蹤的檔案**。
    5. **建立 API 金鑰**（Picker 用）：憑證 → 建立憑證 → API 金鑰，這就是 `GOOGLE_API_KEY`。建議先只把「API 限制」設為 **Google Picker API**，**先不要設網站（HTTP 參照網址）限制**：Picker 會在 Google 網域的畫面裡載入，網站限制設錯會出現「API developer key is invalid」。真實驗證通過後若要再收緊，再加限制並重新驗證（此項列入 [plan.md](plan.md)「待真實驗證的假設」）。
    6. 若授權時看到「這個應用程式未經 Google 驗證」：測試中的應用程式正常會出現，按「進階」→「前往（不安全）」即可；`drive.file` 是非敏感範圍，不需要送審。
-4. 複製 `.env.example` 為 `.env`（`.env` 已被 `.gitignore` 排除），填入 `GOOGLE_CLIENT_ID`、`GOOGLE_CLIENT_SECRET`、`GOOGLE_API_KEY`、`GOOGLE_APP_ID`、`OAUTH_REDIRECT_URI`；啟動時要加 `--env-file .env`（見上表），否則程式讀不到。**任何一項是空字串都視為未設定**，匯入端點會明確回 `GOOGLE_NOT_CONFIGURED`。
+4. 複製 `.env.example` 為 `.env`（`.env` 已被 `.gitignore` 排除），填入 `GOOGLE_CLIENT_ID`、`GOOGLE_CLIENT_SECRET`、`GOOGLE_API_KEY`、`GOOGLE_APP_ID`、`OAUTH_REDIRECT_URI`；用 `python -m lecture_quiz` 啟動時會自動載入（見上表）。**任何一項是空字串都視為未設定**，匯入端點會明確回 `GOOGLE_NOT_CONFIGURED`。
 
 ## A. 自動化驗證（預設不呼叫真實 Google）
 
@@ -62,7 +62,7 @@ pytest -m "not real_google and not perf"
 
 另備一份**單題範本**（六題、作答格橫向合併）與一份**有缺陷**的試算表（例如題號跳號）。
 
-**操作步驟**（老師頁面，後端以 `uvicorn` 本機啟動；活動先用 001 建好，停在準備中）：
+**操作步驟**（老師頁面，後端以 `python -m lecture_quiz` 本機啟動；活動先用 001 建好，停在準備中；匯入在準備中與開放加入都可進行）：
 
 | # | 操作 | 預期 | Spec／SC |
 |---|---|---|---|
@@ -77,6 +77,7 @@ pytest -m "not real_google and not perf"
 | 9 | 匯入單題範本 | 6 題、6 格 | US2-AS1、SC-002 |
 | 10 | 匯入有缺陷的試算表 | 整份拒絕，訊息指出列、欄、原因；先前成功的匯入結果不變 | US4、SC-004 |
 | 11 | 在匯入完成後，檢查原試算表 | 內容完全沒有被修改（可看版本記錄） | FR-023、SC-007 |
+| 11a | 先用 001 按「開放加入」（學生可加入），再改選版面 1 重新匯入 | 成功，整份取代，無舊題目殘餘（開放加入仍在第一輪開始前） | FR-019、US5-AS2 |
 | 12 | 用 001 開第一輪後，再嘗試更換試算表、重新匯入 | 兩者都被拒絕，訊息「搶答已開始」，來源映射與既有提交不變 | US6、SC-008 |
 | 13 | 在老師 token 以外的情況（例如另開無痕視窗沒有老師身分）呼叫匯入 | 被拒絕 | FR-025 |
 
