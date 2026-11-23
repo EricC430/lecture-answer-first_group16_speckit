@@ -516,8 +516,10 @@ description: "001-activity-session 任務清單"
 - [ ] T084 由非實作者依 [quickstart.md](quickstart.md) 的 23 步人工驗證，記錄在 `specs/001-activity-session/verification.md`：日期、每一步的操作與結果、第 12、14 步的延遲 ms，以及 SC-005「1 分鐘內兩組加入」、SC-010「30 秒內換組」的實際時間（原則 VI）。
 - [x] T085 [P] 指令或流程與文件不同時，更新 `specs/001-activity-session/quickstart.md`；在 `CLAUDE.md` 的「專案現況」補上 build、lint、test 指令與 `src/lecture_quiz` 三層結構（現在已有程式碼）。
   - 2026-11-23：quickstart 已更新為 23 步並改用 `python -m lecture_quiz` 啟動；CLAUDE.md「專案現況」補上 001 結構與組數上限。
-- [ ] T086 用全新 clone 在乾淨的 venv 重跑安裝與 `pytest`，確認不依賴任何本機未提交的檔案（規章第 9 節）。
-- [ ] T087 追蹤開發用 seed API 的移除：在 Issue #6（002）留言，註明「002 合併後的第一個 PR 移除 `src/lecture_quiz/adapters/web/dev_seed.py`、`LECTURE_QUIZ_DEV_SEED` 與 `tests/integration/test_dev_seed.py`」。本子功能內不刪除。
+- [x] T086 用全新 clone 在乾淨的 venv 重跑安裝與 `pytest`，確認不依賴任何本機未提交的檔案（規章第 9 節）。
+  - 2026-11-23：從 GitHub 全新 clone `feature/5-001-activity-session`（`a1c9596`），在乾淨的 venv 以一般安裝 `pip install ".[dev]"`（不加 `-e`）後執行：ruff 通過、mypy 通過、`pytest` 347 passed。一般安裝不會產生含路徑的 `.pth`，可作為專案路徑含中文時的安裝方式。
+- [x] T087 追蹤開發用 seed API 的移除：在 Issue #6（002）留言，註明「002 合併後的第一個 PR 移除 `src/lecture_quiz/adapters/web/dev_seed.py`、`LECTURE_QUIZ_DEV_SEED` 與 `tests/integration/test_dev_seed.py`」。本子功能內不刪除。
+  - 2026-11-23：已在 Issue #6 留言（issuecomment-7094090227）。
 - [x] T088 確認提案相依的任務狀態：`docs/alignment.md` 2026-11-21 的 6 列已於 2026-11-23 全部獲 OpenSpec 組確認（新增一列決議），結論與提案一致；另依 Clarifications 增加組號、組數上限與 C7，已重跑 clarify → plan → tasks。
 - [ ] T095 在有 `plantuml.jar` 的環境（本機 Windows）執行 `java -jar plantuml.jar "./diagrams/001-*.puml"`，重新產生三張 PNG 並目視檢查（原則 II；2026-11-23 的 `.puml` 修改是在無法執行 PlantUML 的雲端環境完成）。
 
