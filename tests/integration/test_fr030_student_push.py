@@ -5,7 +5,7 @@
 而且版本只比原本多 1（中間沒有任何推送，版本也沒有跳動）。
 """
 
-from tests.conftest import call, join_group, seed_questions, service_of
+from tests.conftest import call, join_group, open_joining, service_of
 
 
 def _post(client, teacher, path, body=None):
@@ -24,30 +24,20 @@ def _connect(client, code, token):
 
 
 def test_student_sees_no_trace_of_other_groups_activity(client, teacher):
-    seed_questions(client, teacher)
+    open_joining(client, teacher)
     mine = join_group(client, teacher.code, 1)
     _post(client, teacher, "/rounds", {})
     s_ctx, s_ws, first = _connect(client, teacher.code, mine)
     t_ctx, t_ws, t_first = _connect(client, teacher.code, teacher.token)
     try:
-        # 他組在搶答中加入、第一次提交、離開；老師刪除另一個空組
+        # 他組在搶答中加入、第一次提交
         other = join_group(client, teacher.code, 2)
         join_group(client, teacher.code, 3)
         service = service_of(client)
         assert call(client, service.mark_group_submitted, teacher.code, 2).ok
-        client.post(
-            f"/api/activities/{teacher.code}/groups/leave",
-            headers={"Authorization": f"Bearer {other}"},
-        )
-        assert (
-            client.delete(
-                f"/api/activities/{teacher.code}/groups/3", headers=teacher.headers
-            ).status_code
-            == 200
-        )
 
         # 老師每次都收到新的 revision，但 version 不變
-        revisions = [t_ws.receive_json() for _ in range(4)]
+        revisions = [t_ws.receive_json() for _ in range(3)]
         assert {s["version"] for s in revisions} == {t_first["version"]}
         assert [s["revision"] for s in revisions] == sorted(
             {s["revision"] for s in revisions}
@@ -59,6 +49,23 @@ def test_student_sees_no_trace_of_other_groups_activity(client, teacher):
         assert snap["stage"] == "RESULT_PENDING"
         assert snap["version"] == first["version"] + 1 == closed["version"]
         assert t_ws.receive_json()["version"] == snap["version"]
+
+        # 結果階段：他組離開、老師刪除另一個空組；學生仍不會收到任何訊息
+        client.post(
+            f"/api/activities/{teacher.code}/groups/leave",
+            headers={"Authorization": f"Bearer {other}"},
+        )
+        deleted = client.delete(
+            f"/api/activities/{teacher.code}/groups/3", headers=teacher.headers
+        )
+        assert deleted.status_code == 200
+        assert [t_ws.receive_json()["version"] for _ in range(2)] == [
+            snap["version"]
+        ] * 2
+        finalized = _post(client, teacher, "/rounds/current/finalize").json()
+        after = s_ws.receive_json()
+        assert after["stage"] == "RESULT_FINAL"
+        assert after["version"] == snap["version"] + 1 == finalized["version"]
     finally:
         s_ctx.__exit__(None, None, None)
         t_ctx.__exit__(None, None, None)

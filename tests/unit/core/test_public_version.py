@@ -24,7 +24,7 @@ from lecture_quiz.core.activity.commands import (
 from lecture_quiz.core.activity.results import IssuedSecrets
 from lecture_quiz.core.activity.snapshot_view import SnapshotView
 from lecture_quiz.core.activity.state_machine import ActivityStateMachine
-from tests.unit.core.helpers import NOW, TEACHER, new_activity
+from tests.unit.core.helpers import NOW, TEACHER, joining_activity
 
 apply = ActivityStateMachine.apply
 LATER = NOW + timedelta(seconds=10)
@@ -43,12 +43,12 @@ def _join(activity, device, number, at=NOW):
 
 
 def test_new_activity_starts_at_version_and_revision_one():
-    activity = new_activity()
+    activity = joining_activity()
     assert (activity.version, activity.revision) == (1, 1)
 
 
 def test_group_changes_bump_only_revision():
-    base = new_activity()
+    base = joining_activity()
     joined = _join(base, X, 1, at=LATER)
     assert joined.version == base.version
     assert joined.changed_at == base.changed_at
@@ -66,7 +66,7 @@ def test_group_changes_bump_only_revision():
 
 def test_first_submission_mark_bumps_only_revision():
     activity = apply(
-        _join(new_activity(), X, 1), ReplaceQuestions(TEACHER, (1, 2)), NOW
+        _join(joining_activity(), X, 1), ReplaceQuestions(TEACHER, (1, 2)), NOW
     ).activity
     opened = apply(activity, OpenRound(TEACHER), NOW).activity
     marked = apply(opened, MarkGroupSubmitted(System(), 1), LATER)
@@ -77,7 +77,7 @@ def test_first_submission_mark_bumps_only_revision():
 
 
 def test_public_changes_bump_version_and_revision():
-    activity = _join(new_activity(), X, 1)
+    activity = _join(joining_activity(), X, 1)
     steps = [
         ReplaceQuestions(TEACHER, (1, 2)),
         OpenRound(TEACHER),
@@ -93,7 +93,7 @@ def test_public_changes_bump_version_and_revision():
 
 
 def test_snapshots_carry_public_version_and_teacher_revision():
-    activity = _join(_join(new_activity(), X, 1), Y, 2)
+    activity = _join(_join(joining_activity(), X, 1), Y, 2)
     teacher = SnapshotView.for_teacher(activity).to_json()
     student = SnapshotView.for_group(activity, 1).to_json()
     assert teacher["version"] == student["version"] == activity.version

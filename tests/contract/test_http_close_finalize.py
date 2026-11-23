@@ -1,10 +1,10 @@
 """T054：關輪與定案端點契約（contracts/http-api.md #7、#8）。"""
 
-from tests.conftest import seed_questions
+from tests.conftest import open_joining
 
 
 def _open(client, teacher):
-    seed_questions(client, teacher)
+    open_joining(client, teacher)
     client.post(
         f"/api/activities/{teacher.code}/rounds", json={}, headers=teacher.headers
     )

@@ -22,13 +22,19 @@ from lecture_quiz.core.activity.results import (
 )
 from lecture_quiz.core.activity.snapshot_view import SnapshotView
 from lecture_quiz.core.activity.state_machine import ActivityStateMachine
-from tests.unit.core.helpers import NOW, TEACHER, new_activity, with_questions
+from tests.unit.core.helpers import (
+    NOW,
+    TEACHER,
+    joining_activity,
+    new_activity,
+    with_questions,
+)
 
 apply = ActivityStateMachine.apply
 
 
 def finalized(solved=frozenset({1, 2})):
-    activity = with_questions(new_activity(), 1, 2, 3)
+    activity = with_questions(joining_activity(), 1, 2, 3)
     activity = apply(activity, OpenRound(TEACHER, (1, 2, 3)), NOW).activity
     activity = apply(activity, CloseRound(TEACHER), NOW).activity
     return apply(activity, Finalize(TEACHER, FinalizeOutcome(solved)), NOW).activity

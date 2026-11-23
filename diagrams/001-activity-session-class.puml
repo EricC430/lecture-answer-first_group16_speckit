@@ -7,6 +7,7 @@ title 001 活動與階段同步 — 類別圖
 package "核心（純資料與純函式）" {
   enum Stage <<資料>> {
     準備中
+    開放加入
     搶答中
     結果未定案
     結果已定案
@@ -69,7 +70,7 @@ package "核心（純資料與純函式）" {
     actor : Teacher／Device／System／Anonymous（只含 token 雜湊）
     --
     各操作各為一個 frozen dataclass：
-    CreateActivity(maxGroupsRaw)、JoinGroup(numberRaw, credentialRaw)、
+    CreateActivity(maxGroupsRaw)、OpenJoining、JoinGroup(numberRaw, credentialRaw)、
     LeaveGroup、DeleteGroup(numberRaw)、MarkGroupSubmitted(groupNumber)、
     OpenRound、CloseRound、Finalize、EndActivity、CancelActivity、ReplaceQuestions
     Idempotency-Key 不放在 Command，由服務層去重
@@ -100,6 +101,8 @@ package "核心（純資料與純函式）" {
     已在某組
     不在任何組
     組別不存在
+    尚未開放加入
+    搶答中不可刪除組別
     已有存續中活動
     活動已失效
     規則不可修改
@@ -149,6 +152,7 @@ package "應用層" {
   class ActivityService {
     +create(maxGroupsRaw, teacherToken, idempotencyKey) : 代碼與老師 token（C7：同瀏覽器上一個活動仍存續時拒絕）
     +join(code, numberRaw, credentialRaw, requester, idempotencyKey) : 裝置 token、組號、憑證
+    +openJoining(code, requester, idempotencyKey) : 準備中 → 開放加入（須已匯入題目）
     +openRound(code, requester, questionNumbers, fairMode, countdownRaw, idempotencyKey)
     +closeRound(code, requester, idempotencyKey) : 含 alreadyClosed
     +onDeadline(code, deadline) : now = max(clock.now(), deadline)

@@ -1,6 +1,6 @@
 """T033：組別加入端點的契約（contracts/http-api.md #3）。"""
 
-from tests.conftest import create_activity
+from tests.conftest import create_joinable
 
 
 def _join(client, code, body, token=None):
@@ -11,7 +11,7 @@ def _join(client, code, body, token=None):
 
 
 def test_join_returns_device_token_number_credential_version(client):
-    teacher = create_activity(client)
+    teacher = create_joinable(client)
     response = _join(client, teacher.code, {"groupNumber": 3})
     assert response.status_code == 200
     body = response.json()
@@ -20,11 +20,11 @@ def test_join_returns_device_token_number_credential_version(client):
     assert len(body["credential"]) == 6
     assert len(body["deviceToken"]) >= 40
     # 加入組別不改變學生可見的狀態，version 不變（FR-030）
-    assert body["version"] == 1
+    assert body["version"] == 3
 
 
 def test_code_is_case_and_space_insensitive(client):
-    teacher = create_activity(client)
+    teacher = create_joinable(client)
     response = _join(client, f" {teacher.code.lower()} ", {"groupNumber": "1"})
     assert response.status_code == 200
 
@@ -36,7 +36,7 @@ def test_unknown_code_without_token_is_404(client):
 
 
 def test_device_already_in_group_gets_409(client):
-    teacher = create_activity(client)
+    teacher = create_joinable(client)
     token = _join(client, teacher.code, {"groupNumber": 1}).json()["deviceToken"]
     again = _join(client, teacher.code, {"groupNumber": 2}, token=token)
     assert again.status_code == 409
@@ -46,7 +46,7 @@ def test_device_already_in_group_gets_409(client):
 
 
 def test_errors_do_not_leak_credentials(client):
-    teacher = create_activity(client)
+    teacher = create_joinable(client)
     first = _join(client, teacher.code, {"groupNumber": 1}).json()
     wrong = _join(client, teacher.code, {"groupNumber": 1, "credential": "XXXXXX"})
     assert wrong.status_code == 403

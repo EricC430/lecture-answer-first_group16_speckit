@@ -14,6 +14,7 @@ import { connectSync } from "./sync.js";
 
 export const STAGE_LABELS = {
   PREPARING: "準備中",
+  JOINING: "開放加入",
   ROUND_OPEN: "搶答中",
   RESULT_PENDING: "結果未定案",
   RESULT_FINAL: "結果已定案",
@@ -112,7 +113,7 @@ async function createActivity() {
 let lastQuestionKey = "";
 
 function renderOpenRoundPanel(snapshot) {
-  const canOpen = snapshot.stage === "PREPARING" || snapshot.stage === "RESULT_FINAL";
+  const canOpen = snapshot.stage === "JOINING" || snapshot.stage === "RESULT_FINAL";
   $("open-round-panel").hidden = !canOpen;
   $("activity-questions").textContent = snapshot.questionNumbers.length
     ? snapshot.questionNumbers.map((q) => `第 ${q} 題`).join("、")
@@ -191,7 +192,12 @@ function formatQuestions(numbers) {
 
 function renderClosing(snapshot) {
   $("end-activity").hidden = snapshot.stage !== "RESULT_FINAL";
-  $("cancel-activity").hidden = snapshot.stage !== "PREPARING";
+  // 開輪前（準備中、開放加入）都可以取消活動
+  $("cancel-activity").hidden = !["PREPARING", "JOINING"].includes(snapshot.stage);
+  // 準備中：老師匯入題目後按「開放加入」，學生才能加入
+  $("open-joining").hidden = snapshot.stage !== "PREPARING";
+  $("open-joining").disabled = snapshot.questionNumbers.length === 0;
+  $("open-joining").title = snapshot.questionNumbers.length ? "" : "請先匯入題目";
   $("ended-summary").hidden = snapshot.stage !== "ENDED";
   $("ended-unsolved").textContent = formatQuestions(snapshot.unsolvedQuestions);
   $("cancelled-summary").hidden = snapshot.stage !== "CANCELLED";
@@ -237,16 +243,16 @@ function renderGroups(snapshot) {
 
 onTeacherSnapshot(renderGroups);
 
-// ── US7：刪除沒有作答紀錄的組別（alignment 2026-11-23 B5）──
+// ── US7：刪除沒有作答紀錄的組別（alignment 2026-11-23 B5；開放加入與結果階段可刪，搶答中不可刪）──
 
 onGroupRow((td, group, snapshot) => {
-  const terminal = snapshot.stage === "ENDED" || snapshot.stage === "CANCELLED";
-  if (group.hasSubmissions || terminal) return;
+  const deletable = ["JOINING", "RESULT_PENDING", "RESULT_FINAL"].includes(snapshot.stage);
+  if (group.hasSubmissions || !deletable) return;
   const button = document.createElement("button");
   button.type = "button";
   button.textContent = "刪除";
   button.addEventListener("click", () => {
-    if (!window.confirm(`確定要刪除第 ${group.number} 組嗎？該組裝置會回到加入畫面。`)) return;
+    if (!window.confirm(`確定要刪除第 ${group.number} 組嗎？該組 ${group.deviceCount} 台裝置會回到加入畫面，舊憑證失效。`)) return;
     teacherAction("DELETE", `/groups/${group.number}`);
   });
   td.append(button);
@@ -261,6 +267,7 @@ function init() {
     teacherAction("POST", "/rounds/current/finalize", {}),
   );
   $("end-activity").addEventListener("click", () => teacherAction("POST", "/end", {}));
+  $("open-joining").addEventListener("click", () => teacherAction("POST", "/open-joining", {}));
   $("cancel-activity").addEventListener("click", () => teacherAction("POST", "/cancel", {}));
   detectDevSeed();
   const code = normalizeCode(new URLSearchParams(location.search).get("code"));

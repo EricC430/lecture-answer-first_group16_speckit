@@ -1,6 +1,6 @@
 """T078：重送去重（SC-004、FR-033）。"""
 
-from tests.conftest import TeacherSession, seed_questions, service_of
+from tests.conftest import TeacherSession, open_joining, service_of
 
 
 def test_create_join_and_open_round_replayed_20_times(client):
@@ -13,6 +13,7 @@ def test_create_join_and_open_round_replayed_20_times(client):
     assert all(c == created[0] for c in created)
     assert len(service_of(client).registry.codes()) == 1
     code = created[0]["code"]
+    open_joining(client, TeacherSession(code, created[0]["teacherToken"]))
 
     joins = [
         client.post(
@@ -32,7 +33,6 @@ def test_create_join_and_open_round_replayed_20_times(client):
         "Idempotency-Key": "open-k",
     }
     service = service_of(client)
-    seed_questions(client, TeacherSession(code, created[0]["teacherToken"]))
     opens = [
         client.post(f"/api/activities/{code}/rounds", json={}, headers=teacher_headers)
         for _ in range(20)

@@ -11,7 +11,7 @@ description: "001-activity-session 任務清單"
 
 **Tests**: REQUIRED（專案覆寫，憲章原則 VI）。
 
-- spec 共有 47 個 Acceptance Scenario（2026-11-23 clarify 後：US1 新增 AS7、AS8，US2 新增 AS9），每一個至少對應一個自動化測試；測試的 docstring 第一行寫 `Scenario: USn-ASm`。
+- spec 共有 57 個 Acceptance Scenario（2026-11-23 clarify 後：US1 新增 AS7、AS8，US2 新增 AS9、AS10；後續決議新增 US8 的 AS1～AS7、US7 的 AS7、AS8），每一個至少對應一個自動化測試；測試的 docstring 第一行寫 `Scenario: USn-ASm`。
 - 測試先寫，並確認在實作前是失敗的。
 - 本子功能不使用 Google，不需要 mock，也不需要真實路徑驗證。
 
@@ -515,7 +515,7 @@ description: "001-activity-session 任務清單"
 - [x] T083 執行 `pytest` 與 `pytest -m perf`，記錄日期、指令，以及通過、失敗、略過的數字；perf 記錄四種操作的最大延遲（原則 VI、品質關卡 4）。
   - 2026-11-23：`pytest` 347 passed、1 deselected、0 failed；`pytest -m perf` 1 passed（老師 + 6 組 × 2 條連線，各 10 次）：開輪最大 7.5 ms、關輪 9.8 ms、定案 2.7 ms、結束 2.9 ms，皆小於 2000 ms。執行環境為雲端 Linux（Python 3.13），Windows 本機需再跑一次。
   - 2026-11-23（Windows 11 本機、Python 3.11.5，含 T096～T101 修正後）：`pytest` 362 passed、1 deselected、0 failed；`pytest -m perf` 1 passed：開輪最大 6.9 ms、關輪 4.8 ms、定案 4.5 ms、結束 5.0 ms。
-- [ ] T084 由非實作者依 [quickstart.md](quickstart.md) 的 23 步人工驗證，記錄在 `specs/001-activity-session/verification.md`：日期、每一步的操作與結果、第 12、14 步的延遲 ms，以及 SC-005「1 分鐘內兩組加入」、SC-010「30 秒內換組」的實際時間（原則 VI）。
+- [ ] T084 由非實作者依 [quickstart.md](quickstart.md) 的 27 步人工驗證，記錄在 `specs/001-activity-session/verification.md`：日期、每一步的操作與結果、第 8、15、17 步的延遲 ms，以及 SC-005「1 分鐘內兩組加入」、SC-010「30 秒內換組」的實際時間（原則 VI）。
 - [x] T085 [P] 指令或流程與文件不同時，更新 `specs/001-activity-session/quickstart.md`；在 `CLAUDE.md` 的「專案現況」補上 build、lint、test 指令與 `src/lecture_quiz` 三層結構（現在已有程式碼）。
   - 2026-11-23：quickstart 已更新為 23 步並改用 `python -m lecture_quiz` 啟動；CLAUDE.md「專案現況」補上 001 結構與組數上限。
 - [x] T086 用全新 clone 在乾淨的 venv 重跑安裝與 `pytest`，確認不依賴任何本機未提交的檔案（規章第 9 節）。
@@ -534,6 +534,18 @@ description: "001-activity-session 任務清單"
 - [x] T099 學生版只推與自己有關的變更（第三次審查問題 2；FR-027、FR-030；jacky0407 決定）：`Activity.version`／`changed_at` 只在學生可見的共同狀態改變時遞增，新增 `revision`（只在老師快照）；WebSocketHub 對每條連線內容相同時不送；`sync.js` 老師快照以 `(version, revision)` 排序。spec FR-027／FR-030、data-model、sync-websocket、http-api 已同步；測試 `tests/unit/core/test_public_version.py`、`tests/integration/test_fr030_student_push.py`，並把 4 個依舊語意的測試改為新語意。
 - [x] T100 推送並行與逾時（第二次審查問題 2）：`WebSocketHub.publish` 以 `asyncio.gather` 並行送出，每條連線 `asyncio.wait_for` 1 秒，失敗或逾時只關閉該連線。
 - [x] T101 前端連按防護（第二次審查問題 3）：`teacher.js` 的 `teacherAction` 送出期間停用活動區塊所有按鈕並忽略新操作；`student.js` 的「離開本組」送出期間停用。
+
+## T084 人工驗證後的決議（2026-11-23，兩組已同意；EricC430 驗證回報）
+
+- [x] T102 測試先行：`tests/unit/core/test_state_machine_open_joining.py`（26 個測試）涵蓋開放加入、準備中不能加入、空組免憑證、搶答中不能刪除組別、刪除後組號重建與舊憑證失效。
+  - 2026-11-23：實作前（`git stash` 暫時移開 `src/` 的修改）執行 `pytest tests/unit/core/test_state_machine_open_joining.py`：1 error（匯入 `OpenJoining` 失敗，測試收集中斷）；實作後 26 passed。
+- [x] T103 核心、服務層與 HTTP：`Stage.JOINING`、`OpenJoining` 操作、`JOIN_NOT_OPEN`／`GROUP_DELETE_DURING_ROUND`；加入組別的階段改為開放加入起、組別沒有裝置時免憑證；離開本組與刪除組別、開輪、取消、重新匯入的階段依 spec 調整；`ActivityService.open_joining` 與 `POST /activities/{code}/open-joining`（#12）。
+- [x] T104 前端：老師頁新增「開放加入」按鈕（準備中顯示，沒有題目時停用）、開輪面板改在開放加入與結果已定案顯示、取消按鈕在準備中與開放加入顯示、搶答中不顯示「刪除」組別按鈕；學生頁與老師頁加入「開放加入」階段名稱。前端沒有自動化測試，請在 T084 人工驗證。
+- [x] T105 既有測試改為先開放加入再加入／開輪（`tests/conftest.py` 新增 `open_joining`、`create_joinable`；`tests/unit/core/helpers.py` 新增 `joining_activity`）；刪除組別的「搶答中並行」測試改為驗證「搶答中一律拒絕刪除、不會產生孤兒答案」；`tests/SCENARIO_MAP.md` 重新掃描（57 個 Scenario，未對應：無）。
+- [x] T106 文件同步：spec（FR-008、FR-011、FR-013、FR-025、FR-034、FR-035、新增 FR-038、US8、US2-AS10、US7-AS7、US7-AS8、Clarifications、Traceability）、data-model、contracts（HTTP #12、WebSocket 階段列舉、service-interfaces）、research R11、plan、quickstart（改為 27 步）、類別圖與時序圖的 `.puml`、`docs/alignment.md`（三列 2026-11-23 決議）。
+- [ ] T107 重新產生三張 PNG：`.puml` 在 T106 又改過，現有 PNG 落後；需要在有 `plantuml.jar` 的本機 Windows 執行 `java -jar plantuml.jar -charset UTF-8 "./diagrams/001-*.puml"` 並目視確認（原則 II）。T095 的證據對應的是更早的版本。
+- [x] T108 Ctrl+C 關機保護（緩解，未在回報者的環境驗證）：`python -m lecture_quiz` 加上 `timeout_graceful_shutdown=3`，最多等 3 秒就取消剩下的連線並退出。EricC430 回報按 Ctrl+C 後後端沒有結束；本機（Windows、Python 3.14、uvicorn 0.54）以 8 條自動重連的 WebSocket 模擬，修改前後都在 0.2 秒內正常結束，所以**無法重現**，這項只是保險，需要 T084 第 26 步在回報者的環境再確認。
+- 2026-11-23 驗證（Windows 11、Python 3.14.7；與 T083 的 3.11.5 不同）：`ruff check .` All checks passed；`ruff format --check .` 115 files already formatted；`mypy` Success: no issues found in 26 source files；`pytest` 389 passed、1 deselected；`pytest -m perf` 1 passed。
 
 ---
 
@@ -593,12 +605,12 @@ Task: "T035 src/lecture_quiz/core/activity/input_rules.py normalize_group_number
 
 1. Phase 1 + Phase 2（基礎，包含架構測試）→ 單獨 PR 先合併（見下方「共用骨架先合併」）。
 2. 依序完成 US1 → US2 → US3 → US4 → US6（全部 P1），每完成一個 Story 就執行該 Story 的整合測試。
-3. **STOP and VALIDATE**：完成 P1 後，跑 quickstart 第 1～12、14～16、19、21、22 步。
+3. **STOP and VALIDATE**：完成 P1 後，跑 quickstart 第 1～19、23、25、26 步。
 
 ### Incremental Delivery
 
-1. 加上 US5（結束與取消）→ 驗證 quickstart 第 20、23 步。
-2. 加上 US7（組別更正，alignment 2026-11-23 B4、B5）→ 驗證 quickstart 第 13、17、18 步。
+1. 加上 US5（結束與取消）→ 驗證 quickstart 第 24、27 步。
+2. 加上 US7（組別更正，alignment 2026-11-23 B4、B5）→ 驗證 quickstart 第 16、20～22 步。
 3. 完成 Polish → 開 PR（`Closes #5`），由 EricC430 審查。
 
 ### 共用骨架先合併

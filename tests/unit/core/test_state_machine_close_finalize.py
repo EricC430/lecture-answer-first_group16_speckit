@@ -20,7 +20,7 @@ from lecture_quiz.core.activity.state_machine import ActivityStateMachine
 from tests.unit.core.helpers import (
     NOW,
     TEACHER,
-    new_activity,
+    joining_activity,
     with_groups,
     with_questions,
 )
@@ -29,7 +29,7 @@ apply = ActivityStateMachine.apply
 
 
 def opened(countdown=None, questions=(1, 2)):
-    activity = with_groups(with_questions(new_activity()), 1, 2)
+    activity = with_groups(with_questions(joining_activity()), 1, 2)
     return apply(
         activity, OpenRound(TEACHER, questions, False, countdown), NOW
     ).activity

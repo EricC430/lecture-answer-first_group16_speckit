@@ -28,6 +28,7 @@ async def one_race(teacher_first: bool):
     created = (await service.create(6)).value
     teacher = service.resolve_requester(created.code, created.teacher_token)
     await service.replace_questions(created.code, teacher, (1, 2))
+    await service.open_joining(created.code, teacher)
     await service.open_round(created.code, teacher, None, False, 30)
     version_before = service.get(created.code).version
     publisher.published.clear()
@@ -72,6 +73,7 @@ def test_deadline_callback_uses_deadline_when_timer_fires_early():
         created = (await service.create(6)).value
         teacher = service.resolve_requester(created.code, created.teacher_token)
         await service.replace_questions(created.code, teacher, (1,))
+        await service.open_joining(created.code, teacher)
         await service.open_round(created.code, teacher, None, False, 30)
         clock.advance(30 - 0.005)  # 計時器早 5 ms 觸發
         await scheduler.fire(created.code)

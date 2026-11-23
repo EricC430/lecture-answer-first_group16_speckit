@@ -79,6 +79,7 @@ async def _run() -> dict[str, list[float]]:
                 headers = {"Authorization": f"Bearer {created['teacherToken']}"}
                 teacher = service.resolve_requester(code, created["teacherToken"])
                 await service.replace_questions(code, teacher, (1, 2, 3, 4))
+                assert (await service.open_joining(code, teacher)).ok
                 tokens = [created["teacherToken"]]
                 for g in range(GROUPS):
                     credential = None

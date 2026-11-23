@@ -20,7 +20,7 @@ from lecture_quiz.core.activity.results import (
     describe_rejection,
 )
 from lecture_quiz.core.activity.state_machine import ActivityStateMachine
-from tests.unit.core.helpers import NOW, TEACHER, new_activity
+from tests.unit.core.helpers import NOW, TEACHER, joining_activity
 
 apply = ActivityStateMachine.apply
 X, Y = "1" * 64, "2" * 64
@@ -37,8 +37,8 @@ def _join(activity, device, number, credential=None, new_cred="AAAAAA"):
     return t.activity
 
 
-def two_devices_in_group_one(stage=Stage.PREPARING):
-    activity = _join(new_activity(), X, 1)
+def two_devices_in_group_one(stage=Stage.JOINING):
+    activity = _join(joining_activity(), X, 1)
     activity = _join(activity, Y, 1, "AAAAAA")
     groups = dict(activity.groups)
     groups[1] = dataclasses.replace(groups[1], success_count=2)
@@ -46,7 +46,7 @@ def two_devices_in_group_one(stage=Stage.PREPARING):
 
 
 @pytest.mark.parametrize(
-    "stage", [Stage.PREPARING, Stage.RESULT_PENDING, Stage.RESULT_FINAL]
+    "stage", [Stage.JOINING, Stage.RESULT_PENDING, Stage.RESULT_FINAL]
 )
 def test_leave_removes_only_that_device(stage):
     """Scenario: US7-AS1
@@ -110,7 +110,7 @@ def test_delete_empty_group_removes_group_and_devices_and_frees_number():
 
     刪除沒有提交的組：組與其裝置都移除；組號可再使用，會建立新組與新憑證。
     """
-    activity = _join(new_activity(), X, 5)
+    activity = _join(joining_activity(), X, 5)
     t = apply(activity, DeleteGroup(TEACHER, 5), NOW)
     assert t.ok and t.changed
     assert 5 not in t.activity.groups
@@ -126,6 +126,7 @@ def test_delete_group_with_submissions_is_rejected():
     """
     activity = two_devices_in_group_one(Stage.ROUND_OPEN)
     activity = apply(activity, MarkGroupSubmitted(System(), 1), NOW).activity
+    activity = dataclasses.replace(activity, stage=Stage.RESULT_PENDING)
     t = apply(activity, DeleteGroup(TEACHER, 1), NOW)
     assert t.rejection is RejectionReason.GROUP_HAS_SUBMISSIONS
     assert t.activity == activity
@@ -133,7 +134,7 @@ def test_delete_group_with_submissions_is_rejected():
 
 def test_delete_missing_group_and_permission_and_leave_without_group():
     """刪除不存在的組號、學生刪除組別、未加入任何組的裝置離開，都被拒絕。"""
-    activity = _join(new_activity(), X, 1)
+    activity = _join(joining_activity(), X, 1)
     missing = DeleteGroup(TEACHER, 4)
     t = apply(activity, missing, NOW)
     assert t.rejection is RejectionReason.GROUP_NOT_FOUND
@@ -153,7 +154,7 @@ def test_delete_missing_group_and_permission_and_leave_without_group():
 
 def test_mark_group_submitted_only_during_round_open():
     """MarkGroupSubmitted 只在搶答中生效；重複標記不改變版本。"""
-    activity = _join(new_activity(), X, 1)
+    activity = _join(joining_activity(), X, 1)
     assert (
         apply(activity, MarkGroupSubmitted(System(), 1), NOW).rejection
         is RejectionReason.STAGE_NOT_ALLOWED

@@ -95,6 +95,17 @@ class JoinGroup:
 
 
 @dataclass(frozen=True)
+class OpenJoining:
+    """老師開放加入：準備中 → 開放加入，學生才能開始加入組別（須已匯入題目）。
+
+    Attributes:
+        actor: 操作者。
+    """
+
+    actor: Actor
+
+
+@dataclass(frozen=True)
 class LeaveGroup:
     """學生裝置離開本組（US7，alignment 2026-11-23 B4）。"""
 
@@ -193,6 +204,7 @@ class ReplaceQuestions:
 
 Command = (
     CreateActivity
+    | OpenJoining
     | JoinGroup
     | LeaveGroup
     | DeleteGroup

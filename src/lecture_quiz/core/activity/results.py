@@ -11,6 +11,7 @@ from lecture_quiz.core.activity.commands import (
     EndActivity,
     Finalize,
     JoinGroup,
+    OpenJoining,
     OpenRound,
     ReplaceQuestions,
 )
@@ -36,6 +37,8 @@ class RejectionReason(StrEnum):
     ALREADY_IN_GROUP = "ALREADY_IN_GROUP"
     NOT_IN_GROUP = "NOT_IN_GROUP"
     GROUP_NOT_FOUND = "GROUP_NOT_FOUND"
+    JOIN_NOT_OPEN = "JOIN_NOT_OPEN"
+    GROUP_DELETE_DURING_ROUND = "GROUP_DELETE_DURING_ROUND"
 
     @property
     def http_status(self) -> int:
@@ -65,6 +68,8 @@ _HTTP_STATUS = {
     RejectionReason.ALREADY_IN_GROUP: 409,
     RejectionReason.NOT_IN_GROUP: 403,
     RejectionReason.GROUP_NOT_FOUND: 404,
+    RejectionReason.JOIN_NOT_OPEN: 409,
+    RejectionReason.GROUP_DELETE_DURING_ROUND: 409,
 }
 
 _MESSAGES = {
@@ -91,6 +96,10 @@ _MESSAGES = {
     RejectionReason.ALREADY_IN_GROUP: "這台裝置已經在某一組，請先離開本組。",
     RejectionReason.NOT_IN_GROUP: "這台裝置目前沒有加入任何組別。",
     RejectionReason.GROUP_NOT_FOUND: "找不到這個組別。",
+    RejectionReason.JOIN_NOT_OPEN: "老師還沒開放加入，請稍後再試。",
+    RejectionReason.GROUP_DELETE_DURING_ROUND: (
+        "搶答進行中不能刪除組別，請在本輪關閉後再操作。"
+    ),
 }
 
 
@@ -160,12 +169,18 @@ def describe_rejection(
         return f"活動{stage.label}，無法再進行這個操作。"
     if isinstance(command, OpenRound) and stage is Stage.RESULT_PENDING:
         return "目前是「結果未定案」，請先確認定案本輪結果。"
+    if isinstance(command, OpenRound) and stage is Stage.PREPARING:
+        return "請先按「開放加入」，再開始搶答。"
+    if isinstance(command, OpenJoining):
+        if stage is Stage.JOINING:
+            return "已經開放加入了。"
+        return f"目前是「{stage.label}」，不能再開放加入。"
     if isinstance(command, EndActivity):
-        if stage is Stage.PREPARING:
-            return "準備中只能取消活動。"
+        if stage in (Stage.PREPARING, Stage.JOINING):
+            return f"{stage.label}只能取消活動。"
         return f"目前是「{stage.label}」，請先關輪並確認定案，再結束活動。"
     if isinstance(command, CancelActivity):
-        return "只有準備中可以取消活動；已開始搶答的活動請在定案後結束活動。"
+        return "只有準備中與開放加入可以取消活動；已開始搶答的活動請在定案後結束活動。"
     if isinstance(command, CloseRound):
         return "目前沒有進行中的輪次。"
     if isinstance(command, Finalize):
@@ -173,7 +188,7 @@ def describe_rejection(
             return "請先關輪，再確認定案。"
         return "目前沒有待定案的輪次。"
     if isinstance(command, ReplaceQuestions):
-        return "只有準備中可以匯入學習單。"
+        return "只有準備中與開放加入可以匯入學習單。"
     return f"目前是「{stage.label}」，不能進行這個操作。"
 
 

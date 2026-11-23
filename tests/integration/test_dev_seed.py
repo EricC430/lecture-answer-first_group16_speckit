@@ -25,6 +25,19 @@ def test_seed_endpoint_enabled_teacher_only():
     with TestClient(make_app(FakeClock(), ManualScheduler(), dev_seed=True)) as client:
         assert client.get("/api/dev/status").json() == {"enabled": True}
         teacher = create_activity(client)
+        # 開放加入前學生不能加入；先以 seed API 放入題目並開放加入
+        ok = client.post(
+            f"/api/dev/activities/{teacher.code}/seed-questions",
+            json={"count": 4},
+            headers=teacher.headers,
+        )
+        assert ok.status_code == 200
+        opened = client.post(
+            f"/api/activities/{teacher.code}/open-joining",
+            json={},
+            headers=teacher.headers,
+        )
+        assert opened.status_code == 200
         device = join_group(client, teacher.code, 1)
         student = client.post(
             f"/api/dev/activities/{teacher.code}/seed-questions",

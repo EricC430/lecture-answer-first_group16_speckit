@@ -1,10 +1,10 @@
 """T044：開輪端點契約（contracts/http-api.md #6）。"""
 
-from tests.conftest import seed_questions
+from tests.conftest import open_joining
 
 
 def test_open_round_returns_201_contract(client, teacher):
-    seed_questions(client, teacher)
+    open_joining(client, teacher)
     response = client.post(
         f"/api/activities/{teacher.code}/rounds",
         json={"questionNumbers": [1, 2], "fairMode": False, "countdownSeconds": 60},
@@ -15,11 +15,11 @@ def test_open_round_returns_201_contract(client, teacher):
     assert set(body) == {"roundNumber", "deadline", "version"}
     assert body["roundNumber"] == 1
     assert body["deadline"] == "2026-11-21T09:01:00+08:00"
-    assert body["version"] == 3
+    assert body["version"] == 4
 
 
 def test_open_round_without_countdown_has_null_deadline(client, teacher):
-    seed_questions(client, teacher)
+    open_joining(client, teacher)
     response = client.post(
         f"/api/activities/{teacher.code}/rounds", json={}, headers=teacher.headers
     )
@@ -28,7 +28,7 @@ def test_open_round_without_countdown_has_null_deadline(client, teacher):
 
 
 def test_fractional_countdown_is_invalid_countdown(client, teacher):
-    seed_questions(client, teacher)
+    open_joining(client, teacher)
     response = client.post(
         f"/api/activities/{teacher.code}/rounds",
         json={"countdownSeconds": 2.5},
@@ -41,7 +41,7 @@ def test_fractional_countdown_is_invalid_countdown(client, teacher):
 
 
 def test_malformed_body_is_invalid_request(client, teacher):
-    seed_questions(client, teacher)
+    open_joining(client, teacher)
     response = client.post(
         f"/api/activities/{teacher.code}/rounds",
         json={"questionNumbers": "1,2"},

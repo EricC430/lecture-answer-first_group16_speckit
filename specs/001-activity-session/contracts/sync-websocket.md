@@ -26,7 +26,7 @@
   "code": "K7QH2M",
   "version": 12,
   "changedAt": "2026-11-21T13:05:07.123+08:00",
-  "stage": "PREPARING | ROUND_OPEN | RESULT_PENDING | RESULT_FINAL | ENDED | CANCELLED",
+  "stage": "PREPARING | JOINING | ROUND_OPEN | RESULT_PENDING | RESULT_FINAL | ENDED | CANCELLED",
   "roundNumber": 2,
   "openQuestions": [1, 3],
   "deadline": "2026-11-21T13:06:07+08:00",

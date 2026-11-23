@@ -32,6 +32,7 @@ class Stage(StrEnum):
     """活動階段（spec「活動階段狀態機」）。"""
 
     PREPARING = "PREPARING"
+    JOINING = "JOINING"
     ROUND_OPEN = "ROUND_OPEN"
     RESULT_PENDING = "RESULT_PENDING"
     RESULT_FINAL = "RESULT_FINAL"
@@ -51,6 +52,7 @@ class Stage(StrEnum):
 
 _STAGE_LABELS = {
     Stage.PREPARING: "準備中",
+    Stage.JOINING: "開放加入",
     Stage.ROUND_OPEN: "搶答中",
     Stage.RESULT_PENDING: "結果未定案",
     Stage.RESULT_FINAL: "結果已定案",

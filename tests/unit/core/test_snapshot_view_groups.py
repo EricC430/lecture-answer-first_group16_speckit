@@ -6,11 +6,11 @@ from lecture_quiz.core.activity.commands import Anonymous, JoinGroup
 from lecture_quiz.core.activity.results import IssuedSecrets
 from lecture_quiz.core.activity.snapshot_view import SnapshotView
 from lecture_quiz.core.activity.state_machine import ActivityStateMachine
-from tests.unit.core.helpers import NOW, new_activity
+from tests.unit.core.helpers import NOW, joining_activity
 
 
 def two_groups():
-    activity = new_activity()
+    activity = joining_activity()
     for number, device, cred in ((5, "1", "AAAAAA"), (2, "2", "BBBBBB")):
         t = ActivityStateMachine.apply(
             activity,

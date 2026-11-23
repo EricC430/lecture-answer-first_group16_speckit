@@ -120,6 +120,13 @@ def create_activity(client: TestClient, max_groups: int = 6) -> TeacherSession:
     return TeacherSession(body["code"], body["teacherToken"])
 
 
+def create_joinable(client: TestClient, max_groups: int = 6) -> TeacherSession:
+    """建立活動、放入題目並開放加入；回傳老師身分（學生之後才能加入）。"""
+    session = create_activity(client, max_groups)
+    open_joining(client, session)
+    return session
+
+
 @pytest.fixture
 def teacher(client: TestClient) -> TeacherSession:
     return create_activity(client)
@@ -151,6 +158,19 @@ def seed_questions(client: TestClient, teacher: TeacherSession, count: int = 4) 
         tuple(range(1, count + 1)),
     )
     assert outcome.ok, outcome
+
+
+def open_joining(
+    client: TestClient, teacher: TeacherSession, question_count: int = 4
+) -> None:
+    """放入題目並開放加入（準備中 → 開放加入），之後學生才能加入。"""
+    seed_questions(client, teacher, question_count)
+    response = client.post(
+        f"/api/activities/{teacher.code}/open-joining",
+        json={},
+        headers=teacher.headers,
+    )
+    assert response.status_code == 200, response.text
 
 
 def join_group(

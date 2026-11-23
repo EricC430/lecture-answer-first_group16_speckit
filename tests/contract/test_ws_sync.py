@@ -8,6 +8,7 @@ from tests.conftest import (
     FakeClock,
     ManualScheduler,
     create_activity,
+    create_joinable,
     join_group,
     make_app,
 )
@@ -66,7 +67,7 @@ def test_teacher_receives_snapshot_with_teacher_fields(client):
 
 
 def test_student_receives_only_own_group(client):
-    teacher = create_activity(client)
+    teacher = create_joinable(client)
     device = join_group(client, teacher.code, 1)
     join_group(client, teacher.code, 2)
     with client.websocket_connect(f"/ws/activities/{teacher.code}") as ws:
@@ -117,16 +118,16 @@ def test_invalid_token_gets_unauthorized_and_4401(client):
 
 
 def test_state_change_is_pushed_and_extra_messages_ignored(client, caplog):
-    teacher = create_activity(client)
+    teacher = create_joinable(client)
     with client.websocket_connect(f"/ws/activities/{teacher.code}") as ws:
         ws.send_json({"type": "auth", "token": teacher.token})
-        assert ws.receive_json()["version"] == 1
+        assert ws.receive_json()["version"] == 3
         ws.send_json({"type": "auth", "token": "ignored-after-auth"})
         join_group(client, teacher.code, 1)
         snap = ws.receive_json()
     # 老師收到新快照：version 不變（學生不可見的變更），revision 加 1（FR-030）
-    assert snap["version"] == 1
-    assert snap["revision"] == 2
+    assert snap["version"] == 3
+    assert snap["revision"] == 4
     assert [g["number"] for g in snap["groups"]] == [1]
     assert any("多餘訊息" in r.getMessage() for r in caplog.records)
     assert all("ignored-after-auth" not in r.getMessage() for r in caplog.records)

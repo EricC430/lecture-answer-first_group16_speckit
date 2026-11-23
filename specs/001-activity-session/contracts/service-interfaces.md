@@ -15,7 +15,7 @@
 |---|---|
 | `stage(code) -> Stage` | 目前階段；活動不存在時回傳 `None` |
 | `is_teacher(code, requester) -> bool` | `requester` 是否為該活動老師 |
-| `replace_questions(code, requester, question_numbers: tuple[int, ...]) -> Outcome[int]` | 只允許老師在 `PREPARING` 時呼叫，以整份新題號取代舊的；回傳新 `version`。被拒時，既有題目完全不變（原則 III） |
+| `replace_questions(code, requester, question_numbers: tuple[int, ...]) -> Outcome[int]` | 只允許老師在第一輪開始前（`PREPARING`、`JOINING`）呼叫，以整份新題號取代舊的；回傳新 `version`。被拒時，既有題目完全不變（原則 III） |
 
 **與 002 類別圖的差異**：002 類別圖寫的是 `stage()`、`isTeacher(requester)`、`replaceQuestions(result)`。這裡多了 `code` 參數，因為後端會同時有多個活動；而且 `replaceQuestions` 只接收題號清單，不接收整個 `ParseResult`。
 

@@ -1,6 +1,6 @@
 """T034：US2 學生以組號加入，多裝置同組並可恢復身分。"""
 
-from tests.conftest import create_activity, seed_questions
+from tests.conftest import create_joinable
 
 
 def _join(client, code, number, credential=None, token=None):
@@ -22,7 +22,7 @@ def test_join_with_fullwidth_number_creates_group(client):
 
     組號「 ０３ 」建立第 3 組，裝置取得第 3 組身分與 6 碼憑證。
     """
-    teacher = create_activity(client)
+    teacher = create_joinable(client)
     body = _join(client, teacher.code, " ０３ ").json()
     assert body["groupNumber"] == 3
     snap = _snapshot(client, teacher.code, body["deviceToken"]).json()
@@ -39,7 +39,7 @@ def test_second_device_with_credential_shares_group(client):
 
     第二台裝置附上第一台畫面上的憑證加入，兩台快照的 ownGroup 相同，不建立第二組。
     """
-    teacher = create_activity(client)
+    teacher = create_joinable(client)
     first = _join(client, teacher.code, 3).json()
     second = _join(client, teacher.code, 3, first["credential"]).json()
     snaps = [
@@ -56,7 +56,7 @@ def test_credentials_visible_to_own_group_and_teacher_only(client):
 
     本組裝置看得到本組憑證；其他組看不到；老師看得到每一組憑證。
     """
-    teacher = create_activity(client)
+    teacher = create_joinable(client)
     a = _join(client, teacher.code, 3).json()
     b = _join(client, teacher.code, 2).json()
     b_snap = _snapshot(client, teacher.code, b["deviceToken"])
@@ -73,7 +73,7 @@ def test_existing_number_without_credential_is_rejected(client):
 
     既有組號不附憑證時拒絕，訊息提示向同組同學查看憑證，不含憑證，不建立新組。
     """
-    teacher = create_activity(client)
+    teacher = create_joinable(client)
     first = _join(client, teacher.code, 3).json()
     response = _join(client, teacher.code, 3)
     assert response.status_code == 403
@@ -89,7 +89,7 @@ def test_invalid_code_number_or_credential_changes_nothing(client):
 
     不存在的代碼、超出範圍或格式錯誤的組號、錯誤憑證都被拒絕，組別資料不變。
     """
-    teacher = create_activity(client)
+    teacher = create_joinable(client)
     first = _join(client, teacher.code, 1).json()
     before = _snapshot(client, teacher.code, teacher.token).json()
     assert _join(client, "ZZZZZZ", 1).status_code == 404
@@ -110,7 +110,7 @@ def test_join_rejected_after_cancel(client):
 
     活動已取消時加入被拒，訊息說明活動已取消。
     """
-    teacher = create_activity(client)
+    teacher = create_joinable(client)
     client.post(
         f"/api/activities/{teacher.code}/cancel", json={}, headers=teacher.headers
     )
@@ -124,8 +124,7 @@ def test_join_during_round_sees_current_stage(client):
 
     搶答中新組加入，立即看到搶答中與開放題目，成功次數為零。
     """
-    teacher = create_activity(client)
-    seed_questions(client, teacher)
+    teacher = create_joinable(client)
     client.post(
         f"/api/activities/{teacher.code}/rounds",
         json={"questionNumbers": [1, 2]},
@@ -143,7 +142,7 @@ def test_identity_restored_over_websocket(client):
 
     以同一個裝置 token 重新連 WebSocket（模擬重新整理），取得原組別與憑證。
     """
-    teacher = create_activity(client)
+    teacher = create_joinable(client)
     body = _join(client, teacher.code, 3).json()
     with client.websocket_connect(f"/ws/activities/{teacher.code}") as ws:
         ws.send_json({"type": "auth", "token": body["deviceToken"]})
@@ -157,7 +156,7 @@ def test_member_device_cannot_join_again(client):
 
     已在第 3 組的裝置再加入時回 409「請先離開本組」，身分不變。
     """
-    teacher = create_activity(client)
+    teacher = create_joinable(client)
     body = _join(client, teacher.code, 3).json()
     again = _join(client, teacher.code, 2, token=body["deviceToken"])
     assert again.status_code == 409

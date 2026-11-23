@@ -3,7 +3,7 @@
 import logging
 import pathlib
 
-from tests.conftest import create_activity, join_group, seed_questions
+from tests.conftest import create_activity, join_group, open_joining
 
 SRC = pathlib.Path(__file__).resolve().parents[2] / "src"
 
@@ -11,13 +11,13 @@ SRC = pathlib.Path(__file__).resolve().parents[2] / "src"
 def test_full_flow_logs_contain_no_secrets(client, caplog):
     caplog.set_level(logging.INFO)
     teacher = create_activity(client)
+    open_joining(client, teacher)
     base = f"/api/activities/{teacher.code}"
     device = join_group(client, teacher.code, 1)
     credential = client.get(f"{base}/snapshot", headers=teacher.headers).json()[
         "groups"
     ][0]["credential"]
     join_group(client, teacher.code, 1, credential)
-    seed_questions(client, teacher)
     for path in ("/rounds", "/rounds/current/close", "/rounds/current/finalize"):
         client.post(f"{base}{path}", json={}, headers=teacher.headers)
     client.post(

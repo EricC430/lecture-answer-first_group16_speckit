@@ -145,6 +145,16 @@ def create_router(app: FastAPI) -> APIRouter:
         snapshot = unwrap(request, code, token, outcome)
         return ok(request, code, snapshot.version, snapshot.to_json())
 
+    @router.post("/activities/{code}/open-joining")
+    async def open_joining(
+        request: Request, code: str, token: Token, key: IdempotencyKey
+    ) -> JsonDict:
+        """開放加入（#12）：準備中 → 開放加入，須已匯入題目。"""
+        code = normalize_code_input(code)
+        outcome = await service().open_joining(code, requester_for(code, token), key)
+        version = unwrap(request, code, token, outcome)
+        return ok(request, code, version, {"version": version})
+
     @router.post("/activities/{code}/groups/join")
     async def join_group(
         request: Request,

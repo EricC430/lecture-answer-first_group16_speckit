@@ -8,6 +8,7 @@ import { connectSync } from "./sync.js";
 
 const STAGE_LABELS = {
   PREPARING: "準備中",
+  JOINING: "開放加入",
   ROUND_OPEN: "搶答中",
   RESULT_PENDING: "結果未定案",
   RESULT_FINAL: "結果已定案",

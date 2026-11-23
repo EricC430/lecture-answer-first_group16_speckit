@@ -25,6 +25,7 @@ from lecture_quiz.core.activity.commands import (
     JoinGroup,
     LeaveGroup,
     MarkGroupSubmitted,
+    OpenJoining,
     OpenRound,
     ReplaceQuestions,
     System,
@@ -48,23 +49,29 @@ from lecture_quiz.core.activity.results import (
 )
 
 _NON_TERMINAL = frozenset(s for s in Stage if not s.is_terminal)
+# 學生可加入：準備中不開放（老師按「開放加入」後才開始），終止階段不能加入。
+_JOINABLE = _NON_TERMINAL - {Stage.PREPARING}
+# 第一輪開始前：可重新匯入題目、可取消活動。
+_BEFORE_FIRST_ROUND = frozenset({Stage.PREPARING, Stage.JOINING})
 
 # 「階段 × 操作」相容表（spec 兩張表）。CloseRound 另外處理「已關輪」的冪等成功。
 _ALLOWED_STAGES: dict[type, frozenset[Stage]] = {
-    JoinGroup: _NON_TERMINAL,
-    LeaveGroup: frozenset({Stage.PREPARING, Stage.RESULT_PENDING, Stage.RESULT_FINAL}),
-    DeleteGroup: _NON_TERMINAL,
+    OpenJoining: frozenset({Stage.PREPARING}),
+    JoinGroup: _JOINABLE,
+    LeaveGroup: frozenset({Stage.JOINING, Stage.RESULT_PENDING, Stage.RESULT_FINAL}),
+    DeleteGroup: frozenset({Stage.JOINING, Stage.RESULT_PENDING, Stage.RESULT_FINAL}),
     MarkGroupSubmitted: frozenset({Stage.ROUND_OPEN}),
-    OpenRound: frozenset({Stage.PREPARING, Stage.RESULT_FINAL}),
+    OpenRound: frozenset({Stage.JOINING, Stage.RESULT_FINAL}),
     CloseRound: frozenset({Stage.ROUND_OPEN}),
     Finalize: frozenset({Stage.RESULT_PENDING}),
     EndActivity: frozenset({Stage.RESULT_FINAL}),
-    CancelActivity: frozenset({Stage.PREPARING}),
-    ReplaceQuestions: frozenset({Stage.PREPARING}),
+    CancelActivity: _BEFORE_FIRST_ROUND,
+    ReplaceQuestions: _BEFORE_FIRST_ROUND,
 }
 
 # 只有本活動老師能執行的操作（FR-004）。CloseRound 也允許 System（倒數）。
 _TEACHER_ONLY = (
+    OpenJoining,
     DeleteGroup,
     OpenRound,
     CloseRound,
@@ -202,6 +209,16 @@ def _stage_rejection(activity: Activity, command: Command) -> Transition:
     """階段不相容時的結果；部分組合有專屬的拒絕原因或冪等成功。"""
     if isinstance(command, OpenRound) and activity.stage is Stage.ROUND_OPEN:
         return _reject(activity, RejectionReason.RULES_LOCKED)
+    if (
+        isinstance(command, OpenRound)
+        and activity.stage is Stage.PREPARING
+        and not activity.question_numbers
+    ):
+        return _reject(activity, RejectionReason.NO_QUESTIONS)
+    if isinstance(command, JoinGroup) and activity.stage is Stage.PREPARING:
+        return _reject(activity, RejectionReason.JOIN_NOT_OPEN)
+    if isinstance(command, DeleteGroup) and activity.stage is Stage.ROUND_OPEN:
+        return _reject(activity, RejectionReason.GROUP_DELETE_DURING_ROUND)
     if isinstance(command, LeaveGroup) and activity.stage is Stage.ROUND_OPEN:
         return _reject(activity, RejectionReason.NO_GROUP_SWITCH_DURING_ROUND)
     if isinstance(command, CloseRound):
@@ -232,6 +249,16 @@ def _create(
     return Transition(ok=True, activity=activity, changed=True, issued=issued)
 
 
+def _open_joining(
+    activity: Activity, command: Command, now: datetime, issued: IssuedSecrets | None
+) -> Transition:
+    """開放加入：須已成功匯入題目；之後學生才能加入組別。"""
+    assert isinstance(command, OpenJoining)
+    if not activity.question_numbers:
+        return _reject(activity, RejectionReason.NO_QUESTIONS)
+    return _changed(dataclasses.replace(activity, stage=Stage.JOINING))
+
+
 def _join_group(
     activity: Activity, command: Command, now: datetime, issued: IssuedSecrets | None
 ) -> Transition:
@@ -254,7 +281,8 @@ def _join_group(
         if not issued.group_credential:
             raise ValueError("建立新組需要服務層傳入組別加入憑證")
         groups[number] = Group(number, issued.group_credential)
-    else:
+    elif any(d.group_number == number for d in activity.devices.values()):
+        # 組別還有裝置時才要憑證；沒有任何裝置的組別直接加入（兩組已同意）
         given = InputRules.normalize_credential(command.credential_raw)
         if not hmac.compare_digest(given.encode(), existing.join_credential.encode()):
             return _reject(activity, RejectionReason.BAD_CREDENTIAL)
@@ -320,7 +348,7 @@ def _open_round(
 ) -> Transition:
     """開輪：驗證輸入、固定規則快照、保存各組成功次數基準（FR-013～017）。"""
     assert isinstance(command, OpenRound)
-    if activity.stage is Stage.PREPARING and not activity.question_numbers:
+    if not activity.question_numbers:
         return _reject(activity, RejectionReason.NO_QUESTIONS)
     try:
         countdown = InputRules.validate_countdown(command.countdown_raw)
@@ -422,6 +450,7 @@ def _cancel_activity(
 
 
 _HANDLERS: dict[type, Handler] = {
+    OpenJoining: _open_joining,
     JoinGroup: _join_group,
     LeaveGroup: _leave_group,
     DeleteGroup: _delete_group,

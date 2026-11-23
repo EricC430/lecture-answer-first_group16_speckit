@@ -5,7 +5,13 @@ import re
 from fastapi.testclient import TestClient
 
 from lecture_quiz.app.activity.secrets_gen import CODE_ALPHABET
-from tests.conftest import call, create_activity, join_group, service_of
+from tests.conftest import (
+    call,
+    create_activity,
+    create_joinable,
+    join_group,
+    service_of,
+)
 
 TEACHER_ONLY_REQUESTS = [
     ("post", "/rounds", {}),
@@ -84,7 +90,7 @@ def test_student_device_token_is_rejected(client):
 
     學生裝置 token 送出老師專用請求 → 403，狀態不變，回應不含任何 token。
     """
-    teacher = create_activity(client)
+    teacher = create_joinable(client)
     device_token = join_group(client, teacher.code, 1)
     version_before = _version(client, teacher)
     for method, path, body in TEACHER_ONLY_REQUESTS:

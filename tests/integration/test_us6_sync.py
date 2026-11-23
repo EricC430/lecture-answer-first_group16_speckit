@@ -9,7 +9,7 @@ from tests.conftest import (
     ManualScheduler,
     join_group,
     make_app,
-    seed_questions,
+    open_joining,
 )
 
 
@@ -34,7 +34,7 @@ def test_close_reaches_all_three_pages_with_same_version(client, teacher):
 
     老師與兩組共 3 條連線；關輪後都收到相同的 version 與 roundNumber，且有 changedAt。
     """
-    seed_questions(client, teacher)
+    open_joining(client, teacher)
     a = join_group(client, teacher.code, 1)
     b = join_group(client, teacher.code, 2)
     _post(client, teacher, "/rounds", {"questionNumbers": [1, 2]})
@@ -69,7 +69,7 @@ def test_failed_connection_does_not_affect_others(client, teacher):
     from lecture_quiz.app.activity.secrets_gen import hash_token
     from lecture_quiz.core.activity.commands import Device
 
-    seed_questions(client, teacher)
+    open_joining(client, teacher)
     device = join_group(client, teacher.code, 1)
     hub = client.app.state.sync_hub
     ctx, ws, _ = _connect(client, teacher.code, teacher.token)
@@ -90,7 +90,7 @@ def test_reconnect_gets_latest_snapshot_first(client, teacher):
 
     斷線期間發生變更，重連後第一則 snapshot 就是最新版本。
     """
-    seed_questions(client, teacher)
+    open_joining(client, teacher)
     device = join_group(client, teacher.code, 1)
     ctx, _, first = _connect(client, teacher.code, device)
     ctx.__exit__(None, None, None)  # 斷線
@@ -107,6 +107,7 @@ def test_restart_makes_old_identities_gone(client, teacher):
     後端重啟（建立新的 app）後，舊老師 token 與舊裝置 token 的 WebSocket 都收到 gone，
     HTTP snapshot 回 410，不顯示任何舊資料（SC-007）。
     """
+    open_joining(client, teacher)
     device = join_group(client, teacher.code, 1)
     with TestClient(make_app(FakeClock(), ManualScheduler())) as restarted:
         for token in (teacher.token, device):
@@ -134,7 +135,7 @@ def test_student_messages_never_contain_other_groups(client, teacher):
 
     搶答中學生收到的每一則訊息與回應，都不含其他組的組號、憑證、提交狀態或組別清單（SC-009）。
     """
-    seed_questions(client, teacher)
+    open_joining(client, teacher)
     mine = join_group(client, teacher.code, 1)
     ctx, ws, first = _connect(client, teacher.code, mine)
     try:

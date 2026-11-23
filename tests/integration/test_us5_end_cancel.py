@@ -3,7 +3,7 @@
 from types import MappingProxyType
 
 from lecture_quiz.core.activity.commands import FinalizeOutcome
-from tests.conftest import call, join_group, seed_questions, service_of
+from tests.conftest import call, join_group, open_joining, service_of
 
 
 def _post(client, teacher, path, body=None):
@@ -24,7 +24,8 @@ def _finalize_with_solved(client, teacher, solved):
 
 
 def _to_final(client, teacher, solved=(1, 2)):
-    seed_questions(client, teacher, 3)
+    if service_of(client).get(teacher.code).stage.value == "PREPARING":
+        open_joining(client, teacher, 3)
     _post(client, teacher, "/rounds", {"questionNumbers": [1, 2, 3]})
     _post(client, teacher, "/rounds/current/close")
     _finalize_with_solved(client, teacher, solved)
@@ -35,6 +36,7 @@ def test_end_shows_unsolved_on_all_pages(client, teacher):
 
     定案後第 3 題無人成功 → 結束：回應與所有頁面的快照都列出未成功題（含第 3 題）。
     """
+    open_joining(client, teacher, 3)
     device = join_group(client, teacher.code, 1)
     _to_final(client, teacher)
     with (
@@ -79,7 +81,7 @@ def test_end_during_round_or_pending_rejected(client, teacher):
 
     搶答中或結果未定案時結束被拒，說明「請先關輪並確認定案」，階段不變。
     """
-    seed_questions(client, teacher)
+    open_joining(client, teacher)
     _post(client, teacher, "/rounds", {})
     for expected_stage in ("ROUND_OPEN", "RESULT_PENDING"):
         response = _post(client, teacher, "/end")
@@ -95,8 +97,10 @@ def test_end_during_round_or_pending_rejected(client, teacher):
 def test_cancel_while_preparing(client, teacher):
     """Scenario: US5-AS4
 
-    準備中取消 → 已取消；之後控制操作被拒、學生畫面顯示已取消、不提供匯出。
+    開放加入階段（第一輪開始前）取消 → 已取消；之後控制操作被拒、學生畫面顯示已取消、
+    不提供匯出。
     """
+    open_joining(client, teacher)
     device = join_group(client, teacher.code, 1)
     with client.websocket_connect(f"/ws/activities/{teacher.code}") as s_ws:
         s_ws.send_json({"type": "auth", "token": device})

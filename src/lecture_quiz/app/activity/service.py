@@ -51,6 +51,7 @@ from lecture_quiz.core.activity.commands import (
     JoinGroup,
     LeaveGroup,
     MarkGroupSubmitted,
+    OpenJoining,
     OpenRound,
     ReplaceQuestions,
     System,
@@ -544,6 +545,26 @@ class ActivityService:
             code,
             MarkGroupSubmitted(System(), group_number),
             None,
+            lambda t, a: a.version,
+        )
+
+    async def open_joining(
+        self, code: str, requester: Requester, idempotency_key: str | None = None
+    ) -> Outcome[int]:
+        """老師開放加入：準備中 → 開放加入（須已匯入題目），學生才能開始加入組別。
+
+        Args:
+            code: 活動代碼。
+            requester: 已解析的身分。
+            idempotency_key: 前端送來的 key。
+
+        Returns:
+            新版本號；沒有題目時回傳 `NO_QUESTIONS`。
+        """
+        return await self._execute(
+            code,
+            OpenJoining(requester),
+            idempotency_key,
             lambda t, a: a.version,
         )
 

@@ -22,14 +22,15 @@
 |---|---|---|---|---|---|
 | 1 | `POST /activities` | 無，或同瀏覽器上一個活動的老師 token（C7） | `{"maxGroups": int}` | `201 {"code", "teacherToken", "maxGroups", "version"}` | FR-001～003、FR-036、FR-037 |
 | 2 | `GET /activities/{code}/snapshot` | 老師或裝置 | — | `200 ActivitySnapshot`（依角色裁切） | FR-028 |
-| 3 | `POST /activities/{code}/groups/join` | 無或裝置 | `{"groupNumber": int \| str, "credential": str \| null}` | `200 {"deviceToken", "groupNumber", "credential", "version"}` | FR-006～012 |
+| 3 | `POST /activities/{code}/groups/join`（準備中回 `409 JOIN_NOT_OPEN`；組別沒有裝置時免憑證） | 無或裝置 | `{"groupNumber": int \| str, "credential": str \| null}` | `200 {"deviceToken", "groupNumber", "credential", "version"}` | FR-006～012 |
 | 4 | `POST /activities/{code}/groups/leave` | 裝置 | `{}` | `200 {"version"}` | FR-034 |
-| 5 | `DELETE /activities/{code}/groups/{number}` | 老師 | — | `200 {"version"}` | FR-035 |
+| 5 | `DELETE /activities/{code}/groups/{number}`（搶答中回 `409 GROUP_DELETE_DURING_ROUND`） | 老師 | — | `200 {"version"}` | FR-035 |
 | 6 | `POST /activities/{code}/rounds` | 老師 | `{"questionNumbers": [int], "fairMode": bool, "countdownSeconds": int \| null}` | `201 {"roundNumber", "deadline" \| null, "version"}` | FR-013～018 |
 | 7 | `POST /activities/{code}/rounds/current/close` | 老師 | `{}` | `200 {"roundNumber", "version", "alreadyClosed": bool}` | FR-019 |
 | 8 | `POST /activities/{code}/rounds/current/finalize` | 老師 | `{}`（004 會擴充） | `200 {"version"}` | FR-020、FR-021 |
 | 9 | `POST /activities/{code}/end` | 老師 | `{}` | `200 {"version", "unsolvedQuestions": [int]}` | FR-022～024 |
 | 10 | `POST /activities/{code}/cancel` | 老師 | `{}` | `200 {"version"}` | FR-025 |
+| 12 | `POST /activities/{code}/open-joining` | 老師 | `{}` | `200 {"version"}`；沒有題目時 `409 NO_QUESTIONS` | FR-038 |
 | 11 | `POST /dev/activities/{code}/seed-questions` | 老師 | `{"count": int}` | `200 {"version"}` | 只在 `LECTURE_QUIZ_DEV_SEED=1` 時存在；002 合併後移除（research R8） |
 
 所有偏離與新增行為已於 alignment 2026-11-23 獲 OpenSpec 組確認。

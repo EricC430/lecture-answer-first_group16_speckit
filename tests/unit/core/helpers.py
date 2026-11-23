@@ -4,7 +4,7 @@ import dataclasses
 from types import MappingProxyType
 
 from lecture_quiz.core.activity.commands import CreateActivity, Teacher
-from lecture_quiz.core.activity.models import Activity, Group
+from lecture_quiz.core.activity.models import Activity, Group, Stage
 from lecture_quiz.core.activity.results import IssuedSecrets
 from lecture_quiz.core.activity.state_machine import ActivityStateMachine
 from tests.conftest import FAKE_CLOCK_START
@@ -26,6 +26,11 @@ def new_activity(code: str = "K7QH2M") -> Activity:
     )
     assert transition.ok and transition.activity is not None
     return transition.activity
+
+
+def joining_activity(code: str = "K7QH2M") -> Activity:
+    """已開放加入的活動（階段「開放加入」）：學生可加入，老師可開輪。"""
+    return dataclasses.replace(new_activity(code), stage=Stage.JOINING)
 
 
 def with_questions(activity: Activity, *numbers: int) -> Activity:

@@ -15,7 +15,8 @@
 
 | 值 | 中文 | 終止階段 |
 |---|---|---|
-| `PREPARING` | 準備中 | 否 |
+| `PREPARING` | 準備中（老師的前置作業；學生不能加入） | 否 |
+| `JOINING` | 開放加入（老師按「開放加入」後，學生才能加入） | 否 |
 | `ROUND_OPEN` | 搶答中 | 否 |
 | `RESULT_PENDING` | 結果未定案 | 否 |
 | `RESULT_FINAL` | 結果已定案 | 否 |
@@ -123,6 +124,8 @@
 | `ALREADY_IN_GROUP` | 已在某組 | 409 | 這台裝置已經在第 n 組，請先離開本組。 |
 | `NOT_IN_GROUP` | 不在任何組 | 403 | 這台裝置目前沒有加入任何組別。 |
 | `GROUP_NOT_FOUND` | 組別不存在 | 404 | 找不到第 n 組。 |
+| `JOIN_NOT_OPEN` | 尚未開放加入 | 409 | 老師還沒開放加入，請稍後再試。 |
+| `GROUP_DELETE_DURING_ROUND` | 搶答中不可刪除組別 | 409 | 搶答進行中不能刪除組別，請在本輪關閉後再操作。 |
 | `TEACHER_HAS_ACTIVE_ACTIVITY` | 已有存續中活動 | 409 | 你已有一個進行中的活動（代碼 K），請先結束或取消它。 |
 | `ACTIVITY_GONE` | 活動已失效 | 410 | 活動已失效，請重新建立或加入活動。 |
 | `RULES_LOCKED` | 規則不可修改 | 409 | 本輪進行中，題目、模式與截止時間不能修改。 |
@@ -151,15 +154,16 @@
 | 操作 | 允許的階段 | 成功後 |
 |---|---|---|
 | `CreateActivity` | （無） | `max_groups` 為 1～99 時：`PREPARING`，version = 1。C7 的跨活動檢查在服務層（研究 R10） |
-| `ReplaceQuestions`（002） | `PREPARING` | 更新 `question_numbers`；`solved_questions` 清空 |
-| `JoinGroup` | 非終止 | 裝置不在任何組；組號 1～N；新組號：建立 `Group`＋裝置；既有組號：憑證正確時新增裝置 |
-| `LeaveGroup` | `PREPARING`、`RESULT_PENDING`、`RESULT_FINAL`（`ROUND_OPEN` 回 `NO_GROUP_SWITCH_DURING_ROUND`） | 移除該裝置 |
-| `DeleteGroup` | 非終止 | 組別存在且 `has_submissions == False` 時，移除組別與其所有裝置；組號可再使用 |
-| `OpenRound` | `PREPARING`（已有題目）、`RESULT_FINAL` | `ROUND_OPEN`，新增 `Round` |
+| `OpenJoining` | `PREPARING`（須已有題目，否則 `NO_QUESTIONS`） | `JOINING` |
+| `ReplaceQuestions`（002） | `PREPARING`、`JOINING` | 更新 `question_numbers`；`solved_questions` 清空 |
+| `JoinGroup` | `JOINING`、`ROUND_OPEN`、`RESULT_PENDING`、`RESULT_FINAL`（`PREPARING` 回 `JOIN_NOT_OPEN`） | 裝置不在任何組；組號 1～N；新組號：建立 `Group`＋裝置；既有組號：組別**還有裝置**時憑證正確才新增裝置，**沒有任何裝置**時免憑證直接新增 |
+| `LeaveGroup` | `JOINING`、`RESULT_PENDING`、`RESULT_FINAL`（`ROUND_OPEN` 回 `NO_GROUP_SWITCH_DURING_ROUND`） | 移除該裝置 |
+| `DeleteGroup` | `JOINING`、`RESULT_PENDING`、`RESULT_FINAL`（`ROUND_OPEN` 回 `GROUP_DELETE_DURING_ROUND`） | 組別存在且 `has_submissions == False` 時，移除組別與其所有裝置（即使還有裝置）；組號可再使用並取得新憑證，舊憑證失效 |
+| `OpenRound` | `JOINING`、`RESULT_FINAL`（`PREPARING` 回 `STAGE_NOT_ALLOWED`，沒有題目時回 `NO_QUESTIONS`） | `ROUND_OPEN`，新增 `Round` |
 | `CloseRound` | `ROUND_OPEN`；目前輪次已關時（`RESULT_PENDING`、`RESULT_FINAL`）視為冪等 | `RESULT_PENDING`，`closed = True`；目前輪次已經關過時，回傳成功但沒有變化（`changed=False`，HTTP `alreadyClosed: true`） |
 | `Finalize` | `RESULT_PENDING` | `RESULT_FINAL`；套用 `outcome`（已成功題、各組成功次數增量） |
 | `EndActivity` | `RESULT_FINAL` | `ENDED` |
-| `CancelActivity` | `PREPARING` | `CANCELLED` |
+| `CancelActivity` | `PREPARING`、`JOINING` | `CANCELLED` |
 | `MarkGroupSubmitted`（003） | `ROUND_OPEN` | 該組 `has_submissions = True` |
 
 **倒數截止**：`System` 送出的 `CloseRound`，只有在 `deadline` 不為 `None` 且 `now >= deadline` 時才生效；否則回傳成功但沒有變化。這是為了防止排程誤觸發。服務層的倒數回呼一律以 `now = max(clock.now(), deadline)` 呼叫（研究 R6）。`ActivityStateMachine.is_deadline_passed(round, now)` 是供 003 判斷「截止後才到的提交」用的純函式。

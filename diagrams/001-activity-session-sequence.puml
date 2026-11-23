@@ -31,6 +31,23 @@ else 沒有存續中的活動
 end
 note right of S : 同一 key 重送 → 回傳同一活動（查表在鎖內）
 
+== 開放加入（準備中 → 開放加入） ==
+SA -> API : 加入（代碼, 3）（老師還沒開放）
+API -> S : join
+S -> M : apply(加入)
+M --> S : 拒絕（尚未開放加入）
+S --> SA : 「老師還沒開放加入，請稍後再試」，不建立組別
+T -> API : 開放加入
+API -> S : openJoining(code, 老師, key)
+S -> M : apply(開放加入)
+alt 已匯入題目
+  M --> S : 開放加入
+  S -> P : publish（版本 +1）
+else 沒有題目
+  M --> S : 拒絕（未匯入題目）
+  S --> T : 「請先成功匯入學習單」，階段不變
+end
+
 == 組別加入 ==
 SA -> API : 加入（代碼, 組號 " ０３ "）
 API -> S : join(code, numberRaw, credentialRaw, requester, key)
@@ -40,7 +57,7 @@ S --> SA : 裝置 1 身分 + 第 3 組憑證（本組裝置與老師可見）
 SA -> API : 裝置 2 加入（代碼, 3, 從裝置 1 畫面看到的憑證）
 API -> S : join
 S -> M : apply(加入既有組, 憑證)
-alt 憑證正確
+alt 憑證正確，或該組沒有任何裝置（免憑證）
   M --> S : 共用第 3 組身分
   S --> SA : 裝置 2 身分
 else 無憑證或憑證錯誤
@@ -59,7 +76,7 @@ S -> P : publish（老師版：組別清單；學生版：只含自己組）
 SB -> API : 離開本組（裝置身分）
 API -> S : leaveGroup(code, 裝置, key)
 S -> M : apply(離開本組)
-alt 階段為準備中／結果未定案／結果已定案
+alt 階段為開放加入／結果未定案／結果已定案
   M --> S : 解除裝置身分（原組提交與成功次數不變）
   S -> P : disconnectDevice(code, 裝置, LEFT_GROUP)
   S --> SB : 回到加入畫面
@@ -70,10 +87,13 @@ end
 T -> API : 刪除組別（第 5 組）
 API -> S : deleteGroup(code, 老師, 5, key)
 S -> M : apply(刪除組別)
-alt 該組沒有任何提交紀錄
-  M --> S : 移除組別、解除其裝置身分（組號可再使用）
+alt 開放加入／結果階段，且該組沒有任何提交紀錄（即使還有裝置）
+  M --> S : 移除組別、解除其所有裝置身分與舊憑證（組號可再使用）
   S -> P : disconnectDevice(code, 原組裝置, GROUP_DELETED)
   S -> P : publish
+else 搶答中
+  M --> S : 拒絕（搶答中不可刪除組別）
+  S --> T : 錯誤訊息，資料不變
 else 已有提交紀錄
   M --> S : 拒絕（組別已有提交）
   S --> T : 錯誤訊息，資料不變
@@ -83,14 +103,14 @@ end
 T -> API : 開輪（所選題號, 公平模式=關, 倒數 60 秒）
 API -> S : openRound(code, 老師, 選題, 模式, 倒數, key)
 S -> M : apply(開輪, now = clock.now())
-alt 已匯入題目、選題合法、階段為準備中或已定案
+alt 選題合法、階段為開放加入或已定案
   M --> S : 搶答中、第 n 輪、規則快照、成功次數基準、截止時間
   S -> C : schedule(代碼, 截止時間)
   S -> P : publish（版本 +1）
   P --> T : 搶答中
   P --> SA : 搶答中（只含本組）
   P --> SB : 搶答中（只含本組）
-else 未匯入／零題／含已成功題／未定案／秒數非正整數
+else 準備中／零題／含已成功題／未定案／秒數非正整數
   M --> S : 拒絕原因
   S --> T : 可修正的錯誤訊息，狀態不變
 end

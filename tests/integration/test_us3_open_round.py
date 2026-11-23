@@ -1,6 +1,6 @@
 """T045：US3 老師依條件開輪並固定本輪規則。"""
 
-from tests.conftest import join_group, seed_questions
+from tests.conftest import join_group, open_joining
 
 
 def _open(client, teacher, body, key=None):
@@ -23,7 +23,7 @@ def test_open_panel_defaults(client, teacher):
 
     匯入四題後，快照列出四題且都是未成功題；不帶任何選項開輪時，四題全開、公平模式關、不倒數。
     """
-    seed_questions(client, teacher, 4)
+    open_joining(client, teacher, 4)
     snap = _snapshot(client, teacher)
     assert snap["questionNumbers"] == [1, 2, 3, 4]
     body = _open(client, teacher, {}).json()
@@ -38,7 +38,7 @@ def test_open_two_questions_pushes_round_open_to_all(client, teacher):
 
     選兩題開輪：建立第 1 輪，所有 WebSocket 連線都收到 stage == ROUND_OPEN。
     """
-    seed_questions(client, teacher, 4)
+    open_joining(client, teacher, 4)
     device = join_group(client, teacher.code, 1)
     with (
         client.websocket_connect(f"/ws/activities/{teacher.code}") as t_ws,
@@ -76,7 +76,7 @@ def test_invalid_selection_rejected(client, teacher):
     「選已成功題」與「結果未定案時開新輪」需要定案與關輪，分別由核心測試
     `test_state_machine_open_round.py` 與 US4-AS5 的整合測試涵蓋。
     """
-    seed_questions(client, teacher, 4)
+    open_joining(client, teacher, 4)
     before = _snapshot(client, teacher)
     for selection in ([], [9], [1, 1]):
         response = _open(client, teacher, {"questionNumbers": selection})
@@ -93,7 +93,7 @@ def test_rules_locked_during_round(client, teacher):
 
     搶答中再送開輪（試圖改題目、模式或截止時間）被拒，規則快照不變。
     """
-    seed_questions(client, teacher, 4)
+    open_joining(client, teacher, 4)
     _open(client, teacher, {"questionNumbers": [1, 2], "fairMode": False})
     before = _snapshot(client, teacher)
     response = _open(
@@ -112,7 +112,7 @@ def test_countdown_range(client, teacher):
 
     秒數 0、負數、小數、非數字、空白、大於 3600 都被拒且不建立輪次；1 可以正常開輪。
     """
-    seed_questions(client, teacher, 4)
+    open_joining(client, teacher, 4)
     for raw in (0, -5, 1.5, "abc", "", 3601):
         response = _open(client, teacher, {"countdownSeconds": raw})
         assert response.status_code == 400, raw
@@ -128,7 +128,7 @@ def test_resent_open_creates_one_round(client, teacher, manual_scheduler):
 
     同一個 Idempotency-Key 重送開輪，只產生一個輪次，回應相同（SC-004）。
     """
-    seed_questions(client, teacher, 4)
+    open_joining(client, teacher, 4)
     responses = [
         _open(
             client,
@@ -153,7 +153,7 @@ def test_concurrent_open_with_same_key_applies_once(client, teacher):
 
     from tests.conftest import call, service_of
 
-    seed_questions(client, teacher, 4)
+    open_joining(client, teacher, 4)
     service = service_of(client)
     requester = service.resolve_requester(teacher.code, teacher.token)
 

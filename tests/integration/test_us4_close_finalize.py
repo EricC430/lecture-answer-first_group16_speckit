@@ -1,6 +1,6 @@
 """T055：US4 關輪只發生一次，並先定案才能往下走。"""
 
-from tests.conftest import call, seed_questions
+from tests.conftest import call, open_joining
 
 
 def _post(client, teacher, path, body=None):
@@ -30,7 +30,7 @@ def test_teacher_close(client, teacher, manual_scheduler):
 
     老師關輪 → 結果未定案，推送一次新快照，倒數排程被取消。
     """
-    seed_questions(client, teacher)
+    open_joining(client, teacher)
     _post(client, teacher, "/rounds", {"countdownSeconds": 60})
     ctx, ws = _ws(client, teacher)
     try:
@@ -50,7 +50,7 @@ def test_deadline_closes_round(client, teacher, manual_scheduler, fake_clock):
 
     到達開輪時固定的截止時間，系統自動關輪，行為與手動關輪相同。
     """
-    seed_questions(client, teacher)
+    open_joining(client, teacher)
     _post(client, teacher, "/rounds", {"countdownSeconds": 60})
     assert teacher.code in manual_scheduler.scheduled
     fake_clock.advance(60)
@@ -69,7 +69,7 @@ def test_simultaneous_close_and_deadline(client, teacher, manual_scheduler, fake
 
     from tests.conftest import service_of
 
-    seed_questions(client, teacher)
+    open_joining(client, teacher)
     _post(client, teacher, "/rounds", {"countdownSeconds": 60})
     fake_clock.advance(60)
     service = service_of(client)
@@ -95,7 +95,7 @@ def test_no_auto_finalize(client, teacher, manual_scheduler, fake_clock):
 
     結果未定案時，即使時間經過、倒數再次觸發，也不會自動定案或開下一輪。
     """
-    seed_questions(client, teacher)
+    open_joining(client, teacher)
     _post(client, teacher, "/rounds", {"countdownSeconds": 10})
     _post(client, teacher, "/rounds/current/close")
     fake_clock.advance(3600)
@@ -110,7 +110,7 @@ def test_open_next_round_before_finalize_rejected(client, teacher):
 
     結果未定案時開下一輪被拒，說明「請先確認定案本輪結果」。
     """
-    seed_questions(client, teacher)
+    open_joining(client, teacher)
     _post(client, teacher, "/rounds", {"questionNumbers": [1]})
     _post(client, teacher, "/rounds/current/close")
     response = _post(client, teacher, "/rounds", {"questionNumbers": [2]})
@@ -125,7 +125,7 @@ def test_finalize_then_next_round(client, teacher):
     定案後開下一輪：輪次編號加一；可選題目只包含尚未成功的題目
     （001 的定案不標記成功題，因此四題仍可選；選已成功題的拒絕由核心測試涵蓋）。
     """
-    seed_questions(client, teacher)
+    open_joining(client, teacher)
     _post(client, teacher, "/rounds", {"questionNumbers": [1]})
     _post(client, teacher, "/rounds/current/close")
     assert _post(client, teacher, "/rounds/current/finalize").status_code == 200

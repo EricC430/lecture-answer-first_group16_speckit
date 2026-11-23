@@ -12,7 +12,7 @@ from lecture_quiz.core.activity.results import (
     describe_rejection,
 )
 from lecture_quiz.core.activity.state_machine import ActivityStateMachine
-from tests.unit.core.helpers import NOW, new_activity
+from tests.unit.core.helpers import NOW, joining_activity
 
 apply = ActivityStateMachine.apply
 CRED = "Q8MZ3R"
@@ -23,7 +23,7 @@ def issued(device: str, credential: str = CRED) -> IssuedSecrets:
 
 
 def joined(number_raw: object = 3):
-    activity = new_activity()
+    activity = joining_activity()
     t = apply(activity, JoinGroup(Anonymous(), number_raw, None), NOW, issued("1"))
     assert t.ok and t.changed, t
     return t.activity
@@ -87,7 +87,7 @@ def test_invalid_group_number_rejected(raw):
 
     組號格式錯誤或超出 1～N 時拒絕，訊息帶入 N，活動不變。
     """
-    activity = new_activity()
+    activity = joining_activity()
     command = JoinGroup(Anonymous(), raw, None)
     t = apply(activity, command, NOW, issued("1"))
     assert t.rejection is RejectionReason.INVALID_GROUP_NUMBER
@@ -106,7 +106,7 @@ def test_terminal_stage_rejects_join(stage, word):
 
     已結束或已取消時拒絕加入，訊息依階段說明。
     """
-    activity = dataclasses.replace(new_activity(), stage=stage)
+    activity = dataclasses.replace(joining_activity(), stage=stage)
     command = JoinGroup(Anonymous(), 1, None)
     t = apply(activity, command, NOW, issued("1"))
     assert t.rejection is RejectionReason.STAGE_NOT_ALLOWED
@@ -118,7 +118,7 @@ def test_join_during_round_open_keeps_stage():
 
     搶答中加入新組，成功次數為零，階段不變。
     """
-    activity = dataclasses.replace(new_activity(), stage=Stage.ROUND_OPEN)
+    activity = dataclasses.replace(joining_activity(), stage=Stage.ROUND_OPEN)
     t = apply(activity, JoinGroup(Anonymous(), 2, None), NOW, issued("1"))
     assert t.ok
     assert t.activity.stage is Stage.ROUND_OPEN

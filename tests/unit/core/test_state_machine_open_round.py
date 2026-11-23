@@ -13,7 +13,7 @@ from lecture_quiz.core.activity.state_machine import ActivityStateMachine
 from tests.unit.core.helpers import (
     NOW,
     TEACHER,
-    new_activity,
+    joining_activity,
     with_groups,
     with_questions,
 )
@@ -28,7 +28,7 @@ def test_default_selects_all_unsolved_without_fair_mode_or_countdown():
 
     question_numbers=None 時選取全部未成功題，公平模式預設關閉，沒有截止時間。
     """
-    activity = with_questions(new_activity(), 1, 2, 3, 4)
+    activity = with_questions(joining_activity(), 1, 2, 3, 4)
     transition = open_round(activity)
     assert transition.ok and transition.changed
     rules = transition.activity.current_round.rules
@@ -43,7 +43,7 @@ def test_open_two_questions_creates_round_one_with_baseline():
 
     選兩題開輪：建立第 1 輪，保存各組歷史成功次數基準，進入搶答中，版本加 1。
     """
-    activity = with_groups(with_questions(new_activity()), 1, 2)
+    activity = with_groups(with_questions(joining_activity()), 1, 2)
     groups = dict(activity.groups)
     groups[2] = Group(2, "CRED02", success_count=3)
     activity = dataclasses.replace(activity, groups=MappingProxyType(groups))
@@ -65,7 +65,7 @@ def test_no_questions_is_rejected():
 
     從未成功匯入題目時開輪被拒（NO_QUESTIONS），維持準備中。
     """
-    activity = new_activity()
+    activity = joining_activity()
     transition = open_round(activity)
     assert transition.rejection is RejectionReason.NO_QUESTIONS
     assert transition.activity == activity
@@ -93,7 +93,7 @@ def test_invalid_open_is_rejected_without_change(setup, kwargs, reason):
 
     選零題、選已成功題、在結果未定案時開新輪，全部被拒，狀態不變。
     """
-    activity = setup(with_questions(new_activity()))
+    activity = setup(with_questions(joining_activity()))
     transition = open_round(activity, **kwargs)
     assert transition.rejection is reason
     assert transition.activity == activity
@@ -104,7 +104,8 @@ def test_open_again_during_round_is_rules_locked():
 
     搶答中再送開輪（修改題目、模式或截止時間）回傳 RULES_LOCKED，規則不變。
     """
-    opened = open_round(with_questions(new_activity()), question_numbers=(1,)).activity
+    activity = with_questions(joining_activity())
+    opened = open_round(activity, question_numbers=(1,)).activity
     transition = open_round(
         opened, question_numbers=(2,), fair_mode=True, countdown_raw=30
     )
@@ -115,7 +116,7 @@ def test_open_again_during_round_is_rules_locked():
 @pytest.mark.parametrize("raw", [0, 3601, 2.5, "10"])
 def test_invalid_countdown_creates_no_round(raw):
     """Scenario: US3-AS6"""
-    activity = with_questions(new_activity())
+    activity = with_questions(joining_activity())
     transition = open_round(activity, countdown_raw=raw)
     assert transition.rejection is RejectionReason.INVALID_COUNTDOWN
     assert transition.activity == activity
@@ -124,7 +125,7 @@ def test_invalid_countdown_creates_no_round(raw):
 @pytest.mark.parametrize("seconds", [1, 60, 3600])
 def test_countdown_sets_deadline(seconds):
     transition = open_round(
-        with_questions(new_activity()), countdown_raw=seconds, fair_mode=True
+        with_questions(joining_activity()), countdown_raw=seconds, fair_mode=True
     )
     rules = transition.activity.current_round.rules
     assert rules.countdown_seconds == seconds
