@@ -31,7 +31,7 @@
 | 9 | `POST /activities/{code}/end` | 老師 | `{}` | `200 {"version", "unsolvedQuestions": [int]}` | FR-022～024 |
 | 10 | `POST /activities/{code}/cancel` | 老師 | `{}` | `200 {"version"}` | FR-025 |
 | 12 | `POST /activities/{code}/open-joining` | 老師 | `{}` | `200 {"version"}`；沒有題目時 `409 NO_QUESTIONS` | FR-038 |
-| 11 | `POST /dev/activities/{code}/seed-questions` | 老師 | `{"count": int}` | `200 {"version"}` | 只在 `LECTURE_QUIZ_DEV_SEED=1` 時存在；002 合併後移除（research R8） |
+| 11 | `POST /dev/activities/{code}/seed-questions` | 老師 | `{"count": int}` | `200 {"version"}` | **已移除（2026-11-23，於 002 實作分支）**；原僅在 `LECTURE_QUIZ_DEV_SEED=1` 時存在（research R8） |
 
 所有偏離與新增行為已於 alignment 2026-11-23 獲 OpenSpec 組確認。
 

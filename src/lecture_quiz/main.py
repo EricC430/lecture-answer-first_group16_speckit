@@ -13,7 +13,6 @@
 """
 
 import logging
-import os
 import sys
 from pathlib import Path
 
@@ -22,7 +21,6 @@ from fastapi.staticfiles import StaticFiles
 
 from lecture_quiz.adapters.clock import SupportsNow, SystemClock
 from lecture_quiz.adapters.countdown import AsyncioCountdownScheduler
-from lecture_quiz.adapters.web import dev_seed as dev_seed_api
 from lecture_quiz.adapters.web import guided_notes_import, http_api, system, ws_sync
 from lecture_quiz.adapters.web.common import (
     RequestLogMiddleware,
@@ -36,7 +34,6 @@ from lecture_quiz.app.guided_notes_import.ports import AuthGateway, SheetsReader
 
 STATIC_DIR = Path(__file__).parent / "adapters" / "static"
 LOG_FORMAT = "%(asctime)s %(levelname)s %(name)s %(message)s"
-DEV_SEED_ENV = "LECTURE_QUIZ_DEV_SEED"
 
 
 def configure_logging() -> None:
@@ -67,7 +64,6 @@ def _wire_activity(
 def create_app(
     clock: SupportsNow | None = None,
     scheduler: CountdownScheduler | None = None,
-    dev_seed: bool | None = None,
     import_auth_gateway: AuthGateway | None = None,
     import_sheets_reader: SheetsReader | None = None,
     ws_auth_timeout: float = 5.0,
@@ -79,8 +75,6 @@ def create_app(
         clock: 時鐘；測試傳入 `FakeClock`，省略時使用 `SystemClock`。
             子功能從 `app.state.clock` 取得，不得自行讀取系統時鐘。
         scheduler: 倒數排程；測試傳入 `ManualScheduler`，省略時使用 asyncio 版本。
-        dev_seed: 是否啟用開發用 seed API；省略時讀環境變數 `LECTURE_QUIZ_DEV_SEED=1`。
-            002 合併後移除（研究 R8）。
         import_auth_gateway: 002 的授權連接埠；測試傳入 Fake，
             省略時使用真實 Google 轉接器。
         import_sheets_reader: 002 的 Sheets 讀取連接埠；測試傳入 Fake，
@@ -93,9 +87,6 @@ def create_app(
     """
     app = FastAPI(title="Vibe Coding 課堂搶答系統", docs_url=None, redoc_url=None)
     app.state.clock = clock if clock is not None else SystemClock()
-    app.state.dev_seed = (
-        dev_seed if dev_seed is not None else os.environ.get(DEV_SEED_ENV) == "1"
-    )
     install_error_handlers(app)
     app.add_middleware(RequestLogMiddleware)
     _wire_activity(app, scheduler, ws_auth_timeout, ws_ping_interval)
@@ -107,8 +98,6 @@ def create_app(
     api.include_router(system.create_router(app))
     api.include_router(http_api.create_router(app))  # 001
     api.include_router(guided_notes_import.create_router(app))  # 002
-    if app.state.dev_seed:  # 001 開發用；002 合併後移除（研究 R8）
-        api.include_router(dev_seed_api.create_router(app))
     # ── 子功能 router 結束 ──
     app.include_router(api)
     install_api_fallback(app)  # 未定義的 /api 路徑一律 404

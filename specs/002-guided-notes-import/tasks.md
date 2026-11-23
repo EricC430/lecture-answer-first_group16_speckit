@@ -124,7 +124,8 @@ description: "002-guided-notes-import 任務清單"
 
 **真實驗證里程碑**
 
-- [ ] T028 [US1] **里程碑 0（待驗證假設 1）**：以真實 Google 帳號與一份真實試算表，依 [quickstart.md](quickstart.md) 前置條件設定好 `.env`，用 `python -m lecture_quiz`（001 的啟動方式；埠號預設 8000）啟動後走完「授權 → Picker 選檔 → `inspect`」，確認 `drive.file` 足以讀取 Picker 選到的試算表。把日期、操作與結果填入 quickstart 紀錄表；若讀取失敗，依 [research.md](research.md) R1 的 fallback 評估改用敏感範圍，並在 plan「待真實驗證的假設」註明；**未做之前不得宣稱授權範圍成立**。（依賴 T026、T027）
+- [X] T028 [US1] **里程碑 0（待驗證假設 1）**：以真實 Google 帳號與一份真實試算表，依 [quickstart.md](quickstart.md) 前置條件設定好 `.env`，用 `python -m lecture_quiz`（001 的啟動方式；埠號預設 8000）啟動後走完「授權 → Picker 選檔 → `inspect`」，確認 `drive.file` 足以讀取 Picker 選到的試算表。把日期、操作與結果填入 quickstart 紀錄表；若讀取失敗，依 [research.md](research.md) R1 的 fallback 評估改用敏感範圍，並在 plan「待真實驗證的假設」註明；**未做之前不得宣稱授權範圍成立**。（依賴 T026、T027）
+    - **紀錄（2026-11-23）**：EricC430 回報已用真實帳號與試算表完成，`drive.file` 足以讀取 Picker 選到的試算表，**細節依其決定不記錄**。過程中發現 `GOOGLE_APP_ID` 必須是 Cloud 專案編號（純數字），填錯時 Drive 回 404 `notFound`，已加入診斷日誌（狀態碼與原因代碼）。
 
 **Checkpoint**: 老師可以授權、選檔並選定工作表；失敗時題目不變
 
@@ -290,13 +291,15 @@ description: "002-guided-notes-import 任務清單"
 - [X] T068 [P] 建立 `scripts/capture_real_fixture.py`：把真實 `spreadsheets.get` 回應去識別化（刪除標題、帳號、檔案 ID）後存成 `tests/fixtures/real/*.json`；憑證與輸出只在本機，不入版控的內容不得提交。
 - [X] T069 [P] 建立 `tests/real_google/test_real_import.py`，標記 `@pytest.mark.real_google`，明確指定真實轉接器（不跟隨預設的 Fake）；缺少任何 Google 環境變數時**明確失敗**並說明缺什麼，不跳過、不退回離線路徑；pytest 不會自動讀 `.env`，環境變數由執行者在 shell 設定。預設 `pytest` 不執行它。
 - [X] T070 在 [quickstart.md](quickstart.md) B 區補一步「選只有一張工作表的試算表 → 自動選用並顯示名稱」（`Scenario: US1-AS2`；自動選用的判斷已由 T020、T021 自動測試，這裡人工確認畫面顯示名稱），並把 US1-AS5「選檔取消」對應到 B-3。
-- [ ] T071 **真實路徑驗證（SC-009，合併前必做）**：EricC430 以兩份版面不同的真實 Google 試算表，依 quickstart B-1～B-13 各走一次，記錄日期、操作、結果數字與 SC-006 的「確認工作表到看見預覽」秒數（**超過 10 秒記為未通過**，並記錄當時題數與網路狀況），填入 quickstart 紀錄表；憑證只在本機，不貼進 repo、Issue、PR。（依賴 T074）
+- [X] T071 **真實路徑驗證（SC-009，合併前必做）**：EricC430 以兩份版面不同的真實 Google 試算表，依 quickstart B-1～B-13 各走一次，記錄日期、操作、結果數字與 SC-006 的「確認工作表到看見預覽」秒數（**超過 10 秒記為未通過**，並記錄當時題數與網路狀況），填入 quickstart 紀錄表；憑證只在本機，不貼進 repo、Issue、PR。（依賴 T074）
+    - **紀錄（2026-11-23）**：EricC430 回報 B-1～B-13 全數通過，**細節（秒數、題數、逐步結果）依其決定不記錄**；SC-006 的實測秒數因此沒有數字可對照，只有「回報通過」。非實作者的 T076 驗證仍待 jacky0407。
 - [ ] T072 T071 通過後執行 T068 擷取兩份版面的真實回應，新增「JSON → 轉接層 → 解析」的入口測試，確認 `GridRange` 結束索引「不含」的假設，並把假設 1～4 的驗證結果寫回 plan「待真實驗證的假設」。擷取之前不得宣稱入口路徑已驗證。（依賴 T071）
 - [X] T073 程式碼與圖表一致性驗證：逐一比對 `diagrams/002-guided-notes-import-{component,class,sequence}.puml` 與實作（`ImportService` 的方法、`AuthGateway`／`SheetsReader` 的方法、`ImportRecord` 的欄位、`SpreadsheetInfo.autoSelectSheetId`、時序圖的 inspect／`PUT source`／匯入步驟；`IssueKind` 的值。類別圖與時序圖已於 2026-11-22 依 plan 同步，這裡驗證實作沒有再偏離）。有差異時先更新圖表並重新轉出 PNG（原則 II）。
 - [X] T074 執行全部自動化測試 `pytest -m "not real_google and not perf"`，並以 `-v` 確認核心、應用層、轉接層（`HttpMockSequence`）、HTTP 契約、架構純度、日誌各自有項目、沒有任何一類是 0 筆；記錄日期、指令與通過／失敗／略過數字（原則 VI）。
 - [X] T075 執行 `ruff check .`、`ruff format --check .`、`mypy src`，全部通過並記錄結果（技術限制 2）。
 - [ ] T076 由非實作者（jacky0407）依 [quickstart.md](quickstart.md) B 區做人工驗證，記錄日期、每一步操作與結果於 quickstart 紀錄表並簽名（原則 VI）。
-- [ ] T077 追蹤 001 的開發用 seed API（`adapters/web/dev_seed.py`、`LECTURE_QUIZ_DEV_SEED`、`tests/integration/test_dev_seed.py`、前端「放入假題目」按鈕）：依 001 plan 在 002 合併後的第一個 PR 移除；因檔案屬 001，先與 jacky0407 協調是在本 PR 一併移除還是另開 PR，並在 PR 描述記錄結論。
+- [X] T077 追蹤 001 的開發用 seed API（`adapters/web/dev_seed.py`、`LECTURE_QUIZ_DEV_SEED`、`tests/integration/test_dev_seed.py`、前端「放入假題目」按鈕）：依 001 plan 在 002 合併後的第一個 PR 移除；因檔案屬 001，先與 jacky0407 協調是在本 PR 一併移除還是另開 PR，並在 PR 描述記錄結論。
+    - **完成（2026-11-23）**：依 EricC430 指示直接在本 PR 移除：刪除 `adapters/web/dev_seed.py`、`tests/integration/test_dev_seed.py`；`main.py` 的 `dev_seed` 參數與 `LECTURE_QUIZ_DEV_SEED`、`teacher.html`／`teacher.js` 的「放入假題目」按鈕、`tests/conftest.py` 與 `tests/perf` 的相關參數。驗證：`ruff check .` 通過、`mypy` 通過、`pytest -m "not real_google and not perf"` 706 passed。**jacky0407 尚未確認**（檔案屬 001），請在 PR 描述註明。
 - [ ] T078 更新 `CLAUDE.md`「專案現況」：補上 `pytest -m real_google` 的手動執行方式與 002 的三層路徑；再用全新 clone 在乾淨的 venv 重跑安裝與 `pytest`，確認不依賴任何本機未提交的檔案（規章第 9 節）。
 - [ ] T079 開 PR 前確認：文末 Scenario 對照表的 28 個項目都有已通過的測試；spec 的 Traceability 與 `docs/alignment.md` 沒有新增偏離項；quickstart 紀錄表沒有空白的已執行項目；PR 描述列出尚未驗證的假設（若有），並註明已知限制：US1-AS5「取消選檔」是前端行為，沒有自動化測試，僅以人工驗證 B-3 涵蓋（2026-11-23 接受）；品質關卡 7：`git status` 與 `git diff` 確認沒有夾帶 `.env`、憑證、token、`期末專題說明.md`、`project_proposal_draft.md` 或其他不追蹤的檔案。
 

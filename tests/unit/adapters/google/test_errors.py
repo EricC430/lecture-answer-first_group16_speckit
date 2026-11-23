@@ -39,3 +39,25 @@ def test_messages_of_mapped_rejections_leak_nothing():
     for exc in (http_error(401), http_error(403), http_error(500), RefreshError("tok")):
         text = message_for(map_exception(exc))
         assert "tok" not in text.lower() and "http" not in text.lower()
+
+
+def test_http_error_logs_status_and_reason_only(caplog):
+    """診斷 403／404：只記狀態碼與原因代碼，不記訊息本文（內含檔案資訊）。"""
+    body = (
+        b'{"error": {"code": 404, "status": "NOT_FOUND",'
+        b' "message": "File not found: SECRET-FILE-ID",'
+        b' "errors": [{"reason": "notFound", "message": "SECRET-FILE-ID"}]}}'
+    )
+    exc = HttpError(httplib2.Response({"status": "404"}), body, uri="https://x")
+    with caplog.at_level("WARNING", logger="lecture_quiz.adapters.google.errors"):
+        assert map_exception(exc) is ImportRejection.PERMISSION_DENIED
+    assert "status=404" in caplog.text
+    assert "reason=notFound" in caplog.text
+    assert "SECRET-FILE-ID" not in caplog.text
+
+
+def test_unparsable_error_body_logs_unknown(caplog):
+    exc = HttpError(httplib2.Response({"status": "403"}), b"not json", uri="https://x")
+    with caplog.at_level("WARNING", logger="lecture_quiz.adapters.google.errors"):
+        map_exception(exc)
+    assert "reason=unknown" in caplog.text

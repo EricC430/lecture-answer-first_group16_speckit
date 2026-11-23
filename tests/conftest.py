@@ -2,7 +2,7 @@
 
 - `FakeClock`：可手動前進的時鐘，取代系統時鐘。
 - `ManualScheduler`：手動觸發的倒數排程（001）。
-- `make_app`：以指定時鐘、排程與開發用 seed 設定建立 app 的工廠。
+- `make_app`：以指定時鐘、排程建立 app 的工廠。
 - fixture：`fake_clock`、`manual_scheduler`、`client`、`teacher`（001）。
 
 子功能專屬的工具請追加在本檔最後，或放在各自測試目錄的 conftest.py。
@@ -71,14 +71,12 @@ class ManualScheduler:
 def make_app(
     clock: FakeClock | None = None,
     scheduler: ManualScheduler | None = None,
-    dev_seed: bool = False,
     **kwargs: Any,
 ) -> FastAPI:
     """以 FakeClock 與 ManualScheduler 建立 app。"""
     return create_app(
         clock=clock if clock is not None else FakeClock(),
         scheduler=scheduler if scheduler is not None else ManualScheduler(),
-        dev_seed=dev_seed,
         **kwargs,
     )
 
