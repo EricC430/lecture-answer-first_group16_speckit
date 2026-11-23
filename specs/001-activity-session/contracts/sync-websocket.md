@@ -43,17 +43,18 @@
 **學生版另外有**：
 
 ```json
-{ "ownGroup": { "name": "第一組", "credential": "Q8MZ3R", "successCount": 1 } }
+{ "ownGroup": { "number": 3, "credential": "Q8MZ3R", "successCount": 1 } }
 ```
 
-學生版**不含**其他組的任何資訊，包括組名、組數、憑證、進度（FR-030）。
+學生版**不含**其他組的任何資訊，包括組號、實際組數、憑證、進度（FR-030）。
 
 **老師版另外有**：
 
 ```json
 {
+  "maxGroups": 6,
   "groups": [
-    { "name": "第一組", "credential": "Q8MZ3R", "successCount": 1, "hasSubmissions": true, "deviceCount": 2 }
+    { "number": 3, "credential": "Q8MZ3R", "successCount": 1, "hasSubmissions": true, "deviceCount": 2 }
   ],
   "questionNumbers": [1, 2, 3, 4]
 }
@@ -74,7 +75,8 @@
 - **重連**：依序等 0.5、1、2、4 秒，之後每次都等 4 秒，直到連上。重連後收到的第一則 `snapshot` 就是最新的完整狀態（FR-028）。
 - **舊版本**：收到的 `snapshot.version` 小於目前畫面的版本時，直接丟棄。
 - **狀態列**：頁面右下角顯示 `v{version}` 與延遲（畫面更新完成的時間 − `changedAt`，單位毫秒），供人工量測 2 秒同步（研究 R2）。
-- **不可信文字**：組名一律以 `textContent` 輸出（原則 V）。
+- **不可信文字**：伺服端回傳的文字（錯誤訊息等）一律以 `textContent` 輸出（原則 V）。
+- **組別排序**：老師版 `groups` 依組號由小到大排列。
 
 ## 推送保證
 

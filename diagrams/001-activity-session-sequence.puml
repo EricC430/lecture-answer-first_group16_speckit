@@ -13,52 +13,67 @@ participant "倒數排程" as C
 participant "同步推送" as P
 
 == 建立活動 ==
-T -> API : 建立活動（Idempotency-Key）
-API -> S : create(idempotencyKey)
-S -> M : apply(無, 建立, now, 新代碼與 token 雜湊)
-M --> S : 準備中、新代碼、老師身分
-S --> API : 活動代碼、老師身分
-API --> T : 顯示活動代碼
+T -> API : 建立活動（組數上限 N, 同瀏覽器上一個活動的老師身分, Idempotency-Key）
+API -> S : create(maxGroupsRaw, teacherToken, idempotencyKey)
+S -> S : registry.findByTeacher(tokenHash)
+alt 上一個活動仍存續（未結束、未取消）
+  S --> T : 拒絕（你已有一個進行中的活動，代碼 K）
+else 沒有存續中的活動
+  S -> M : apply(無, 建立(N), now, 新代碼與 token 雜湊)
+  alt N 為 1～99 的整數
+    M --> S : 準備中、新代碼、組數上限 N、老師身分
+    S --> API : 活動代碼、老師身分
+    API --> T : 顯示活動代碼與組數上限
+  else N 不合法
+    M --> S : 拒絕（組數上限無效）
+    S --> T : 「組數上限須為 1～99 的整數」
+  end
+end
 note right of S : 同一 key 重送 → 回傳同一活動（查表在鎖內）
 
 == 組別加入 ==
-SA -> API : 加入（代碼, " A 組 "）
-API -> S : join
-S -> M : apply(加入, 組名去首尾空白)
-M --> S : 建立 A 組、加入憑證
-S --> SA : 裝置 1 身分 + A 組憑證（本組裝置與老師可見）
-SA -> API : 裝置 2 加入（代碼, "A 組", 從裝置 1 畫面看到的憑證）
+SA -> API : 加入（代碼, 組號 " ０３ "）
+API -> S : join(code, numberRaw, credentialRaw, requester, key)
+S -> M : apply(加入, 組號正規化為 3，檢查 1～N)
+M --> S : 建立第 3 組、加入憑證
+S --> SA : 裝置 1 身分 + 第 3 組憑證（本組裝置與老師可見）
+SA -> API : 裝置 2 加入（代碼, 3, 從裝置 1 畫面看到的憑證）
 API -> S : join
 S -> M : apply(加入既有組, 憑證)
 alt 憑證正確
-  M --> S : 共用 A 組身分
+  M --> S : 共用第 3 組身分
   S --> SA : 裝置 2 身分
 else 無憑證或憑證錯誤
   M --> S : 拒絕（憑證錯誤）
   S --> SA : 錯誤訊息（不含憑證），狀態不變
+else 組號不是 1～N 的整數
+  M --> S : 拒絕（組號無效）
+  S --> SA : 「組號須為 1～N 的整數」
 end
-SB -> API : 加入（代碼, "B 組"）
+SB -> API : 加入（代碼, 2）
 API -> S : join
-S --> SB : B 組身分 + 憑證
+S --> SB : 第 2 組身分 + 憑證
 S -> P : publish（老師版：組別清單；學生版：只含自己組）
 
-== 組別更正（新增行為，待 OpenSpec 組確認） ==
+== 組別更正（OpenSpec 組 2026-11-23 確認） ==
 SB -> API : 離開本組（裝置身分）
-API -> S : leaveGroup(裝置)
+API -> S : leaveGroup(code, 裝置, key)
 S -> M : apply(離開本組)
 alt 階段為準備中／結果未定案／結果已定案
   M --> S : 解除裝置身分（原組提交與成功次數不變）
+  S -> P : disconnectDevice(code, 裝置, LEFT_GROUP)
   S --> SB : 回到加入畫面
 else 搶答中
   M --> S : 拒絕（搶答中不可換組）
   S --> SB : 錯誤訊息，身分不變
 end
-T -> API : 刪除組別（"第ㄧ組"）
-API -> S : deleteGroup(老師, 組名)
+T -> API : 刪除組別（第 5 組）
+API -> S : deleteGroup(code, 老師, 5, key)
 S -> M : apply(刪除組別)
 alt 該組沒有任何提交紀錄
-  M --> S : 移除組別、解除其裝置身分
-  S -> P : publish（原組裝置：此組已被老師刪除）
+  M --> S : 移除組別、解除其裝置身分（組號可再使用）
+  S -> P : disconnectDevice(code, 原組裝置, GROUP_DELETED)
+  S -> P : publish
 else 已有提交紀錄
   M --> S : 拒絕（組別已有提交）
   S --> T : 錯誤訊息，資料不變

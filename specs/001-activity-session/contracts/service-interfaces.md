@@ -26,19 +26,19 @@
 
 | 方法 | 說明 |
 |---|---|
-| `resolve_device(code, device_token) -> Outcome[DeviceContext]` | 回傳 `group_name`、`stage`、`round_number`、`open_questions`、`deadline`；所屬組別一律由後端判定（FR-012） |
+| `resolve_device(code, device_token) -> Outcome[DeviceContext]` | 回傳 `group_number`、`stage`、`round_number`、`open_questions`、`deadline`；所屬組別一律由後端判定（FR-012） |
 | `accepts_submission(code, now) -> bool` | `stage == ROUND_OPEN`，而且沒有截止時間，或 `now < deadline`；用 `ActivityStateMachine.is_deadline_passed` 判斷 |
-| `mark_group_submitted(code, group_name) -> Outcome[int]` | 標記該組有提交紀錄，用於「刪除空組」的判定（⚠ 提案相依） |
+| `mark_group_submitted(code, group_number) -> Outcome[int]` | 標記該組有提交紀錄，用於「刪除空組」的判定（alignment 2026-11-23 B5）。只在 `ROUND_OPEN` 生效；與刪除組別在同一把活動鎖內處理，不會出現「答案已記錄但組別被刪除」 |
 
 ## 給 004（順位與定案）
 
 | 方法 | 說明 |
 |---|---|
 | `current_round(code) -> Round \| None` | 包含 `rules` 與 `baseline`（公平模式要用的歷史成功次數基準） |
-| `finalize(code, requester, outcome: FinalizeOutcome) -> Outcome[int]` | 只允許老師在 `RESULT_PENDING` 時呼叫。`FinalizeOutcome` 有兩個欄位：`solved_questions: frozenset[int]`（本輪新成功的題號）、`success_increments: Mapping[str, int]`（各組成功次數增量）。004 的前提檢查（例如判錯審閱）由 004 在呼叫前自行完成 |
+| `finalize(code, requester, outcome: FinalizeOutcome) -> Outcome[int]` | 只允許老師在 `RESULT_PENDING` 時呼叫。`FinalizeOutcome` 有兩個欄位：`solved_questions: frozenset[int]`（本輪新成功的題號）、`success_increments: Mapping[int, int]`（各組成功次數增量，key 為組號）。004 的前提檢查（例如判錯審閱）由 004 在呼叫前自行完成 |
 
 ## 給 005（結果匯出）
 
 | 方法 | 說明 |
 |---|---|
-| `export_view(code, requester) -> Outcome[ExportView]` | 只限老師。`CANCELLED` 一律拒絕（⚠ 提案相依 Q-09／Q-33）；其他階段是否可以匯出，由 005 依 result-export 規格判定，001 不限制。回傳組別、題號、已成功題、未成功題與目前階段 |
+| `export_view(code, requester) -> Outcome[ExportView]` | 只限老師。`CANCELLED` 一律拒絕（alignment 2026-11-23 C8）；其他階段是否可以匯出，由 005 依 result-export 規格判定，001 不限制。回傳組別（依組號排序，已刪除的空組不在其中）、題號、已成功題、未成功題與目前階段 |

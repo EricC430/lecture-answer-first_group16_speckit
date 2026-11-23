@@ -1,6 +1,6 @@
 # Implementation Plan: 活動建立、組別加入與階段同步
 
-**Branch**: `feature/5-001-activity-session` | **Date**: 2026-11-21 | **Spec**: [spec.md](spec.md)
+**Branch**: `feature/5-001-activity-session` | **Date**: 2026-11-21（2026-11-23 依 Clarifications 更新） | **Spec**: [spec.md](spec.md)
 
 **Input**: Feature specification from `/specs/001-activity-session/spec.md`
 
@@ -16,8 +16,8 @@
 
 本子功能提供搶答系統的骨架：
 
-- 老師建立活動並取得獨占控制權。
-- 學生以「組名 + 6 碼組別憑證」加入，多裝置同組，重新整理後恢復身分；也可以在非搶答中離開本組，老師可以刪除沒有提交的空組。
+- 老師指定組數上限 N（1～99）建立活動並取得獨占控制權；同一個瀏覽器同時只能有一個存續中的活動。
+- 學生以「組號（1～N）+ 6 碼組別憑證」加入，多裝置同組，重新整理後恢復身分；也可以在非搶答中離開本組，老師可以刪除沒有提交的空組。
 - 一套 6 階段狀態機，管理開輪、關輪只一次、定案、結束與取消。
 - 所有畫面在 2 秒內同步。
 
@@ -62,33 +62,33 @@
 
 | 檢查項 | 結果 | 依據 |
 |---|---|---|
-| **I 跨組行為一致** | ✅ 通過（附條件） | spec 的 Traceability 涵蓋 6 條 Requirement 與 10 個 Scenario。Q-04、Q-06、Q-08、Q-09／Q-33 的提案，以及「離開本組」「刪除空組」兩項新增行為，已記入 `docs/alignment.md`，但 OpenSpec 組尚未確認。**plan 依提案設計；合併實作前必須取得確認**，受影響的設計點集中列在下方，方便修改 |
+| **I 跨組行為一致** | ✅ 通過 | spec 的 Traceability 涵蓋 6 條 Requirement 與 10 個 Scenario。所有偏離與新增行為（組號、組數上限、組別加入憑證、倒數、取消與結束、離開本組、刪除空組、一位老師一個活動）都已記入 `docs/alignment.md`，OpenSpec 組於 2026-11-23 全部確認 |
 | **II 圖表生成** | ✅ 通過 | 以三張圖為藍圖。本 plan 為圖表補上 `code` 參數，以及給 003／004／005 的介面方法，已同步更新類別圖並重新轉出 PNG。tasks 必須有「程式碼與圖表一致性驗證」任務 |
 | **III Guided Notes 動態定位** | ✅ 通過（不適用解析） | 本子功能不解析學習單。`replace_questions` 只接收 002 成功匯入的題號；被拒時，既有題目完全不變（[service-interfaces](contracts/service-interfaces.md)）。不需要「兩份版面學習單」測試 |
 | **IV 後端為唯一事實來源** | ✅ 通過 | 身分由後端 token 雜湊判定（研究 R5）；階段、關輪只一次由鎖與 `round.closed` 雙重保證（研究 R6）；重送以 `Idempotency-Key` 去重；狀態機是確定性純函式 |
-| **V 資料可見性與安全** | ✅ 通過 | 學生快照只含本組資料，連組數都不給（[data-model](data-model.md)）；所有輸入由 `InputRules` 在後端驗證，失敗時不改變狀態；錯誤只回 `code` 與可修正的 `message`；組名以 `textContent` 輸出；token 只保存雜湊、比對用 `compare_digest`、不寫入 log |
-| **VI 驗收情境驅動測試** | ✅ 通過 | 每個 Acceptance Scenario（US1～US7，共 44 個）至少對應一個測試，docstring 標明 `Scenario: USn-ASm`。本子功能不使用 Google，因此不需要 mock 或真實路徑驗證。非實作者人工驗證腳本見 [quickstart](quickstart.md)，包含 2 秒同步與重啟失效 |
+| **V 資料可見性與安全** | ✅ 通過 | 學生快照只含本組資料，連實際組數都不給（[data-model](data-model.md)）；所有輸入（含組數上限、組號、憑證）由 `InputRules` 在後端驗證，失敗時不改變狀態；錯誤只回 `code` 與可修正的 `message`；不可信文字以 `textContent` 輸出；token 只保存雜湊、比對用 `compare_digest`、不寫入 log |
+| **VI 驗收情境驅動測試** | ✅ 通過 | 每個 Acceptance Scenario（US1～US7，共 47 個）至少對應一個測試，docstring 標明 `Scenario: USn-ASm`。本子功能不使用 Google，因此不需要 mock 或真實路徑驗證。非實作者人工驗證腳本見 [quickstart](quickstart.md)，包含 2 秒同步與重啟失效 |
 | **VII 簡單與本機運作** | ✅ 通過 | 只用記憶體、單一 process、只監聽 `127.0.0.1`。前端不用框架與建置工具。開發用的 seed API 預設關閉，002 合併後移除（見 Complexity Tracking） |
 | **技術限制 1 堆疊** | ✅ 通過 | Python 3.11 以上 + FastAPI；Windows 本機；只監聽 localhost |
 | **技術限制 2 程式碼風格** | ✅ 通過 | PEP 8 由 Ruff 檢查；型別提示與 docstring 由 Ruff 規則 ANN、D 加上 mypy 檢查（研究 R3）。**lint 與格式化工具已定案，需以修訂程序補回憲章**（Next Actions） |
 | **技術限制 3 日誌** | ✅ 通過 | `logging.basicConfig(level=INFO, stream=sys.stdout)`；請求 log 的欄位白名單見 [http-api](contracts/http-api.md) |
-| **技術限制 4 效能** | ✅ 通過 | N = 6，有自動化效能測試與人工延遲顯示（研究 R2）；不自訂組數上限 |
+| **技術限制 4 效能** | ✅ 通過 | N = 6，有自動化效能測試與人工延遲顯示（研究 R2）；系統的組數上限由老師建立活動時指定（1～99，研究 R9；alignment 2026-11-23 A2） |
 | **技術限制 4 架構（NON-NEGOTIABLE）** | ✅ 通過 | 核心放在 `src/lecture_quiz/core/`，只依賴標準函式庫的資料型別。`tests/architecture/test_core_is_pure.py` 以 `ast` 自動檢查（研究 R4）；相依方向為 `adapters → app → core` |
 
-**Phase 1 設計完成後重新檢查**：結果相同，沒有新增違規。唯一需要說明的例外，是開發用 seed API，列在 Complexity Tracking。
+**Phase 1 設計完成後重新檢查**（2026-11-23 依 Clarifications 再檢查一次）：結果相同，沒有新增違規。唯一需要說明的例外，是開發用 seed API，列在 Complexity Tracking。
 
-## 受待確認提案影響的設計點
+## OpenSpec 組確認後的設計調整（2026-11-23）
 
-組內開會或 OpenSpec 組回覆後，若結論與提案不同，只需修改下列位置；其餘設計不受影響。
+2026-11-21 的提案已全部獲確認（alignment 2026-11-23）。與 2026-11-21 版 plan 相比，設計調整如下：
 
-| 提案 | 受影響的設計點 | 修改範圍 |
+| 決議 | 設計調整 | 依據 |
 |---|---|---|
-| Q-04 老師身分同瀏覽器分頁共用 | 研究 R5：老師 token 存在 `localStorage`；`TeacherIdentity` | 前端儲存位置、`static/js/identity.js`；若改為跨裝置，需新增「老師身分轉移」流程 |
-| Q-06 憑證由本組裝置與老師可見 | 學生與老師快照中的 `credential` 欄位；[sync-websocket](contracts/sync-websocket.md) | `SnapshotView`；若改成只有老師可見，只要從學生快照移除這個欄位 |
-| Q-08 倒數與模式獨立、1～3600 秒 | `InputRules.validate_countdown`；`RoundRules.countdown_seconds` | 單一函式與其測試 |
-| Q-09／Q-33 取消與結束分開、取消後不能匯出 | `Stage.CANCELLED`；`export_view` 拒絕 `CANCELLED` | 狀態機的一列轉移；若改成取消後可以匯出，只要修改 `export_view` |
-| 離開本組（搶答中禁止） | `LeaveGroup` 操作；HTTP #4；`NO_GROUP_SWITCH_DURING_ROUND` | 若對方不同意，刪除該操作、端點與前端按鈕 |
-| 刪除空組 | `DeleteGroup` 操作；HTTP #5；`Group.has_submissions`；003 的 `mark_group_submitted` | 若對方不同意，刪除該操作與端點；`has_submissions` 可以保留給 005 使用 |
+| A1 組號取代組名 | `Group.number: int` 成為識別鍵；`DeviceIdentity.group_number`、`Round.baseline`、`FinalizeOutcome.success_increments` 都以組號為 key；`InputRules.normalize_group_number` 取代 `normalize_group_name`；拒絕原因 `INVALID_GROUP_NAME` 改為 `INVALID_GROUP_NUMBER` | 研究 R9 |
+| A2 組數上限 | `Activity.max_groups`；建立活動的 HTTP 本文新增 `maxGroups`；`InputRules.validate_max_groups`（1～99）；新增拒絕原因 `INVALID_MAX_GROUPS`；老師快照新增 `maxGroups` | 研究 R9 |
+| B3 組別加入憑證 | 維持原設計（學生快照 `ownGroup.credential`、老師快照每組 `credential`）；新增 `ALREADY_IN_GROUP` | 研究 R9 |
+| B4、B5 離開本組、刪除空組 | 維持原設計（`LeaveGroup`、`DeleteGroup`、`MarkGroupSubmitted`）；刪除路徑改為 `DELETE /activities/{code}/groups/{number}`；新增 `GROUP_NOT_FOUND`、`NOT_IN_GROUP` | contracts |
+| C6、C8、C9 | 維持原設計 | — |
+| C7 一位老師一個存續中活動 | `ActivityService.create` 檢查請求帶的老師 token；`ActivityRegistry.find_by_teacher`；新增 `TEACHER_HAS_ACTIVE_ACTIVITY`；前端 `localStorage["teacher:last"]` | 研究 R10 |
 
 ## Project Structure
 
@@ -168,7 +168,7 @@ tests/
 
 ## Next Actions
 
-1. **補回憲章**：依憲章技術限制 2，以修訂程序把「Ruff（lint + format）、mypy」補進憲章「程式碼風格」（PATCH 版本 1.0.1）。要另開 Issue 與 PR，經兩位組員同意。
-2. **開會確認提案**：組內開會檢視 alignment 的 6 筆 2026-11-21 提案，再請 OpenSpec 組確認。結論不同時，依「受待確認提案影響的設計點」修改。
-3. **協調 002 介面**：002 整合時，在 002 類別圖的 `ActivityGateway` 補上 `code` 參數，並改為只傳題號（[service-interfaces](contracts/service-interfaces.md)）。
-4. **下一步**：執行 `/speckit-tasks`，產生 tasks.md。
+1. ~~補回憲章（Ruff、mypy）~~：已由 PR #13 合併為憲章 v1.0.1。
+2. ~~開會確認提案~~：OpenSpec 組 2026-11-23 全部同意（alignment 2026-11-23）。
+3. ~~協調 002 介面~~：EricC430 已於 Issue #6 同意 `code` 參數與只傳題號，PR #11 已更新 002 類別圖。
+4. **下一步**：執行 `/speckit-tasks` 更新 tasks.md（US1 的 N 與 C7、US2、US7），再執行 `/speckit-analyze`。

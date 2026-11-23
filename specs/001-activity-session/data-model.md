@@ -1,6 +1,6 @@
 # 資料模型：001-activity-session
 
-**日期**：2026-11-21 | **藍圖**：[`diagrams/001-activity-session-class.puml`](../../diagrams/001-activity-session-class.puml)
+**日期**：2026-11-21（2026-11-23 依 Clarifications 更新：組號、組數上限、C7） | **藍圖**：[`diagrams/001-activity-session-class.puml`](../../diagrams/001-activity-session-class.puml)
 
 ## 設計原則
 
@@ -20,20 +20,21 @@
 | `RESULT_PENDING` | 結果未定案 | 否 |
 | `RESULT_FINAL` | 結果已定案 | 否 |
 | `ENDED` | 已結束 | 是 |
-| `CANCELLED` | 已取消（⚠ 提案相依 Q-09） | 是 |
+| `CANCELLED` | 已取消（alignment 2026-11-23 C8） | 是 |
 
 ### Activity
 
 | 欄位 | 型別 | 規則 |
 |---|---|---|
 | `code` | `str` | 6 碼，字元集 `ABCDEFGHJKLMNPQRSTUVWXYZ23456789`；不與存續中活動重複（由服務層保證） |
+| `max_groups` | `int` | 組數上限 N，1～99；建立時指定，之後不變（alignment 2026-11-23 A2） |
 | `stage` | `Stage` | 見狀態轉移 |
 | `version` | `int` | 從 1 開始，每次成功的狀態變更加 1；無變化的成功（例如重複關輪）不加 |
 | `changed_at` | `datetime` | 最近一次狀態變更的時間（R2 量測起點） |
 | `teacher` | `TeacherIdentity` | 建立時產生，不可變 |
 | `question_numbers` | `tuple[int, ...]` | 由 002 的成功匯入提供；未匯入時為空 |
 | `solved_questions` | `frozenset[int]` | 由 004 定案結果提供；必須是 `question_numbers` 的子集 |
-| `groups` | `Mapping[str, Group]` | key 為正規化後的組名 |
+| `groups` | `Mapping[int, Group]` | key 為組號（1～`max_groups`） |
 | `devices` | `Mapping[str, DeviceIdentity]` | key 為裝置 token 的雜湊（見下） |
 | `rounds` | `tuple[Round, ...]` | 依輪次編號排序；最後一個是目前輪次 |
 
@@ -46,23 +47,23 @@
 
 | 欄位 | 型別 | 規則 |
 |---|---|---|
-| `token_hash` | `str` | 只保存 token 的 SHA-256；原始 token 只在建立活動時回傳一次（⚠ 提案相依 Q-04） |
+| `token_hash` | `str` | 只保存 token 的 SHA-256；原始 token 只在建立活動時回傳一次（alignment 2026-11-23 C6） |
 
 ### Group
 
 | 欄位 | 型別 | 規則 |
 |---|---|---|
-| `name` | `str` | 正規化：去除首尾空白；不可為空；不可含 Unicode 控制字元（`Cc` 類別，例如換行、Tab）；不設長度上限（Q-07） |
-| `join_credential` | `str` | 6 碼，字元集同活動代碼（⚠ 提案相依 Q-06）；只出現在本組學生快照與老師快照 |
+| `number` | `int` | 組號，1～`Activity.max_groups`；輸入經 `InputRules.normalize_group_number` 正規化（半形／全形數字、前導零、首尾空白皆可，研究 R9） |
+| `join_credential` | `str` | 6 碼，字元集同活動代碼（alignment 2026-11-23 B3）；只出現在本組學生快照與老師快照 |
 | `success_count` | `int` | 大於等於 0；只由 `finalize(outcome)` 增加 |
-| `has_submissions` | `bool` | 由 003 經 `mark_group_submitted` 設為 `True`，之後不會變回 `False`（⚠ 提案相依：刪除空組） |
+| `has_submissions` | `bool` | 由 003 經 `mark_group_submitted` 設為 `True`，之後不會變回 `False`（用於刪除空組，alignment 2026-11-23 B5） |
 
 ### DeviceIdentity
 
 | 欄位 | 型別 | 規則 |
 |---|---|---|
 | `token_hash` | `str` | 裝置 token 的 SHA-256 |
-| `group_name` | `str` | 指向 `groups` 中的組別；組別被刪除或裝置離開時，這筆資料會被移除 |
+| `group_number` | `int` | 指向 `groups` 中的組別；組別被刪除或裝置離開時，這筆資料會被移除 |
 
 老師不使用 `DeviceIdentity`，而是以 `TeacherIdentity` 判定。
 
@@ -73,7 +74,7 @@
 | `number` | `int` | 從 1 開始連續遞增 |
 | `rules` | `RoundRules` | 開輪後不可變 |
 | `opened_at` | `datetime` | 開輪時的 `now` |
-| `baseline` | `Mapping[str, int]` | 開輪當下各組的 `success_count` 快照 |
+| `baseline` | `Mapping[int, int]` | 開輪當下各組（key 為組號）的 `success_count` 快照 |
 | `closed` | `bool` | 只能由 `False` 變成 `True`，而且只能一次 |
 | `closed_at` | `datetime \| None` | 關輪時的 `now` |
 | `close_cause` | `Literal["teacher", "deadline"] \| None` | 記錄先生效的關輪來源 |
@@ -84,7 +85,7 @@
 |---|---|---|
 | `question_numbers` | `tuple[int, ...]` | 至少 1 題；每題都在 `Activity.question_numbers` 中，而且不在 `solved_questions` 中；不得重複 |
 | `fair_mode` | `bool` | 預設 `False` |
-| `countdown_seconds` | `int \| None` | `None` 表示不倒數；否則為 1～3600 的整數（⚠ 提案相依 Q-08） |
+| `countdown_seconds` | `int \| None` | `None` 表示不倒數；否則為 1～3600 的整數（alignment 2026-11-23 C9） |
 | `deadline` | `datetime \| None` | `opened_at + countdown_seconds`；沒有倒數時為 `None` |
 
 ### Command（核心輸入）
@@ -92,7 +93,8 @@
 各種操作都是不同的 frozen dataclass，共用欄位是 `actor`：
 
 - **`actor` 的型別**：`Teacher(token_hash)`、`Device(token_hash)`、`System`（倒數排程）或 `Anonymous`。
-- **操作清單**：`CreateActivity`、`JoinGroup(name_raw, credential_raw)`、`LeaveGroup`、`DeleteGroup(name)`、`OpenRound(question_numbers, fair_mode, countdown_raw)`、`CloseRound`、`Finalize(outcome)`、`EndActivity`、`CancelActivity`、`ReplaceQuestions(question_numbers)`、`MarkGroupSubmitted(group_name)`。
+- **操作清單**：`CreateActivity(max_groups_raw)`、`JoinGroup(number_raw, credential_raw)`、`LeaveGroup`、`DeleteGroup(number_raw)`、`OpenRound(question_numbers, fair_mode, countdown_raw)`、`CloseRound`、`Finalize(outcome)`、`EndActivity`、`CancelActivity`、`ReplaceQuestions(question_numbers)`、`MarkGroupSubmitted(group_number)`。
+- **`FinalizeOutcome.success_increments`**：`Mapping[int, int]`，key 為組號。
 - **身分由服務層解析**：服務層把 HTTP 請求中的 token 轉成雜湊後，才放進 `actor`。核心只比對雜湊，不接觸原始 token。
 
 ### Transition（核心輸出）
@@ -114,8 +116,13 @@
 | `NO_QUESTIONS` | 未匯入題目 | 409 | 請先成功匯入學習單，再開始搶答。 |
 | `INVALID_SELECTION` | 選題無效 | 400 | 請至少選擇一題尚未有人答對的題目。 |
 | `INVALID_COUNTDOWN` | 倒數秒數無效 | 400 | 倒數秒數須為 1～3600 的整數。 |
-| `INVALID_GROUP_NAME` | 組名無效 | 400 | 組名不能是空白，也不能包含換行或 Tab。 |
-| `BAD_CREDENTIAL` | 憑證錯誤 | 403 | 此組名已被使用；若你是這一組的成員，請向同組同學查看本組加入憑證，否則請換一個組名。 |
+| `INVALID_GROUP_NUMBER` | 組號無效 | 400 | 組號須為 1～N 的整數。（N 依活動帶入） |
+| `BAD_CREDENTIAL` | 憑證錯誤 | 403 | 第 n 組已有同學加入；若你是這一組的成員，請向同組同學查看本組加入憑證，否則請確認組號。 |
+| `INVALID_MAX_GROUPS` | 組數上限無效 | 400 | 組數上限須為 1～99 的整數。 |
+| `ALREADY_IN_GROUP` | 已在某組 | 409 | 這台裝置已經在第 n 組，請先離開本組。 |
+| `NOT_IN_GROUP` | 不在任何組 | 403 | 這台裝置目前沒有加入任何組別。 |
+| `GROUP_NOT_FOUND` | 組別不存在 | 404 | 找不到第 n 組。 |
+| `TEACHER_HAS_ACTIVE_ACTIVITY` | 已有存續中活動 | 409 | 你已有一個進行中的活動（代碼 K），請先結束或取消它。 |
 | `ACTIVITY_GONE` | 活動已失效 | 410 | 活動已失效，請重新建立或加入活動。 |
 | `RULES_LOCKED` | 規則不可修改 | 409 | 本輪進行中，題目、模式與截止時間不能修改。 |
 | `NO_GROUP_SWITCH_DURING_ROUND` | 搶答中不可換組 | 409 | 搶答進行中不能換組，請在本輪關閉後再操作，這段期間可以用同組同學的裝置作答。 |
@@ -127,8 +134,8 @@
 
 由 `SnapshotView.for_teacher` 或 `SnapshotView.for_group` 產生。欄位定義見 [contracts/sync-websocket.md](contracts/sync-websocket.md)。
 
-- **學生版**：只含本組的組名、憑證與成功次數。**不含**其他組的名稱、數量、憑證或任何進度（FR-030；保守做法：學生連組數都看不到，避免推知他組狀態）。
-- **老師版**：含全部組別與憑證。
+- **學生版**：只含本組的組號、憑證與成功次數。**不含**其他組的名稱、數量、憑證或任何進度（FR-030；保守做法：學生連組數都看不到，避免推知他組狀態）。
+- **老師版**：含組數上限、全部組別（依組號排序）與憑證。
 
 ## 狀態轉移
 
@@ -137,16 +144,16 @@
 1. **活動是否還在**：活動在終止階段時，除了查詢以外，一律回傳 `STAGE_NOT_ALLOWED`。訊息依階段寫成「活動已結束」或「活動已取消」。
 2. **權限**：老師專用操作要求 `actor` 是本活動的 `Teacher`，否則回傳 `NOT_TEACHER`。
 3. **階段與操作是否相容**：依 spec 的兩張表判定。
-4. **輸入**：組名、憑證、選題、倒數秒數，由 `InputRules` 驗證。
-5. **業務條件**：例如是否已匯入題目、所選題目是否都未成功、組別是否有提交。
+4. **輸入**：組數上限、組號、憑證、選題、倒數秒數，由 `InputRules` 驗證。
+5. **業務條件**：例如是否已匯入題目、所選題目是否都未成功、組別是否存在、是否有提交、裝置是否已在某組。
 
 | 操作 | 允許的階段 | 成功後 |
 |---|---|---|
-| `CreateActivity` | （無） | `PREPARING`，version = 1 |
+| `CreateActivity` | （無） | `max_groups` 為 1～99 時：`PREPARING`，version = 1。C7 的跨活動檢查在服務層（研究 R10） |
 | `ReplaceQuestions`（002） | `PREPARING` | 更新 `question_numbers`；`solved_questions` 清空 |
-| `JoinGroup` | 非終止 | 新組：建立 `Group`＋裝置；既有組：憑證正確時新增裝置 |
-| `LeaveGroup` | `PREPARING`、`RESULT_PENDING`、`RESULT_FINAL` | 移除該裝置 |
-| `DeleteGroup` | 非終止 | `has_submissions == False` 時，移除組別與其所有裝置 |
+| `JoinGroup` | 非終止 | 裝置不在任何組；組號 1～N；新組號：建立 `Group`＋裝置；既有組號：憑證正確時新增裝置 |
+| `LeaveGroup` | `PREPARING`、`RESULT_PENDING`、`RESULT_FINAL`（`ROUND_OPEN` 回 `NO_GROUP_SWITCH_DURING_ROUND`） | 移除該裝置 |
+| `DeleteGroup` | 非終止 | 組別存在且 `has_submissions == False` 時，移除組別與其所有裝置；組號可再使用 |
 | `OpenRound` | `PREPARING`（已有題目）、`RESULT_FINAL` | `ROUND_OPEN`，新增 `Round` |
 | `CloseRound` | `ROUND_OPEN`；目前輪次已關時（`RESULT_PENDING`、`RESULT_FINAL`）視為冪等 | `RESULT_PENDING`，`closed = True`；目前輪次已經關過時，回傳成功但沒有變化（`changed=False`，HTTP `alreadyClosed: true`） |
 | `Finalize` | `RESULT_PENDING` | `RESULT_FINAL`；套用 `outcome`（已成功題、各組成功次數增量） |
