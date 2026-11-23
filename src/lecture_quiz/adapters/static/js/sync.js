@@ -2,7 +2,7 @@
 // - 連線後第一則訊息送 {"type":"auth","token":...}；token 不放在網址。
 // - 重連依序等 0.5、1、2、4 秒，之後每次 4 秒。
 // - 超過 25 秒沒收到任何訊息，視為中斷。
-// - 丟棄版本較舊的快照。
+// - 丟棄版本較舊的快照；老師快照在同一 version 內再以 revision 排序。
 // - gone：清除本機身分，顯示「活動已失效，請重新建立或加入活動」，不再重連。
 // - unauthorized：交給頁面處理（例如學生回到加入畫面），不再重連。
 // - 中斷期間顯示「同步中斷，正在重新連線」，並在 <body> 加上 sync-broken，
@@ -49,6 +49,7 @@ export function connectSync(code, token, handlers) {
   let socket = null;
   let attempt = 0;
   let version = -1;
+  let revision = -1; // 只有老師快照有；組別變更只改 revision（FR-030）
   let stopped = false;
   let silenceTimer = null;
   let reconnectTimer = null;
@@ -93,7 +94,15 @@ export function connectSync(code, token, handlers) {
         attempt = 0;
         setBroken(false);
         if (typeof message.version !== "number" || message.version < version) return;
+        if (
+          message.version === version &&
+          typeof message.revision === "number" &&
+          message.revision < revision
+        ) {
+          return; // 同一版本內較舊的老師快照
+        }
         version = message.version;
+        if (typeof message.revision === "number") revision = message.revision;
         handlers.onSnapshot(message);
         setStatus(version, Date.now() - Date.parse(message.changedAt));
         break;

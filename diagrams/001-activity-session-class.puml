@@ -1,0 +1,241 @@
+@startuml 001-activity-session-class
+!pragma layout smetana
+skinparam defaultFontName "Microsoft JhengHei"
+skinparam classAttributeIconSize 0
+title 001 活動與階段同步 — 類別圖
+
+package "核心（純資料與純函式）" {
+  enum Stage <<資料>> {
+    準備中
+    開放加入
+    搶答中
+    結果未定案
+    結果已定案
+    已結束
+    已取消
+  }
+
+  class Activity <<資料>> {
+    code : 活動代碼（6 碼，排除 0、O、1、I）
+    maxGroups : 組數上限 N（1～99，建立後不變）
+    stage : Stage
+    version : 學生可見的狀態版本（只在階段、輪次、題號、已成功題改變時遞增）
+    teacher : TeacherIdentity
+    questionNumbers : 題號清單（由 002 提供）
+    solvedQuestions : 已成功題號（由 004 定案後提供）
+    changedAt : 最近一次學生可見變更的時間
+    revision : 修訂號（任何變更都遞增，只給老師版）
+    groups : 組號 → Group
+    devices : DeviceIdentity 清單（key 為 token 雜湊）
+    rounds : Round 清單
+    --
+    currentRound : 目前輪次
+    unsolvedQuestions : 未成功題
+  }
+
+  class TeacherIdentity <<資料>> {
+    tokenHash : 老師 token 的 SHA-256（同瀏覽器分頁共用，不可由代碼推導）
+  }
+
+  class Group <<資料>> {
+    number : 組號（1～maxGroups，活動內唯一）
+    joinCredential : 組別加入憑證（6 碼）
+    successCount : 歷史成功次數
+    hasSubmissions : 是否有提交紀錄（由 003 提供）
+  }
+
+  class DeviceIdentity <<資料>> {
+    tokenHash : 學生裝置 token 的 SHA-256
+    groupNumber : 所屬組號
+  }
+
+  class Round <<資料>> {
+    number : 輪次編號
+    rules : RoundRules
+    openedAt : 開輪時間
+    baseline : 組號 → 歷史成功次數基準
+    closed : 是否已關輪（只能一次）
+    closedAt : 關輪時間
+    closeCause : teacher／deadline
+  }
+
+  class RoundRules <<資料，開輪後不可變>> {
+    questionNumbers : 所選題號（至少 1 題，皆未成功）
+    fairMode : 公平模式（預設關）
+    countdownSeconds : 倒數秒數（可無；1～3600）
+    deadline : 截止時間（可無；開輪時間 + 倒數秒數）
+  }
+
+  class Command <<資料>> {
+    actor : Teacher／Device／System／Anonymous（只含 token 雜湊）
+    --
+    各操作各為一個 frozen dataclass：
+    CreateActivity(maxGroupsRaw)、OpenJoining、JoinGroup(numberRaw, credentialRaw)、
+    LeaveGroup、DeleteGroup(numberRaw)、MarkGroupSubmitted(groupNumber)、
+    OpenRound、CloseRound、Finalize、EndActivity、CancelActivity、ReplaceQuestions
+    Idempotency-Key 不放在 Command，由服務層去重
+  }
+
+  class FinalizeOutcome <<資料，由 004 提供>> {
+    solvedQuestions : 本輪新成功題號
+    successIncrements : 組號 → 成功次數增量
+  }
+
+  class Transition <<資料>> {
+    ok : 是否成功
+    activity : 新的 Activity
+    rejection : RejectionReason
+    changed : 是否真的改變（決定版本與推送）
+    issued : 新產生的憑證／token（由服務層傳入）
+  }
+
+  enum RejectionReason <<資料>> {
+    非老師
+    階段不允許
+    未匯入題目
+    選題無效
+    倒數秒數無效
+    組號無效
+    憑證錯誤
+    組數上限無效
+    已在某組
+    不在任何組
+    組別不存在
+    尚未開放加入
+    搶答中不可刪除組別
+    已有存續中活動
+    活動已失效
+    規則不可修改
+    搶答中不可換組
+    組別已有提交
+  }
+
+  class ActivityStateMachine <<純函式>> {
+    +apply(activity, command, now, issued) : Transition
+    +isDeadlinePassed(round, now) : bool
+    +isTeacher(activity, actor) : bool
+  }
+
+  class InputRules <<純函式>> {
+    +validateMaxGroups(raw) : 1～99 或錯誤
+    +normalizeGroupNumber(raw, maxGroups) : 組號或錯誤（半形／全形、前導零）
+    +normalizeCredential(raw) : 去空白轉大寫
+    +validateCountdown(raw) : 秒數或錯誤
+    +validateSelection(selected, imported, solved) : 題號或錯誤
+    +validateQuestionNumbers(numbers) : 題號或錯誤
+  }
+
+  class SnapshotView <<純函式>> {
+    +forTeacher(activity) : ActivitySnapshot
+    +forGroup(activity, groupNumber) : ActivitySnapshot
+  }
+
+  class ActivitySnapshot <<資料>> {
+    role : teacher／student
+    code
+    changedAt
+    stage
+    version
+    roundNumber
+    openQuestions
+    deadline
+    fairMode
+    ownGroup : 只含自己組號、本組憑證、成功次數（學生版）
+    maxGroups : 組數上限（老師版）
+    groups : 全部組別與憑證，依組號排序（老師版）
+    revision : 修訂號（老師版）
+    unsolvedQuestions : 結束時列出
+  }
+}
+
+package "應用層" {
+  class ActivityService {
+    +create(maxGroupsRaw, teacherToken, idempotencyKey) : 代碼與老師 token（C7：同瀏覽器上一個活動仍存續時拒絕）
+    +join(code, numberRaw, credentialRaw, requester, idempotencyKey) : 裝置 token、組號、憑證
+    +openJoining(code, requester, idempotencyKey) : 準備中 → 開放加入（須已匯入題目）
+    +openRound(code, requester, questionNumbers, fairMode, countdownRaw, idempotencyKey)
+    +closeRound(code, requester, idempotencyKey) : 含 alreadyClosed
+    +onDeadline(code, deadline) : now = max(clock.now(), deadline)
+    +finalize(code, requester, outcome, idempotencyKey) : 由 004 觸發
+    +end(code, requester, idempotencyKey)
+    +cancel(code, requester, idempotencyKey)
+    +leaveGroup(code, requester, idempotencyKey)
+    +deleteGroup(code, requester, numberRaw, idempotencyKey)
+    +resolveRequester(code, token) : Requester
+    +snapshot(code, requester) : ActivitySnapshot
+    .. 002 ActivityGateway ..
+    +stage(code) : Stage
+    +isTeacher(code, requester) : bool
+    +replaceQuestions(code, requester, questionNumbers)
+    .. 003 介面 ..
+    +resolveDevice(code, deviceToken) : DeviceContext
+    +acceptsSubmission(code, now) : bool
+    +markGroupSubmitted(code, groupNumber)
+    .. 004／005 介面 ..
+    +currentRound(code) : Round
+    +exportView(code, requester) : ExportView
+  }
+
+  class ActivityRegistry {
+    activities : 代碼 → Activity（只在記憶體）
+    processed : 身分＋Idempotency-Key → 原回應（每活動最多 1000 筆）
+    created : 建立活動 key → 結果
+    locks : 每個活動一把鎖（去重查表、套用、記錄都在鎖內）
+    +findByTeacher(tokenHash) : Activity（C7）
+  }
+
+  interface CountdownScheduler <<port>> {
+    +setCallback(callback)
+    +schedule(code, deadline)
+    +cancel(code)
+  }
+
+  interface SyncPublisher <<port>> {
+    +publish(activity)
+    +disconnectDevice(code, tokenHash, reason)
+  }
+
+  interface Clock <<port>> {
+    +now() : 時間
+  }
+}
+
+package "外層轉接層" {
+  class AsyncioCountdownScheduler
+  class WebSocketHub {
+    +publish(activity) : 依各連線角色以 SnapshotView 裁切；
+內容與上次相同不送、並行送出、單一連線 1 秒逾時
+    +disconnectDevice(code, tokenHash, reason) : 送 unauthorized（LEFT_GROUP／GROUP_DELETED）並關閉
+    +serve(websocket, code)
+  }
+  class SystemClock {
+    +now() : 時間
+  }
+}
+
+Activity "1" *-- "1" TeacherIdentity
+Activity "1" *-- "*" Group
+Activity "1" *-- "*" Round
+Activity --> Stage
+Round "1" *-- "1" RoundRules
+DeviceIdentity ..> Group : 指向
+ActivityStateMachine ..> Activity
+ActivityStateMachine ..> Command
+ActivityStateMachine ..> Transition
+ActivityStateMachine ..> FinalizeOutcome
+ActivityStateMachine ..> InputRules
+Transition --> RejectionReason
+SnapshotView ..> ActivitySnapshot
+
+ActivityService ..> ActivityStateMachine
+ActivityService ..> SnapshotView
+ActivityService --> ActivityRegistry
+ActivityService ..> SyncPublisher
+ActivityService ..> Clock : 取得 now 後傳入核心
+ActivityService ..> CountdownScheduler
+CountdownScheduler ..> ActivityService : 到期呼叫 onDeadline
+AsyncioCountdownScheduler ..|> CountdownScheduler
+WebSocketHub ..|> SyncPublisher
+WebSocketHub ..> SnapshotView
+SystemClock ..|> Clock
+@enduml

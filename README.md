@@ -23,3 +23,5 @@ py -3.11 -m venv .venv
 Set-Content .venv\Lib\site-packages\_editable_impl_lecture_quiz.pth "../../../src" -Encoding ascii
 .venv\Scripts\python -m lecture_quiz
 ```
+
+只想跑起來、不改程式（例如全新 clone 驗證）時，也可以改用一般安裝 `.venv\Scripts\python -m pip install ".[dev]"`，不需要改 `.pth`；但之後改了 `src/` 要重新安裝才會生效。三種做法的比較見[開發指南](docs/DEVELOPMENT.md#專案路徑含中文時)。
