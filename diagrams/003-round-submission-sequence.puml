@@ -1,0 +1,64 @@
+@startuml 003-round-submission-sequence
+skinparam defaultFontName "Microsoft JhengHei"
+title 003 多題搶答與送出 — 時序圖（提交、同組競爭、截止後提交）
+
+actor "甲組裝置 A" as A
+actor "甲組裝置 B" as B
+participant "學生作答畫面" as UI
+participant "提交 API" as Api
+participant "SubmissionService" as Svc
+participant "001 ActivityService" as Act
+participant "Clock" as Clock
+participant "SubmissionRules（純函式）" as Rules
+participant "同步推送" as Sync
+actor "老師看板" as T
+
+== 正常提交（題組兩格） ==
+A -> UI : 填好第 1、2 格並送出
+UI -> Api : POST 提交（輪次識別、題號、各格答案、裝置 token）
+Api -> Svc : submit(code, token, attempt)
+activate Svc
+note over Svc : 進入該活動的鎖
+Svc -> Act : resolve_device(code, token)
+Act --> Svc : 組號、輪次、本輪開放題、截止時間
+Svc -> Clock : now()
+Clock --> Svc : 接收時間 t
+Svc -> Act : accepts_submission(code, t)
+Act --> Svc : true（t < 截止時間）
+Svc -> Rules : decide(紀錄, 本輪資訊, 組號, attempt, t, 下一序號)
+Rules --> Svc : ACCEPTED（Submission）
+Svc -> Act : mark_group_submitted(code, 組號)
+Act --> Svc : ok
+Svc -> Svc : 保存 Submission、序號 + 1
+note over Svc : 離開鎖
+Svc -> Sync : 推送（老師版：全部；甲組：本組；他組：不送）
+deactivate Svc
+Sync --> T : 甲組題 1 已送出與答案（2 秒內）
+Sync --> B : 本組題 1 已送出與答案
+Api --> UI : 200 已送出（答案、接收時間）
+UI --> A : 顯示「已送出」
+
+== 同組另一台裝置再送（或回應遺失後重送） ==
+B -> Api : POST 提交（題 1、不同答案）
+Api -> Svc : submit(...)
+Svc -> Rules : decide(...)
+Rules --> Svc : ALREADY_SUBMITTED（既有 Submission）
+Svc --> Api : 不保存、不推送
+Api --> B : 409 本組已送出（附既有答案與接收時間）
+
+== 截止後或關輪後提交 ==
+A -> Api : POST 提交（題 2）
+Api -> Svc : submit(...)
+Svc -> Clock : now()
+Svc -> Act : accepts_submission(code, t2)
+Act --> Svc : false（t2 >= 截止時間或已關輪）
+Svc --> Api : REJECTED（ROUND_CLOSED）
+Api --> A : 409 本輪已結束（不保存）
+
+== 舊輪次頁面提交 ==
+A -> Api : POST 提交（輪次識別 = 舊輪）
+Api -> Svc : submit(...)
+Svc -> Rules : decide(...)
+Rules --> Svc : REJECTED（STALE_ROUND）
+Api --> A : 409 輪次已更新，請重新整理後再作答
+@enduml

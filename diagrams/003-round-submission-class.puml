@@ -1,0 +1,126 @@
+@startuml 003-round-submission-class
+!pragma layout smetana
+skinparam defaultFontName "Microsoft JhengHei"
+title 003 多題搶答與送出 — 類別圖
+
+package "core.round_submission（純函式）" {
+  class SubmissionAttempt <<frozen>> {
+    round_number_raw: object
+    question_number_raw: object
+    answers_raw: object
+  }
+  class Submission <<frozen>> {
+    activity_code: str
+    round_number: int
+    question_number: int
+    group_number: int
+    answers: tuple[str, ...]
+    received_at: datetime
+    sequence: int
+  }
+  class RoundContext <<frozen>> {
+    round_number: int
+    open_questions: tuple[int, ...]
+    blanks_per_question: Mapping[int, int]
+    accepting: bool
+  }
+  class SubmissionLedger <<frozen>> {
+    submissions: tuple[Submission, ...]
+    next_sequence: int
+    --
+    find(round, question, group): Submission | None
+    for_round(round): tuple[Submission, ...]
+    with_added(submission): SubmissionLedger
+  }
+  enum DecisionKind {
+    ACCEPTED
+    ALREADY_SUBMITTED
+    REJECTED
+  }
+  enum SubmissionRejection {
+    NOT_IN_GROUP
+    ACTIVITY_GONE
+    ROUND_CLOSED
+    STALE_ROUND
+    QUESTION_NOT_OPEN
+    WRONG_BLANK_COUNT
+    BLANK_EMPTY
+    INVALID_ANSWER
+  }
+  class SubmissionDecision <<frozen>> {
+    kind: DecisionKind
+    submission: Submission | None
+    rejection: SubmissionRejection | None
+    empty_blanks: tuple[int, ...]
+    expected_blanks: int | None
+  }
+  class SubmissionRules {
+    {static} decide(ledger, context, code, group_number, attempt, now, sequence): SubmissionDecision
+    {static} normalize_answers(raw, expected): tuple[str, ...]
+    {static} order(submissions): tuple[Submission, ...]
+  }
+  class SubmissionView {
+    {static} for_teacher(ledger, round): TeacherBoard
+    {static} for_student(ledger, round, group_number, stage): StudentSubmissions
+    {static} published(ledger, round): PublishedRound
+  }
+  SubmissionLedger o-- "0..*" Submission
+  SubmissionDecision --> DecisionKind
+  SubmissionDecision --> SubmissionRejection
+  SubmissionRules ..> SubmissionLedger
+  SubmissionRules ..> RoundContext
+  SubmissionRules ..> SubmissionAttempt
+  SubmissionRules ..> SubmissionDecision
+  SubmissionView ..> SubmissionLedger
+}
+
+package "app.round_submission" {
+  interface QuestionShapeSource <<Protocol>> {
+    blanks_per_question(code): Mapping[int, int] | None
+  }
+  interface SubmissionReader <<Protocol>> {
+    round_submissions(code, round_number): tuple[Submission, ...]
+    all_submissions(code): tuple[Submission, ...]
+  }
+  class SubmissionStore {
+    get(code): SubmissionLedger
+    put(code, ledger): None
+  }
+  class SubmissionService {
+    submit(code, device_token, attempt): Outcome[SubmissionDecision]
+    student_view(code, device_token): Outcome[StudentSubmissions]
+    teacher_board(code, requester): Outcome[TeacherBoard]
+    round_submissions(code, round_number): tuple[Submission, ...]
+    all_submissions(code): tuple[Submission, ...]
+  }
+  SubmissionService ..|> SubmissionReader
+  SubmissionService --> SubmissionStore
+  SubmissionService --> QuestionShapeSource
+  SubmissionService ..> SubmissionRules
+  SubmissionService ..> SubmissionView
+}
+
+package "001 app.activity（既有）" {
+  class ActivityService {
+    resolve_device(code, device_token): Outcome[DeviceContext]
+    accepts_submission(code, now): bool
+    mark_group_submitted(code, group_number): Outcome[int]
+  }
+  interface Clock <<Protocol>> {
+    now(): datetime
+  }
+  interface SyncPublisher <<Protocol>> {
+    publish(activity): None
+  }
+}
+
+SubmissionService --> ActivityService : 組號、輪次、先標記
+SubmissionService --> Clock
+SubmissionService --> SyncPublisher
+
+note right of SubmissionRules
+  判定順序：身分／活動 → 輪次識別與是否接受（now < deadline）
+  → 題號在本輪 → 本組是否已送出 → 答案格數與判空。
+  不讀系統時鐘：now 與 sequence 由服務層傳入。
+end note
+@enduml

@@ -1,0 +1,38 @@
+# Specification Quality Checklist: 多題搶答與送出
+
+**Purpose**: Validate specification completeness and quality before proceeding to planning
+**Created**: 2026-11-23
+**Feature**: [spec.md](../spec.md)
+
+## Content Quality
+
+- [x] No implementation details (languages, frameworks, APIs)
+- [x] Focused on user value and business needs
+- [x] Written for non-technical stakeholders
+- [x] All mandatory sections completed
+
+## Requirement Completeness
+
+- [ ] No [NEEDS CLARIFICATION] markers remain
+- [x] Requirements are testable and unambiguous
+- [x] Success criteria are measurable
+- [x] Success criteria are technology-agnostic (no implementation details)
+- [x] All acceptance scenarios are defined
+- [x] Edge cases are identified
+- [x] Scope is clearly bounded
+- [x] Dependencies and assumptions identified
+
+## Feature Readiness
+
+- [x] All functional requirements have clear acceptance criteria
+- [x] User scenarios cover primary flows
+- [x] Feature meets measurable outcomes defined in Success Criteria
+- [x] No implementation details leak into specification
+
+## Notes
+
+- 驗證日期 2026-11-23（第 1 次即通過，除下列項目）。
+- **[NEEDS CLARIFICATION] 仍有 4 項**：Q-20（答案長度、多行、空白保存）、Q-21（搶答中老師看板暫估順位）、Q-22（搶答中學生可見的額外資訊）、Q-26（判錯標記學生端可見性）。這四項依 `docs/alignment.md` 屬於「待與 OpenSpec 組確認」，依 CLAUDE.md 規定必須標記並引用編號、不得自行假設，因此超過 Spec Kit 預設的 3 項上限。確認後移入 alignment.md 決議紀錄，再以 `/speckit-clarify` 寫回 spec。
+- FR-013 提到「先向 001 標記」、Assumptions 提到 001 的 `contracts/service-interfaces.md`，屬於跨子功能的依賴說明，不是實作細節。
+- 002 目前的契約（PR #11）沒有直接提供「每題子空格數」給 003；需在 003 plan 與 002 協調（見 Assumptions）。
+- 圖表（組件、類別、時序）已產出並轉出 PNG；類別圖的型別名稱是給 plan 的藍圖，spec 本文不依賴它們。
