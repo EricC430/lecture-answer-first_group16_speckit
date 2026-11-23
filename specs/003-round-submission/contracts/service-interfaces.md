@@ -7,7 +7,8 @@
 | 方法 | 說明 |
 |---|---|
 | `ActivityService.record_submission(code, device_token, handler: SubmissionHandler[T]) -> Outcome[T]` | 在該活動的鎖內：找裝置（`NOT_IN_GROUP`／`ACTIVITY_GONE`）→ `now = clock.now()` → 組 `SubmissionWindow` → `handler.decide(window, now)` → 若為接受：套用 `RecordSubmission`（失敗就不呼叫 `commit`）→ `handler.commit()` → 鎖外推送 |
-| `SubmissionHandler.decide(window, now) -> HandlerStep[T]` | 003 實作；`HandlerStep` 為 `accept(value)`、`no_change(value)` 或 `reject(reason, message)`；**不得有副作用** |
+| `SubmissionHandler.decide(window, now) -> HandlerStep[T]` | 003 實作；`HandlerStep` 只有 `accept(value)`（要標記並保存）與 `no_change(value)`（不保存、不推送）兩種；003 自己的拒絕（`STALE_ROUND` 等）也以 `no_change` 回傳，拒絕原因放在 `value`（`SubmissionDecision`），**不經過 001 的 `RejectionReason`**；**不得有副作用** |
+| （拒絕的回傳方式） | `record_submission` 的 `Outcome.ok` 只在 001 層面失敗（`ACTIVITY_GONE`、`NOT_IN_GROUP`、`RecordSubmission` 被拒）時為假，此時 `rejection` 是 001 的 `RejectionReason`；001 的 `Outcome.rejection` 型別**不放寬**，因為 001 HTTP 層的 `unwrap()` 直接使用 `rejection.http_status` |
 | `SubmissionHandler.commit() -> None` | 003 實作；只在 `RecordSubmission` 成功後、仍在鎖內被呼叫，把新的 ledger 寫入 store |
 | `ActivityService.add_snapshot_extension(ext: SnapshotExtension)` | 註冊快照擴充；`ext(activity, viewer) -> Mapping[str, object]`，回傳的欄位併入快照 `extra`，可覆寫 001 的欄位（003 目前不覆寫；只有 Q-22 改為隱藏本組成功次數時才覆寫 `ownGroup.successCount`） |
 | `ActivityService.snapshot_for(activity, requester)` | 改為實例方法；`WebSocketHub` 與 `snapshot()` 都經過它，擴充自動生效 |

@@ -48,7 +48,7 @@ Technical Context 沒有 NEEDS CLARIFICATION；以下是設計決策。每項格
 
 ## R6 每題子空格數的來源
 
-- **決策**：003 定義 `QuestionShapeSource` Protocol：`blanks_per_question(code) -> Mapping[int, int] | None`（題號 → 格數；尚未成功匯入時為 `None`）。由 002 的 `ImportService` 實作（`ImportRecord.blanks` 依題號計數；已與 EricC430 口頭協調）。002 合併前：`dev_seed` 的 seed 可指定每題格數，並提供 `DevQuestionShapeSource`；只在 dev seed 啟用時組裝。
+- **決策**：003 定義 `QuestionShapeSource` Protocol：`blanks_per_question(code) -> Mapping[int, int] | None`（題號 → 格數；尚未成功匯入時為 `None`）。由 002 的 `ImportService` 實作（`ImportRecord.blanks` 依題號計數；已與 EricC430 口頭協調）。002 合併前：`dev_seed` 的 seed 可指定每題格數，並提供 `DevQuestionShapeSource`；只在 dev seed 啟用時組裝；seed 的 `blanks` 長度必須等於題數、每題 1～10 格（只是開發用的防呆上限，不是正式規則）。
 - **理由**：格數一律來自匯入結果（憲章原則 III）；重新匯入只在第一輪前，搶答中格數不變。
 - **替代方案**：001 的 `replace_questions` 改傳格數（改動 001 與 002 已對齊的契約，否決）；003 直接讀 002 的 `ImportRecord`（耦合 002 內部型別，否決）。
 - **防禦**：開放題在 `QuestionShapeSource` 查不到格數時，`decide` 回 `QUESTION_NOT_OPEN` 並記錄 WARNING（不應發生，代表 002／001 資料不一致）。
@@ -79,7 +79,7 @@ Technical Context 沒有 NEEDS CLARIFICATION；以下是設計決策。每項格
 ## R10 判定順序與拒絕原因
 
 - **決策**：`SubmissionRules.decide` 依下列順序，第一個不符合的條件決定結果（data-model.md 有完整表）：
-  1. 輪次識別不是整數，或不等於目前輪次 → `STALE_ROUND`（沒有任何輪次時亦同）。
+  1. 目前還沒有任何輪次（準備中、開放加入）→ `ROUND_CLOSED`（「本輪尚未開始或已結束」）；輪次識別不是整數，或不等於目前輪次 → `STALE_ROUND`。
   2. `accepting` 為假（不在搶答中、已截止、已關輪）→ `ROUND_CLOSED`。
   3. 題號不是整數或不在本輪開放題 → `QUESTION_NOT_OPEN`。
   4. 本組本輪本題已有提交 → `ALREADY_SUBMITTED`（附既有提交）。

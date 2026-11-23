@@ -59,6 +59,7 @@ Svc -> Act : record_submission(...)
 Act -> Svc : handler.decide(window[accepting = false], t3)
 Svc -> Rules : decide(...)
 Rules --> Svc : REJECTED（ROUND_CLOSED）
+Svc --> Act : no_change（拒絕原因放在回傳值）
 Api --> A : 409 本輪已結束（不保存）
 
 == 舊輪次頁面提交 ==
@@ -68,5 +69,6 @@ Svc -> Act : record_submission(...)
 Act -> Svc : handler.decide(...)
 Svc -> Rules : decide(...)
 Rules --> Svc : REJECTED（STALE_ROUND）
+Svc --> Act : no_change（拒絕原因放在回傳值）
 Api --> A : 409 輪次已更新，請重新整理後再作答
 @enduml
