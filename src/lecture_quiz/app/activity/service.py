@@ -72,6 +72,7 @@ class CreatedActivity:
 
     code: str
     teacher_token: str
+    max_groups: int
     version: int
 
 
@@ -325,37 +326,69 @@ class ActivityService:
 
     # ── 會改變狀態的操作 ─────────────────────────────────
 
-    async def create(self, idempotency_key: str | None = None) -> CreatedActivity:
+    async def create(
+        self,
+        max_groups_raw: object,
+        teacher_token: str | None = None,
+        idempotency_key: str | None = None,
+    ) -> Outcome[CreatedActivity]:
         """建立活動；同一個 key 重送時回傳同一組代碼與 token。
 
+        順序：重送查表 → 同一位老師只能有一個存續中活動（C7，研究 R10）→ 狀態機
+        驗證組數上限。三者都在建立鎖內。
+
         Args:
+            max_groups_raw: 組數上限的原始輸入。
+            teacher_token: 這個瀏覽器上一個活動的老師 token（可無）。
             idempotency_key: 前端送來的 key。
 
         Returns:
-            活動代碼、老師 token（只出現這一次）與版本。
+            活動代碼、老師 token（只出現這一次）、組數上限與版本；或拒絕原因。
         """
         async with self._registry.create_lock:
             if idempotency_key is not None:
                 cached = self._registry.recall_create(idempotency_key)
                 if isinstance(cached, CreatedActivity):
-                    return cached
+                    return Outcome(ok=True, value=cached)
+            if teacher_token:
+                previous = self._registry.find_by_teacher(hash_token(teacher_token))
+                if previous is not None and not previous.stage.is_terminal:
+                    reason = RejectionReason.TEACHER_HAS_ACTIVE_ACTIVITY
+                    return Outcome(
+                        ok=False,
+                        rejection=reason,
+                        message=(
+                            f"你已有一個進行中的活動（代碼 {previous.code}），"
+                            "請先結束或取消它。"
+                        ),
+                    )
             token = new_token()
             issued = IssuedSecrets(
                 activity_code=new_code(self._registry.codes()),
                 teacher_token_hash=hash_token(token),
             )
             transition = ActivityStateMachine.apply(
-                None, CreateActivity(Anonymous()), self._clock.now(), issued
+                None,
+                CreateActivity(Anonymous(), max_groups_raw),
+                self._clock.now(),
+                issued,
             )
-            assert transition.activity is not None
-            self._registry.put(transition.activity)
+            if not transition.ok or transition.activity is None:
+                assert transition.rejection is not None
+                return Outcome(
+                    ok=False,
+                    rejection=transition.rejection,
+                    message=transition.rejection.default_message,
+                )
+            created = transition.activity
+            self._registry.put(created)
             result = CreatedActivity(
-                transition.activity.code, token, transition.activity.version
+                created.code, token, created.max_groups, created.version
             )
             if idempotency_key is not None:
                 self._registry.remember_create(idempotency_key, result)
         logger.info("建立活動 activity=%s", result.code)
-        return result
+        return Outcome(ok=True, value=result)
 
     async def join(
         self, code: str, group_name: str, idempotency_key: str | None = None

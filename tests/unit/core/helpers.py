@@ -13,13 +13,14 @@ NOW = FAKE_CLOCK_START
 TEACHER_HASH = "a" * 64
 OTHER_TEACHER_HASH = "b" * 64
 TEACHER = Teacher(TEACHER_HASH)
+MAX_GROUPS = 6
 
 
 def new_activity(code: str = "K7QH2M") -> Activity:
     """以狀態機建立一個準備中的活動。"""
     transition = ActivityStateMachine.apply(
         None,
-        CreateActivity(TEACHER),
+        CreateActivity(TEACHER, max_groups_raw=MAX_GROUPS),
         NOW,
         IssuedSecrets(activity_code=code, teacher_token_hash=TEACHER_HASH),
     )

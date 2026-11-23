@@ -22,7 +22,7 @@ async def one_race(teacher_first: bool):
     publisher = CountingPublisher()
     service = ActivityService(ActivityRegistry(), clock, scheduler, publisher)
     scheduler.set_callback(service.on_deadline)
-    created = await service.create()
+    created = (await service.create(6)).value
     teacher = service.resolve_requester(created.code, created.teacher_token)
     await service.replace_questions(created.code, teacher, (1, 2))
     await service.open_round(created.code, teacher, None, False, 30)
@@ -66,7 +66,7 @@ def test_deadline_callback_uses_deadline_when_timer_fires_early():
             ActivityRegistry(), clock, scheduler, CountingPublisher()
         )
         scheduler.set_callback(service.on_deadline)
-        created = await service.create()
+        created = (await service.create(6)).value
         teacher = service.resolve_requester(created.code, created.teacher_token)
         await service.replace_questions(created.code, teacher, (1,))
         await service.open_round(created.code, teacher, None, False, 30)

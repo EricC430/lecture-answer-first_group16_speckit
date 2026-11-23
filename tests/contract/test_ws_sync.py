@@ -55,7 +55,7 @@ def test_teacher_receives_snapshot_with_teacher_fields(client):
         ws.send_json({"type": "auth", "token": teacher.token})
         snap = ws.receive_json()
     assert COMMON_FIELDS <= set(snap)
-    assert set(snap) == COMMON_FIELDS | {"groups", "questionNumbers"}
+    assert set(snap) == COMMON_FIELDS | {"groups", "maxGroups", "questionNumbers"}
     assert snap["role"] == "teacher"
     assert snap["version"] == 1
 

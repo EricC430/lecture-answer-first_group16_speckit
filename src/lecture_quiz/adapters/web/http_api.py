@@ -28,6 +28,15 @@ Token = Annotated[str | None, Depends(bearer_token)]
 IdempotencyKey = Annotated[str | None, Depends(idempotency_key)]
 
 
+class CreateActivityBody(BaseModel):
+    """`POST /activities` 的本文。"""
+
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    # 原始值交給核心的 InputRules 驗證，錯誤時回 INVALID_MAX_GROUPS
+    max_groups: JsonValue = Field(default=None, alias="maxGroups")
+
+
 class OpenRoundBody(BaseModel):
     """`POST /activities/{code}/rounds` 的本文。"""
 
@@ -94,9 +103,20 @@ def create_router(app: FastAPI) -> APIRouter:
         return body
 
     @router.post("/activities", status_code=201)
-    async def create_activity(request: Request, key: IdempotencyKey) -> JsonDict:
-        """建立活動（#1）。"""
-        created = await service().create(key)
+    async def create_activity(
+        request: Request,
+        token: Token,
+        key: IdempotencyKey,
+        body: CreateActivityBody | None = None,
+    ) -> JsonDict:
+        """建立活動（#1）；`token` 為這個瀏覽器上一個活動的老師 token（C7）。"""
+        body = body or CreateActivityBody()
+        outcome = await service().create(body.max_groups, token, key)
+        if not outcome.ok or outcome.value is None:
+            reason = outcome.rejection
+            assert reason is not None
+            raise ApiError(reason.http_status, reason.value, outcome.message)
+        created = outcome.value
         return ok(
             request,
             created.code,
@@ -104,6 +124,7 @@ def create_router(app: FastAPI) -> APIRouter:
             {
                 "code": created.code,
                 "teacherToken": created.teacher_token,
+                "maxGroups": created.max_groups,
                 "version": created.version,
             },
         )

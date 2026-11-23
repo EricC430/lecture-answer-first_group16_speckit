@@ -68,9 +68,15 @@ class FinalizeOutcome:
 
 @dataclass(frozen=True)
 class CreateActivity:
-    """建立活動。代碼與老師 token 雜湊由 `IssuedSecrets` 傳入。"""
+    """建立活動。代碼與老師 token 雜湊由 `IssuedSecrets` 傳入。
+
+    Attributes:
+        actor: 操作者。
+        max_groups_raw: 組數上限的原始輸入，由 `InputRules` 驗證（FR-036）。
+    """
 
     actor: Actor
+    max_groups_raw: object = None
 
 
 @dataclass(frozen=True)

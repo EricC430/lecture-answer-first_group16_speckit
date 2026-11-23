@@ -28,6 +28,7 @@ def make_activity(**overrides):
         version=1,
         changed_at=NOW,
         teacher=TeacherIdentity("t" * 64),
+        max_groups=6,
     )
     return dataclasses.replace(base, **overrides)
 

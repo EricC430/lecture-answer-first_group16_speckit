@@ -72,7 +72,9 @@ async def _run() -> dict[str, list[float]]:
     try:
         async with httpx.AsyncClient(base_url=base) as http:
             for _ in range(ROUNDS):
-                created = (await http.post("/api/activities", json={})).json()
+                created = (
+                    await http.post("/api/activities", json={"maxGroups": 6})
+                ).json()
                 code = created["code"]
                 headers = {"Authorization": f"Bearer {created['teacherToken']}"}
                 teacher = service.resolve_requester(code, created["teacherToken"])

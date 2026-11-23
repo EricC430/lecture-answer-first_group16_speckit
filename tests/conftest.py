@@ -113,8 +113,8 @@ class TeacherSession:
         return {"Authorization": f"Bearer {self.token}"}
 
 
-def create_activity(client: TestClient) -> TeacherSession:
-    response = client.post("/api/activities", json={})
+def create_activity(client: TestClient, max_groups: int = 6) -> TeacherSession:
+    response = client.post("/api/activities", json={"maxGroups": max_groups})
     assert response.status_code == 201, response.text
     body = response.json()
     return TeacherSession(body["code"], body["teacherToken"])

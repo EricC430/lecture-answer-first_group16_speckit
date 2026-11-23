@@ -65,6 +65,20 @@ class ActivityRegistry:
         """
         self._activities[activity.code] = activity
 
+    def find_by_teacher(self, token_hash: str) -> Activity | None:
+        """找出老師 token 雜湊所屬的活動（研究 R10，C7）。
+
+        Args:
+            token_hash: 老師 token 的 SHA-256。
+
+        Returns:
+            該老師的活動；找不到時為 `None`。
+        """
+        for activity in self._activities.values():
+            if activity.teacher.token_hash == token_hash:
+                return activity
+        return None
+
     def codes(self) -> set[str]:
         """存續中活動的代碼。
 

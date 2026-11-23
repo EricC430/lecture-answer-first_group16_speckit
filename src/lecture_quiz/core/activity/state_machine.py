@@ -186,12 +186,17 @@ def _create(
 ) -> Transition:
     if issued is None or not issued.activity_code or not issued.teacher_token_hash:
         raise ValueError("建立活動需要服務層傳入活動代碼與老師 token 雜湊")
+    try:
+        max_groups = InputRules.validate_max_groups(command.max_groups_raw)
+    except InvalidInputError as exc:
+        return Transition(ok=False, activity=None, rejection=exc.reason)
     activity = Activity(
         code=issued.activity_code,
         stage=Stage.PREPARING,
         version=1,
         changed_at=now,
         teacher=TeacherIdentity(issued.teacher_token_hash),
+        max_groups=max_groups,
     )
     return Transition(ok=True, activity=activity, changed=True, issued=issued)
 

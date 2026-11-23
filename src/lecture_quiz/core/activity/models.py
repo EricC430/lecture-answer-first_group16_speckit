@@ -151,6 +151,7 @@ class Activity:
         version: 狀態版本，從 1 開始，每次真正變更加 1。
         changed_at: 最近一次狀態變更時間。
         teacher: 老師身分。
+        max_groups: 組數上限 N（1～99），建立後不變。
         question_numbers: 題號（由 002 的成功匯入提供）。
         solved_questions: 已成功題號（由定案結果提供）。
         groups: 組別，key 為組別識別。
@@ -163,6 +164,7 @@ class Activity:
     version: int
     changed_at: datetime
     teacher: TeacherIdentity
+    max_groups: int
     question_numbers: tuple[int, ...] = ()
     solved_questions: frozenset[int] = frozenset()
     groups: Mapping[str, Group] = field(default_factory=lambda: freeze({}))

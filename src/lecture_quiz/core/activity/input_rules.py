@@ -1,4 +1,4 @@
-"""輸入規則（純函式）：倒數秒數、選題、題號。
+"""輸入規則（純函式）：組數上限、倒數秒數、選題、題號。
 
 驗證失敗時拋出 `InvalidInputError`，由狀態機轉成拒絕原因；不產生任何部分結果（FR-031）。
 組名正規化（`normalize_group_name`）待 US2 依組號決議實作。
@@ -8,6 +8,8 @@ from collections.abc import Sequence
 
 from lecture_quiz.core.activity.results import RejectionReason
 
+MIN_MAX_GROUPS = 1
+MAX_MAX_GROUPS = 99
 MIN_COUNTDOWN = 1
 MAX_COUNTDOWN = 3600
 
@@ -34,7 +36,24 @@ def _is_int(value: object) -> bool:
 
 
 class InputRules:
-    """開輪與匯入的輸入驗證。"""
+    """建立活動、開輪與匯入的輸入驗證。"""
+
+    @staticmethod
+    def validate_max_groups(raw: object) -> int:
+        """驗證組數上限：1～99 的整數（FR-036、研究 R9）。
+
+        Args:
+            raw: 原始輸入（可能是任何 JSON 值）。
+
+        Returns:
+            組數上限。
+
+        Raises:
+            InvalidInputError: 不是 1～99 的整數（含布林、小數、字串、`None`）。
+        """
+        if _is_int(raw) and MIN_MAX_GROUPS <= raw <= MAX_MAX_GROUPS:  # type: ignore[operator]
+            return int(raw)  # type: ignore[call-overload]
+        raise InvalidInputError(RejectionReason.INVALID_MAX_GROUPS)
 
     @staticmethod
     def validate_countdown(raw: object) -> int | None:

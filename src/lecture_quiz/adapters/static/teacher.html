@@ -23,10 +23,13 @@
       <h2>活動</h2>
       <p id="activity-error" class="error-message" role="alert" hidden></p>
       <div id="activity-create">
+        <label>組數上限（1～99）：
+          <input type="number" id="create-max-groups" min="1" max="99" step="1" value="6"></label>
         <button type="button" id="create-activity">建立活動</button>
       </div>
       <div id="activity-info" hidden>
-        <p>活動代碼：<strong id="activity-code" class="activity-code"></strong></p>
+        <p>活動代碼：<strong id="activity-code" class="activity-code"></strong>
+          <span class="muted">組數上限：<span id="activity-max-groups"></span></span></p>
         <p>目前階段：<strong id="activity-stage"></strong>
           <span id="activity-round" class="muted"></span></p>
         <p>題目：<span id="activity-questions" class="muted"></span></p>

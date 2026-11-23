@@ -104,6 +104,7 @@ class SnapshotView:
             for g in activity.groups.values()
         ]
         extra: JsonDict = {
+            "maxGroups": activity.max_groups,
             "groups": groups,
             "questionNumbers": list(activity.question_numbers),
         }

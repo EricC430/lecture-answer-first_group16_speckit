@@ -2,7 +2,13 @@
 // 所有不可信文字（組名等）一律用 textContent 輸出（原則 V）。
 
 import { apiRequest, showError } from "./api.js";
-import { getTeacherToken, normalizeCode, setTeacherToken } from "./identity.js";
+import {
+  getLastTeacherCode,
+  getTeacherToken,
+  normalizeCode,
+  setLastTeacherCode,
+  setTeacherToken,
+} from "./identity.js";
 import { startCountdown } from "./countdown.js";
 import { connectSync } from "./sync.js";
 
@@ -41,6 +47,7 @@ function render(snapshot) {
   $("activity-create").hidden = true;
   $("activity-info").hidden = false;
   $("activity-code").textContent = snapshot.code;
+  $("activity-max-groups").textContent = String(snapshot.maxGroups);
   $("activity-stage").textContent = STAGE_LABELS[snapshot.stage] ?? snapshot.stage;
   $("activity-round").textContent = snapshot.roundNumber ? `第 ${snapshot.roundNumber} 輪` : "";
   for (const fn of renderers) fn(snapshot, state);
@@ -63,12 +70,22 @@ function start(code, token) {
 async function createActivity() {
   const button = $("create-activity");
   button.disabled = true;
-  const result = await apiRequest("POST", "/api/activities", { body: {} });
+  const rawMax = $("create-max-groups").value.trim();
+  // 原樣送出，由後端驗證並回傳「組數上限須為 1～99 的整數」
+  const maxGroups = rawMax === "" ? null : Number(rawMax);
+  // C7：附上這個瀏覽器上一個活動的老師身分，仍存續時後端會拒絕
+  const lastCode = getLastTeacherCode();
+  const previousToken = lastCode ? getTeacherToken(lastCode) : null;
+  const result = await apiRequest("POST", "/api/activities", {
+    token: previousToken,
+    body: { maxGroups },
+  });
   button.disabled = false;
   showError($("activity-error"), result.ok ? null : result.error);
   if (!result.ok) return;
   const { code, teacherToken } = result.data;
   setTeacherToken(code, teacherToken);
+  setLastTeacherCode(code);
   history.replaceState(null, "", `?code=${encodeURIComponent(code)}`);
   start(code, teacherToken);
 }

@@ -202,17 +202,17 @@ description: "001-activity-session 任務清單"
 
 ### US1 補充：組數上限與一位老師一個活動（2026-11-23 clarify，FR-036、FR-037）
 
-- [ ] T089 [P] [US1] 在 `tests/unit/core/test_input_rules_max_groups.py` 與 `tests/unit/core/test_state_machine_create_and_permissions.py` 測試：
+- [x] T089 [P] [US1] 在 `tests/unit/core/test_input_rules_max_groups.py` 與 `tests/unit/core/test_state_machine_create_and_permissions.py` 測試：
   - `Scenario: US1-AS7`：`InputRules.validate_max_groups` 接受 `1`、`99`；拒絕 `0`、`-1`、`100`、`2.5`、`"6"`、`""`、`None`、`True`，回傳 `INVALID_MAX_GROUPS`；`CreateActivity(max_groups_raw=…)` 不合法時 `Transition.ok is False` 且沒有活動。
   - `Scenario: US1-AS1`：`CreateActivity(max_groups_raw=6)` 後 `activity.max_groups == 6`。
-- [ ] T090 [P] [US1] 在 `tests/contract/test_http_activities.py` 與 `tests/integration/test_us1_teacher.py` 測試：
+- [x] T090 [P] [US1] 在 `tests/contract/test_http_activities.py` 與 `tests/integration/test_us1_teacher.py` 測試：
   - 契約：`POST /api/activities {"maxGroups": 6}` 回 `201 {"code", "teacherToken", "maxGroups", "version"}`；`maxGroups` 不合法時回 `400 INVALID_MAX_GROUPS`；老師快照含 `maxGroups`。
   - `Scenario: US1-AS8`：帶著存續中活動 K 的老師 token 建立新活動時回 `409 TEACHER_HAS_ACTIVE_ACTIVITY`，訊息含 K，活動數不增加；K 結束或取消後，同一 token 可以建立；token 找不到活動（模擬重啟）時可以建立。
   - 同一個 `Idempotency-Key` 重送時，仍回傳同一個活動（不因 C7 檢查而拒絕重送）。
-- [ ] T091 [US1] **核心**：在 `input_rules.py` 實作 `validate_max_groups`（1～99 的 `int`，排除 `bool`）；在 `commands.py` 為 `CreateActivity` 加 `max_groups_raw`；在 `models.py` 為 `Activity` 加 `max_groups`；在 `results.py` 新增 `INVALID_MAX_GROUPS`、`TEACHER_HAS_ACTIVE_ACTIVITY`；`state_machine._create` 驗證後寫入 `max_groups`。
-- [ ] T092 [US1] **服務層**：在 `registry.py` 實作 `find_by_teacher(token_hash)`；在 `service.py` 把 `create` 改為 `create(max_groups_raw, teacher_token, idempotency_key) -> Outcome[CreatedActivity]`：建立鎖內先查重送表，再做 C7 檢查（研究 R10），最後呼叫狀態機。
-- [ ] T093 [US1] **轉接層**：`http_api.py` 的 `POST /activities` 接收本文 `maxGroups`（原樣交給核心）與選填的 `Authorization`，回應加上 `maxGroups`；`SnapshotView.for_teacher` 加上 `maxGroups`。
-- [ ] T094 [US1] **轉接層**：`teacher.html`、`teacher.js` 加入「組數上限」輸入（預設 6，`min=1 max=99`）；建立時附上 `localStorage["teacher:last"]` 那個活動的老師 token；建立成功後更新 `teacher:last`；畫面顯示組數上限。`identity.js` 新增 `getLastTeacherCode`／`setLastTeacherCode`。
+- [x] T091 [US1] **核心**：在 `input_rules.py` 實作 `validate_max_groups`（1～99 的 `int`，排除 `bool`）；在 `commands.py` 為 `CreateActivity` 加 `max_groups_raw`；在 `models.py` 為 `Activity` 加 `max_groups`；在 `results.py` 新增 `INVALID_MAX_GROUPS`、`TEACHER_HAS_ACTIVE_ACTIVITY`；`state_machine._create` 驗證後寫入 `max_groups`。
+- [x] T092 [US1] **服務層**：在 `registry.py` 實作 `find_by_teacher(token_hash)`；在 `service.py` 把 `create` 改為 `create(max_groups_raw, teacher_token, idempotency_key) -> Outcome[CreatedActivity]`：建立鎖內先查重送表，再做 C7 檢查（研究 R10），最後呼叫狀態機。
+- [x] T093 [US1] **轉接層**：`http_api.py` 的 `POST /activities` 接收本文 `maxGroups`（原樣交給核心）與選填的 `Authorization`，回應加上 `maxGroups`；`SnapshotView.for_teacher` 加上 `maxGroups`。
+- [x] T094 [US1] **轉接層**：`teacher.html`、`teacher.js` 加入「組數上限」輸入（預設 6，`min=1 max=99`）；建立時附上 `localStorage["teacher:last"]` 那個活動的老師 token；建立成功後更新 `teacher:last`；畫面顯示組數上限。`identity.js` 新增 `getLastTeacherCode`／`setLastTeacherCode`。
 
 **Checkpoint**: US1 可以獨立測試
 

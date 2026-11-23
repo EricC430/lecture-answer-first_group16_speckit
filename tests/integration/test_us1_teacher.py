@@ -143,9 +143,69 @@ def test_concurrent_create_with_same_key_creates_one_activity(client):
 
     async def both():
         return await asyncio.gather(
-            service.create("same-key"), service.create("same-key")
+            service.create(6, None, "same-key"), service.create(6, None, "same-key")
         )
 
     first, second = call(client, both)
     assert first == second
     assert len(service.registry.codes()) == 1
+
+
+def _create(client, token=None, key=None):
+    headers = {}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    if key:
+        headers["Idempotency-Key"] = key
+    return client.post("/api/activities", json={"maxGroups": 6}, headers=headers)
+
+
+def test_same_browser_cannot_create_second_live_activity(client):
+    """Scenario: US1-AS8
+
+    同一瀏覽器（帶著上一個活動的老師 token）在活動 K 仍存續時建立新活動，
+    回 409 TEACHER_HAS_ACTIVE_ACTIVITY，訊息含 K，活動數不增加。
+    """
+    first = create_activity(client)
+    response = _create(client, token=first.token)
+    assert response.status_code == 409
+    error = response.json()["error"]
+    assert error["code"] == "TEACHER_HAS_ACTIVE_ACTIVITY"
+    assert first.code in error["message"]
+    assert "請先結束或取消它" in error["message"]
+    assert first.token not in response.text
+    assert service_of(client).registry.codes() == frozenset({first.code})
+
+
+def test_after_cancel_same_browser_can_create_again(client):
+    """Scenario: US1-AS8
+
+    活動 K 取消後，同一個瀏覽器可以再建立新活動。
+    """
+    first = create_activity(client)
+    cancelled = client.post(
+        f"/api/activities/{first.code}/cancel", json={}, headers=first.headers
+    )
+    assert cancelled.status_code == 200
+    response = _create(client, token=first.token)
+    assert response.status_code == 201
+    assert response.json()["code"] != first.code
+
+
+def test_unknown_previous_token_allows_create(client):
+    """Scenario: US1-AS8
+
+    瀏覽器保存的上一個老師 token 找不到活動（例如後端重啟）時，可以建立。
+    """
+    response = _create(client, token="token-from-before-restart")
+    assert response.status_code == 201
+
+
+def test_idempotent_retry_is_not_blocked_by_single_activity_rule(client):
+    """T090：同一個 Idempotency-Key 重送時回傳同一個活動，不會被 C7 擋下。"""
+    first = _create(client, key="create-once")
+    assert first.status_code == 201
+    token = first.json()["teacherToken"]
+    retry = _create(client, token=token, key="create-once")
+    assert retry.status_code == 201
+    assert retry.json() == first.json()

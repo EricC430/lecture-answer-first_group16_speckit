@@ -30,6 +30,8 @@ class RejectionReason(StrEnum):
     RULES_LOCKED = "RULES_LOCKED"
     NO_GROUP_SWITCH_DURING_ROUND = "NO_GROUP_SWITCH_DURING_ROUND"
     GROUP_HAS_SUBMISSIONS = "GROUP_HAS_SUBMISSIONS"
+    INVALID_MAX_GROUPS = "INVALID_MAX_GROUPS"
+    TEACHER_HAS_ACTIVE_ACTIVITY = "TEACHER_HAS_ACTIVE_ACTIVITY"
 
     @property
     def http_status(self) -> int:
@@ -54,6 +56,8 @@ _HTTP_STATUS = {
     RejectionReason.RULES_LOCKED: 409,
     RejectionReason.NO_GROUP_SWITCH_DURING_ROUND: 409,
     RejectionReason.GROUP_HAS_SUBMISSIONS: 409,
+    RejectionReason.INVALID_MAX_GROUPS: 400,
+    RejectionReason.TEACHER_HAS_ACTIVE_ACTIVITY: 409,
 }
 
 _MESSAGES = {
@@ -73,6 +77,10 @@ _MESSAGES = {
         "搶答進行中不能換組，請在本輪關閉後再操作，這段期間可以用同組同學的裝置作答。"
     ),
     RejectionReason.GROUP_HAS_SUBMISSIONS: "此組已有作答紀錄，不能刪除。",
+    RejectionReason.INVALID_MAX_GROUPS: "組數上限須為 1～99 的整數。",
+    RejectionReason.TEACHER_HAS_ACTIVE_ACTIVITY: (
+        "你已有一個進行中的活動，請先結束或取消它。"
+    ),
 }
 
 
