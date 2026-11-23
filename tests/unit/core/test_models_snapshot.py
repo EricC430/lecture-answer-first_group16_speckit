@@ -62,12 +62,12 @@ def test_common_snapshot_fields_for_teacher_and_group():
         stage=Stage.ROUND_OPEN,
         version=12,
         question_numbers=(1, 2, 3),
-        groups=MappingProxyType({"第一組": Group("第一組")}),
-        rounds=(Round(1, rules, NOW, MappingProxyType({"第一組": 0})),),
+        groups=MappingProxyType({1: Group(1, "CRED01")}),
+        rounds=(Round(1, rules, NOW, MappingProxyType({1: 0})),),
     )
     for snap in (
         SnapshotView.for_teacher(activity).to_json(),
-        SnapshotView.for_group(activity, "第一組").to_json(),
+        SnapshotView.for_group(activity, 1).to_json(),
     ):
         assert snap["type"] == "snapshot"
         assert snap["code"] == "K7QH2M"

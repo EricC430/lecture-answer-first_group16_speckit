@@ -81,8 +81,11 @@ async def _run() -> dict[str, list[float]]:
                 await service.replace_questions(code, teacher, (1, 2, 3, 4))
                 tokens = [created["teacherToken"]]
                 for g in range(GROUPS):
+                    credential = None
                     for _ in range(DEVICES_PER_GROUP):
-                        joined = await service.join(code, f"第{g + 1}組")
+                        joined = await service.join(code, g + 1, credential)
+                        assert joined.ok, joined
+                        credential = joined.value.credential
                         tokens.append(joined.value.device_token)
                 listeners = []
                 for token in tokens:

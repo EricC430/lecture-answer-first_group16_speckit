@@ -182,6 +182,44 @@ function renderClosing(snapshot) {
 
 onTeacherSnapshot(renderClosing);
 
+// ── US2：組別清單（各組憑證是同組裝置都失去身分時的備援，alignment 2026-11-23 B3）──
+
+const groupActions = [];
+
+/** 讓後續 Story 在每一列組別加上操作按鈕（例如 US7 的刪除）。 */
+export function onGroupRow(addAction) {
+  groupActions.push(addAction);
+}
+
+function cell(text) {
+  const td = document.createElement("td");
+  td.textContent = text;
+  return td;
+}
+
+function renderGroups(snapshot) {
+  const groups = snapshot.groups ?? [];
+  $("groups-empty").hidden = groups.length > 0;
+  $("groups-table").hidden = groups.length === 0;
+  const rows = groups.map((group) => {
+    const tr = document.createElement("tr");
+    tr.append(
+      cell(`第 ${group.number} 組`),
+      cell(group.credential),
+      cell(String(group.deviceCount)),
+      cell(String(group.successCount)),
+      cell(group.hasSubmissions ? "有" : "無"),
+    );
+    const actions = document.createElement("td");
+    for (const add of groupActions) add(actions, group, snapshot);
+    tr.append(actions);
+    return tr;
+  });
+  $("groups-body").replaceChildren(...rows);
+}
+
+onTeacherSnapshot(renderGroups);
+
 function init() {
   $("create-activity").addEventListener("click", createActivity);
   $("open-round-panel").addEventListener("submit", openRound);

@@ -43,9 +43,9 @@ def test_open_two_questions_creates_round_one_with_baseline():
 
     選兩題開輪：建立第 1 輪，保存各組歷史成功次數基準，進入搶答中，版本加 1。
     """
-    activity = with_groups(with_questions(new_activity()), "第一組", "第二組")
+    activity = with_groups(with_questions(new_activity()), 1, 2)
     groups = dict(activity.groups)
-    groups["第二組"] = Group("第二組", success_count=3)
+    groups[2] = Group(2, "CRED02", success_count=3)
     activity = dataclasses.replace(activity, groups=MappingProxyType(groups))
     transition = open_round(activity, question_numbers=(1, 3))
     new = transition.activity
@@ -55,7 +55,7 @@ def test_open_two_questions_creates_round_one_with_baseline():
     current = new.current_round
     assert current.number == 1
     assert current.rules.question_numbers == (1, 3)
-    assert dict(current.baseline) == {"第一組": 0, "第二組": 3}
+    assert dict(current.baseline) == {1: 0, 2: 3}
     assert current.opened_at == NOW
     assert current.closed is False
 

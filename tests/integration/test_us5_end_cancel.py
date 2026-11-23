@@ -35,7 +35,7 @@ def test_end_shows_unsolved_on_all_pages(client, teacher):
 
     定案後第 3 題無人成功 → 結束：回應與所有頁面的快照都列出未成功題（含第 3 題）。
     """
-    device = join_group(client, teacher.code, "第一組")
+    device = join_group(client, teacher.code, 1)
     _to_final(client, teacher)
     with (
         client.websocket_connect(f"/ws/activities/{teacher.code}") as t_ws,
@@ -97,7 +97,7 @@ def test_cancel_while_preparing(client, teacher):
 
     準備中取消 → 已取消；之後控制操作被拒、學生畫面顯示已取消、不提供匯出。
     """
-    device = join_group(client, teacher.code, "第一組")
+    device = join_group(client, teacher.code, 1)
     with client.websocket_connect(f"/ws/activities/{teacher.code}") as s_ws:
         s_ws.send_json({"type": "auth", "token": device})
         s_ws.receive_json()
@@ -124,7 +124,7 @@ def test_ended_rejects_submission_and_join(client, teacher, fake_clock):
     _post(client, teacher, "/end")
     service = service_of(client)
     assert service.accepts_submission(teacher.code, fake_clock.now()) is False
-    joined = call(client, service.join, teacher.code, "新的組")
+    joined = call(client, service.join, teacher.code, 2)
     assert not joined.ok
     assert joined.message == "活動已結束，無法加入。"
 

@@ -29,7 +29,7 @@ apply = ActivityStateMachine.apply
 
 
 def opened(countdown=None, questions=(1, 2)):
-    activity = with_groups(with_questions(new_activity()), "第一組", "第二組")
+    activity = with_groups(with_questions(new_activity()), 1, 2)
     return apply(
         activity, OpenRound(TEACHER, questions, False, countdown), NOW
     ).activity
@@ -124,21 +124,21 @@ def test_finalize_then_next_round_only_unsolved():
     只能選未成功題。
     """
     closed = apply(opened(questions=(1, 2)), CloseRound(TEACHER), NOW).activity
-    outcome = FinalizeOutcome(frozenset({1}), MappingProxyType({"第一組": 1}))
+    outcome = FinalizeOutcome(frozenset({1}), MappingProxyType({1: 1}))
     final = apply(closed, Finalize(TEACHER, outcome), NOW)
     assert final.ok and final.changed
     new = final.activity
     assert new.stage is Stage.RESULT_FINAL
     assert new.solved_questions == frozenset({1})
-    assert new.groups["第一組"].success_count == 1
-    assert new.groups["第二組"].success_count == 0
+    assert new.groups[1].success_count == 1
+    assert new.groups[2].success_count == 0
 
     reject = apply(new, OpenRound(TEACHER, (1, 3)), NOW)
     assert reject.rejection is RejectionReason.INVALID_SELECTION
     second = apply(new, OpenRound(TEACHER), NOW).activity
     assert second.current_round.number == 2
     assert second.current_round.rules.question_numbers == (2, 3, 4)
-    assert dict(second.current_round.baseline) == {"第一組": 1, "第二組": 0}
+    assert dict(second.current_round.baseline) == {1: 1, 2: 0}
 
 
 @pytest.mark.parametrize(
@@ -146,7 +146,7 @@ def test_finalize_then_next_round_only_unsolved():
     [
         FinalizeOutcome(frozenset({3})),  # 不是本輪的題目
         FinalizeOutcome(frozenset(), MappingProxyType({"不存在的組": 1})),
-        FinalizeOutcome(frozenset(), MappingProxyType({"第一組": -1})),
+        FinalizeOutcome(frozenset(), MappingProxyType({1: -1})),
     ],
 )
 def test_invalid_outcome_rejected(outcome):

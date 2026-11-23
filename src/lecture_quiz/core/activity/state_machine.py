@@ -18,6 +18,7 @@ from lecture_quiz.core.activity.commands import (
     CloseRound,
     Command,
     CreateActivity,
+    Device,
     EndActivity,
     Finalize,
     JoinGroup,
@@ -204,16 +205,31 @@ def _create(
 def _join_group(
     activity: Activity, command: Command, now: datetime, issued: IssuedSecrets | None
 ) -> Transition:
-    """最小的組別加入：組別不存在就建立，並登記裝置（US2 會改為組號＋憑證）。"""
+    """以組號加入（FR-006～FR-012）：新組號建立組別；既有組號比對憑證。"""
     assert isinstance(command, JoinGroup)
     if issued is None or not issued.device_token_hash:
         raise ValueError("加入組別需要服務層傳入裝置 token 雜湊")
+    actor = command.actor
+    if isinstance(actor, Device) and actor.token_hash in activity.devices:
+        return _reject(activity, RejectionReason.ALREADY_IN_GROUP)
+    try:
+        number = InputRules.normalize_group_number(
+            command.number_raw, activity.max_groups
+        )
+    except InvalidInputError as exc:
+        return _reject(activity, exc.reason)
     groups = dict(activity.groups)
-    groups.setdefault(command.group_name, Group(command.group_name))
+    existing = groups.get(number)
+    if existing is None:
+        if not issued.group_credential:
+            raise ValueError("建立新組需要服務層傳入組別加入憑證")
+        groups[number] = Group(number, issued.group_credential)
+    else:
+        given = InputRules.normalize_credential(command.credential_raw)
+        if not hmac.compare_digest(given.encode(), existing.join_credential.encode()):
+            return _reject(activity, RejectionReason.BAD_CREDENTIAL)
     devices = dict(activity.devices)
-    devices[issued.device_token_hash] = DeviceIdentity(
-        issued.device_token_hash, command.group_name
-    )
+    devices[issued.device_token_hash] = DeviceIdentity(issued.device_token_hash, number)
     updated = dataclasses.replace(
         activity, groups=freeze(groups), devices=freeze(devices)
     )
@@ -238,7 +254,7 @@ def _open_round(
         return _reject(activity, exc.reason)
     deadline = now + timedelta(seconds=countdown) if countdown is not None else None
     rules = RoundRules(selected, bool(command.fair_mode), countdown, deadline)
-    baseline = freeze({name: g.success_count for name, g in activity.groups.items()})
+    baseline = freeze({n: g.success_count for n, g in activity.groups.items()})
     new_round = Round(len(activity.rounds) + 1, rules, now, baseline)
     updated = dataclasses.replace(
         activity, stage=Stage.ROUND_OPEN, rounds=(*activity.rounds, new_round)
@@ -300,10 +316,8 @@ def _finalize(
     ):
         return _reject(activity, RejectionReason.INVALID_SELECTION)
     groups = {
-        name: dataclasses.replace(
-            g, success_count=g.success_count + increments.get(name, 0)
-        )
-        for name, g in activity.groups.items()
+        n: dataclasses.replace(g, success_count=g.success_count + increments.get(n, 0))
+        for n, g in activity.groups.items()
     }
     updated = dataclasses.replace(
         activity,

@@ -3,7 +3,7 @@
 共用的錯誤格式、例外處理與請求日誌在 `adapters/web/common.py`；這裡只負責
 把服務層的 `Outcome` 轉成 HTTP 回應，以及 `RejectionReason` → 狀態碼。
 
-組別加入（#3）、離開本組（#4）、刪除組別（#5）待 US2、US7 實作。
+離開本組（#4）、刪除組別（#5）待 US7 實作。
 """
 
 from typing import Annotated, TypeVar
@@ -35,6 +35,16 @@ class CreateActivityBody(BaseModel):
 
     # 原始值交給核心的 InputRules 驗證，錯誤時回 INVALID_MAX_GROUPS
     max_groups: JsonValue = Field(default=None, alias="maxGroups")
+
+
+class JoinGroupBody(BaseModel):
+    """`POST /activities/{code}/groups/join` 的本文。"""
+
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    # 原始值交給核心的 InputRules 正規化，錯誤時回 INVALID_GROUP_NUMBER
+    group_number: JsonValue = Field(default=None, alias="groupNumber")
+    credential: JsonValue = None
 
 
 class OpenRoundBody(BaseModel):
@@ -136,6 +146,37 @@ def create_router(app: FastAPI) -> APIRouter:
         outcome = service().snapshot(code, requester_for(code, token))
         snapshot = unwrap(request, code, token, outcome)
         return ok(request, code, snapshot.version, snapshot.to_json())
+
+    @router.post("/activities/{code}/groups/join")
+    async def join_group(
+        request: Request,
+        code: str,
+        token: Token,
+        key: IdempotencyKey,
+        body: JoinGroupBody | None = None,
+    ) -> JsonDict:
+        """以組號加入組別（#3）；已是某組成員的裝置回 409 ALREADY_IN_GROUP。"""
+        code = normalize_code_input(code)
+        body = body or JoinGroupBody()
+        outcome = await service().join(
+            code,
+            body.group_number,
+            body.credential,
+            requester_for(code, token),
+            key,
+        )
+        joined = unwrap(request, code, token, outcome)
+        return ok(
+            request,
+            code,
+            joined.version,
+            {
+                "deviceToken": joined.device_token,
+                "groupNumber": joined.group_number,
+                "credential": joined.credential,
+                "version": joined.version,
+            },
+        )
 
     @router.post("/activities/{code}/rounds", status_code=201)
     async def open_round(

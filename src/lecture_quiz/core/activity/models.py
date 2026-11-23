@@ -72,18 +72,17 @@ class TeacherIdentity:
 
 @dataclass(frozen=True)
 class Group:
-    """組別。
-
-    001 目前只實作最小的組別資料；組號、組數上限與組別加入憑證
-    待 US2 依 alignment 2026-11-22 決議補上。
+    """組別，以組號識別（alignment 2026-11-23 A1）。
 
     Attributes:
-        name: 組別識別（目前為組名；US2 改為組號）。
+        number: 組號，1～`Activity.max_groups`。
+        join_credential: 6 碼組別加入憑證（由服務層產生）。
         success_count: 歷史成功次數，只由定案增加。
         has_submissions: 是否已有提交紀錄（由 003 標記）。
     """
 
-    name: str
+    number: int
+    join_credential: str
     success_count: int = 0
     has_submissions: bool = False
 
@@ -94,11 +93,11 @@ class DeviceIdentity:
 
     Attributes:
         token_hash: 裝置 token 的 SHA-256。
-        group_name: 所屬組別。
+        group_number: 所屬組號。
     """
 
     token_hash: str
-    group_name: str
+    group_number: int
 
 
 @dataclass(frozen=True)
@@ -126,7 +125,7 @@ class Round:
         number: 輪次編號，從 1 開始。
         rules: 規則快照。
         opened_at: 開輪時間。
-        baseline: 開輪當下各組的歷史成功次數。
+        baseline: 開輪當下各組（key 為組號）的歷史成功次數。
         closed: 是否已關輪（只能由 False 變成 True 一次）。
         closed_at: 關輪時間。
         close_cause: 先生效的關輪來源。
@@ -135,7 +134,7 @@ class Round:
     number: int
     rules: RoundRules
     opened_at: datetime
-    baseline: Mapping[str, int]
+    baseline: Mapping[int, int]
     closed: bool = False
     closed_at: datetime | None = None
     close_cause: CloseCause | None = None
@@ -154,7 +153,7 @@ class Activity:
         max_groups: 組數上限 N（1～99），建立後不變。
         question_numbers: 題號（由 002 的成功匯入提供）。
         solved_questions: 已成功題號（由定案結果提供）。
-        groups: 組別，key 為組別識別。
+        groups: 組別，key 為組號。
         devices: 學生裝置，key 為裝置 token 的雜湊。
         rounds: 輪次，最後一個是目前輪次。
     """
@@ -167,7 +166,7 @@ class Activity:
     max_groups: int
     question_numbers: tuple[int, ...] = ()
     solved_questions: frozenset[int] = frozenset()
-    groups: Mapping[str, Group] = field(default_factory=lambda: freeze({}))
+    groups: Mapping[int, Group] = field(default_factory=lambda: freeze({}))
     devices: Mapping[str, DeviceIdentity] = field(default_factory=lambda: freeze({}))
     rounds: tuple[Round, ...] = ()
 

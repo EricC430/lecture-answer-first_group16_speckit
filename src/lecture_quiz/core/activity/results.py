@@ -24,7 +24,7 @@ class RejectionReason(StrEnum):
     NO_QUESTIONS = "NO_QUESTIONS"
     INVALID_SELECTION = "INVALID_SELECTION"
     INVALID_COUNTDOWN = "INVALID_COUNTDOWN"
-    INVALID_GROUP_NAME = "INVALID_GROUP_NAME"
+    INVALID_GROUP_NUMBER = "INVALID_GROUP_NUMBER"
     BAD_CREDENTIAL = "BAD_CREDENTIAL"
     ACTIVITY_GONE = "ACTIVITY_GONE"
     RULES_LOCKED = "RULES_LOCKED"
@@ -32,6 +32,8 @@ class RejectionReason(StrEnum):
     GROUP_HAS_SUBMISSIONS = "GROUP_HAS_SUBMISSIONS"
     INVALID_MAX_GROUPS = "INVALID_MAX_GROUPS"
     TEACHER_HAS_ACTIVE_ACTIVITY = "TEACHER_HAS_ACTIVE_ACTIVITY"
+    ALREADY_IN_GROUP = "ALREADY_IN_GROUP"
+    NOT_IN_GROUP = "NOT_IN_GROUP"
 
     @property
     def http_status(self) -> int:
@@ -50,7 +52,7 @@ _HTTP_STATUS = {
     RejectionReason.NO_QUESTIONS: 409,
     RejectionReason.INVALID_SELECTION: 400,
     RejectionReason.INVALID_COUNTDOWN: 400,
-    RejectionReason.INVALID_GROUP_NAME: 400,
+    RejectionReason.INVALID_GROUP_NUMBER: 400,
     RejectionReason.BAD_CREDENTIAL: 403,
     RejectionReason.ACTIVITY_GONE: 410,
     RejectionReason.RULES_LOCKED: 409,
@@ -58,6 +60,8 @@ _HTTP_STATUS = {
     RejectionReason.GROUP_HAS_SUBMISSIONS: 409,
     RejectionReason.INVALID_MAX_GROUPS: 400,
     RejectionReason.TEACHER_HAS_ACTIVE_ACTIVITY: 409,
+    RejectionReason.ALREADY_IN_GROUP: 409,
+    RejectionReason.NOT_IN_GROUP: 403,
 }
 
 _MESSAGES = {
@@ -66,10 +70,10 @@ _MESSAGES = {
     RejectionReason.NO_QUESTIONS: "請先成功匯入學習單，再開始搶答。",
     RejectionReason.INVALID_SELECTION: "請至少選擇一題尚未有人答對的題目。",
     RejectionReason.INVALID_COUNTDOWN: "倒數秒數須為 1～3600 的整數。",
-    RejectionReason.INVALID_GROUP_NAME: "組名不能是空白，也不能包含換行或 Tab。",
+    RejectionReason.INVALID_GROUP_NUMBER: "組號須為 1～N 的整數。",
     RejectionReason.BAD_CREDENTIAL: (
-        "此組名已被使用；若你是這一組的成員，請向同組同學查看本組加入憑證，"
-        "否則請換一個組名。"
+        "此組已有同學加入；若你是這一組的成員，請向同組同學查看本組加入憑證，"
+        "否則請確認組號。"
     ),
     RejectionReason.ACTIVITY_GONE: "活動已失效，請重新建立或加入活動。",
     RejectionReason.RULES_LOCKED: "本輪進行中，題目、模式與截止時間不能修改。",
@@ -81,6 +85,8 @@ _MESSAGES = {
     RejectionReason.TEACHER_HAS_ACTIVE_ACTIVITY: (
         "你已有一個進行中的活動，請先結束或取消它。"
     ),
+    RejectionReason.ALREADY_IN_GROUP: "這台裝置已經在某一組，請先離開本組。",
+    RejectionReason.NOT_IN_GROUP: "這台裝置目前沒有加入任何組別。",
 }
 
 
@@ -121,18 +127,27 @@ class Transition:
 
 
 def describe_rejection(
-    reason: RejectionReason, stage: Stage | None, command: Command | None
+    reason: RejectionReason,
+    stage: Stage | None,
+    command: Command | None,
+    activity: Activity | None = None,
 ) -> str:
-    """產生可修正的中文拒絕訊息；`STAGE_NOT_ALLOWED` 依「階段 × 操作」產生。
+    """產生可修正的中文拒絕訊息。
+
+    `STAGE_NOT_ALLOWED` 依「階段 × 操作」產生；組別相關的訊息依活動帶入組號或組數上限。
 
     Args:
         reason: 拒絕原因。
         stage: 被拒絕時的活動階段。
         command: 被拒絕的操作。
+        activity: 被拒絕時的活動（用來帶入組號、組數上限）。
 
     Returns:
         中文訊息，不含任何 token 或憑證。
     """
+    group_message = _describe_group_rejection(reason, command, activity)
+    if group_message is not None:
+        return group_message
     if reason is not RejectionReason.STAGE_NOT_ALLOWED or stage is None:
         return reason.default_message
     if stage.is_terminal:
@@ -156,3 +171,35 @@ def describe_rejection(
     if isinstance(command, ReplaceQuestions):
         return "只有準備中可以匯入學習單。"
     return f"目前是「{stage.label}」，不能進行這個操作。"
+
+
+def _describe_group_rejection(
+    reason: RejectionReason, command: Command | None, activity: Activity | None
+) -> str | None:
+    """組別相關拒絕的訊息（帶入組號或 N）；不屬於這類時回傳 `None`。"""
+    if activity is None:
+        return None
+    if reason is RejectionReason.INVALID_GROUP_NUMBER:
+        return f"組號須為 1～{activity.max_groups} 的整數。"
+    if reason is RejectionReason.BAD_CREDENTIAL and isinstance(command, JoinGroup):
+        number = _parse_number(command.number_raw, activity.max_groups)
+        if number is not None:
+            return (
+                f"第 {number} 組已有同學加入；若你是這一組的成員，"
+                "請向同組同學查看本組加入憑證，否則請確認組號。"
+            )
+    if reason is RejectionReason.ALREADY_IN_GROUP and isinstance(command, JoinGroup):
+        token_hash = getattr(command.actor, "token_hash", None)
+        device = activity.devices.get(token_hash) if token_hash else None
+        if device is not None:
+            return f"這台裝置已經在第 {device.group_number} 組，請先離開本組。"
+    return None
+
+
+def _parse_number(raw: object, max_groups: int) -> int | None:
+    from lecture_quiz.core.activity.input_rules import InputRules, InvalidInputError
+
+    try:
+        return InputRules.normalize_group_number(raw, max_groups)
+    except InvalidInputError:
+        return None

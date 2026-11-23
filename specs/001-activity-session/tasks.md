@@ -75,7 +75,7 @@ description: "001-activity-session 任務清單"
 
 ### 核心（純函式）
 
-- [ ] T007 [P] 部分完成；US2 時一併完成（`Activity.max_groups`、`Group.number`、`Group.join_credential`、`DeviceIdentity.group_number`、各 Mapping 以組號為 key，研究 R9）。在 `src/lecture_quiz/core/activity/models.py` 建立 frozen dataclass，欄位與規則照 [data-model.md](data-model.md) 原文：
+- [x] T007 [P] 2026-11-23 隨 US2 完成（`Activity.max_groups`、`Group.number`、`Group.join_credential`、`DeviceIdentity.group_number`、各 Mapping 以組號為 key，研究 R9）。在 `src/lecture_quiz/core/activity/models.py` 建立 frozen dataclass，欄位與規則照 [data-model.md](data-model.md) 原文：
   - `Stage`（`PREPARING`、`ROUND_OPEN`、`RESULT_PENDING`、`RESULT_FINAL`、`ENDED`、`CANCELLED`；`is_terminal` 屬性）。
   - `TeacherIdentity(token_hash)`、`Group(number, join_credential, success_count, has_submissions)`、`DeviceIdentity(token_hash, group_number)`。
   - `RoundRules(question_numbers, fair_mode, countdown_seconds, deadline)`。
@@ -228,11 +228,11 @@ description: "001-activity-session 任務清單"
 
 ### Tests for User Story 2 (REQUIRED) ⚠️
 
-- [ ] T030 [P] [US2] 在 `tests/unit/core/test_input_rules_group_number.py` 測試 `normalize_group_number(raw, max_groups=6)`：
+- [x] T030 [P] [US2] 在 `tests/unit/core/test_input_rules_group_number.py` 測試 `normalize_group_number(raw, max_groups=6)`：
   - 接受 `3`、`"3"`、`" 3 "`、`"03"`、`"３"`、`"０３"`、`6`、`1`，都回傳整數。
   - 拒絕 `0`、`7`、`-1`、`2.5`、`"2.5"`、`"三"`、`"3組"`、`""`、`"　"`、`None`、`True`、`[3]`，回傳 `INVALID_GROUP_NUMBER`；訊息為「組號須為 1～6 的整數。」。
   - `normalize_credential`：`" q8mz3r "` 變成 `"Q8MZ3R"`；`None` 變成 `""`。
-- [ ] T031 [P] [US2] 在 `tests/unit/core/test_state_machine_join.py` 測試：
+- [x] T031 [P] [US2] 在 `tests/unit/core/test_state_machine_join.py` 測試：
   - `Scenario: US2-AS1`：組號 `" ０３ "` 建立第 3 組，並為該裝置建立 `DeviceIdentity(group_number=3)`；憑證來自 `issued.group_credential`。
   - `Scenario: US2-AS2`：既有組號加上正確憑證（大小寫、首尾空白不影響）時，新增裝置，不新增組。
   - `Scenario: US2-AS4`：既有組號不附憑證或憑證錯誤時，回傳 `BAD_CREDENTIAL`，`activity` 不變，訊息含組號、不含憑證。
@@ -240,15 +240,15 @@ description: "001-activity-session 任務清單"
   - `Scenario: US2-AS6`：`ENDED`、`CANCELLED` 時拒絕加入，訊息依階段寫成「活動已結束／已取消」。
   - `Scenario: US2-AS7`：在 `ROUND_OPEN` 加入新組，`success_count == 0`，`stage` 不變。
   - `Scenario: US2-AS9`：`Device` 已在 `devices` 中時回傳 `ALREADY_IN_GROUP`，`activity` 不變。
-- [ ] T032 [P] [US2] 在 `tests/unit/core/test_snapshot_view_groups.py` 測試：
+- [x] T032 [P] [US2] 在 `tests/unit/core/test_snapshot_view_groups.py` 測試：
   - `Scenario: US2-AS3`：`for_group` 只含 `ownGroup`（`number`、`credential`、`successCount`）；`for_teacher` 的 `groups` 依組號排序，含每一組的 `credential`。
   - FR-030：`for_group` 的序列化 JSON 不含任何其他組的組號、憑證，也不含 `groups`、`maxGroups`。
-- [ ] T033 [P] [US2] 在 `tests/contract/test_http_join.py` 測試契約：
+- [x] T033 [P] [US2] 在 `tests/contract/test_http_join.py` 測試契約：
   - `POST /groups/join {"groupNumber": 3}` 回 `200 {"deviceToken", "groupNumber", "credential", "version"}`。
   - 代碼輸入 `" k7qh2m "` 視為 `K7QH2M`；代碼不存在且未帶 token 時回 404。
   - 已帶有效裝置 token 再加入時，回 `409 ALREADY_IN_GROUP`「請先離開本組」。
   - 錯誤回應不含任何憑證或 token。
-- [ ] T034 [P] [US2] 在 `tests/integration/test_us2_join.py` 以 HTTP 加 WebSocket 測試 `Scenario: US2-AS1`～`US2-AS9`：
+- [x] T034 [P] [US2] 在 `tests/integration/test_us2_join.py` 以 HTTP 加 WebSocket 測試 `Scenario: US2-AS1`～`US2-AS9`：
   - AS2：兩個裝置的快照中，`ownGroup` 相同。
   - AS3：其他組的快照中沒有第 3 組的憑證；老師快照有每一組的憑證。
   - AS4：錯誤訊息含「向同組同學查看本組加入憑證」，而且不含憑證本身。
@@ -256,21 +256,21 @@ description: "001-activity-session 任務清單"
 
 ### Implementation for User Story 2
 
-- [ ] T035 [P] [US2] **核心**：在 `src/lecture_quiz/core/activity/input_rules.py` 實作 `normalize_group_number(raw, max_groups)`（研究 R9：`int` 或半形／全形數字字串、前導零與首尾空白、1～N）與 `normalize_credential(raw)`；`results.py` 把 `INVALID_GROUP_NAME` 改為 `INVALID_GROUP_NUMBER`，新增 `ALREADY_IN_GROUP`，`BAD_CREDENTIAL` 訊息改為組號版；訊息需要帶入組號或 N 時由 `describe_rejection` 產生。
-- [ ] T036 [US2] **核心**：在 `src/lecture_quiz/core/activity/state_machine.py` 實作 `JoinGroup(number_raw, credential_raw)`：
+- [x] T035 [P] [US2] **核心**：在 `src/lecture_quiz/core/activity/input_rules.py` 實作 `normalize_group_number(raw, max_groups)`（研究 R9：`int` 或半形／全形數字字串、前導零與首尾空白、1～N）與 `normalize_credential(raw)`；`results.py` 把 `INVALID_GROUP_NAME` 改為 `INVALID_GROUP_NUMBER`，新增 `ALREADY_IN_GROUP`，`BAD_CREDENTIAL` 訊息改為組號版；訊息需要帶入組號或 N 時由 `describe_rejection` 產生。
+- [x] T036 [US2] **核心**：在 `src/lecture_quiz/core/activity/state_machine.py` 實作 `JoinGroup(number_raw, credential_raw)`：
   - 允許的階段：非終止階段。
   - `Device` 已在 `devices` 中時拒絕（`ALREADY_IN_GROUP`）。
   - 新組號：使用 `issued.group_credential` 建立 `Group(number, join_credential)`。
   - 既有組號：用 `hmac.compare_digest` 比對正規化後的憑證。
   - 新增 `DeviceIdentity(token_hash, group_number)`，`token_hash` 來自 `issued`。
   - `models.py`：`Group.number`、`DeviceIdentity.group_number`，`groups`、`Round.baseline` 以組號為 key；`FinalizeOutcome.success_increments` 以組號為 key（T007、T008 一併完成）。
-- [ ] T037 [US2] **核心**：在 `src/lecture_quiz/core/activity/snapshot_view.py` 補上 `for_group(activity, group_number)` 的 `ownGroup`（`number`、`credential`、`successCount`）與 `for_teacher` 的 `groups`（依組號排序：`number`、`credential`、`successCount`、`hasSubmissions`、`deviceCount`）。
-- [ ] T038 [US2] **服務層**：在 `src/lecture_quiz/app/activity/service.py` 實作：
+- [x] T037 [US2] **核心**：在 `src/lecture_quiz/core/activity/snapshot_view.py` 補上 `for_group(activity, group_number)` 的 `ownGroup`（`number`、`credential`、`successCount`）與 `for_teacher` 的 `groups`（依組號排序：`number`、`credential`、`successCount`、`hasSubmissions`、`deviceCount`）。
+- [x] T038 [US2] **服務層**：在 `src/lecture_quiz/app/activity/service.py` 實作：
   - `join(code, number_raw, credential_raw, requester, idempotency_key) -> Outcome[JoinedDevice]`：產生憑證與裝置 token，回傳原始 token 一次與該組憑證。
   - `resolve_device(code, device_token) -> Outcome[DeviceContext]`：給 003 使用。
   - `ExportView.groups` 依組號排序。
-- [ ] T039 [US2] **轉接層**：在 `src/lecture_quiz/adapters/web/http_api.py` 實作 `POST /activities/{code}/groups/join`（本文 `groupNumber`、`credential` 原樣交給核心）；`GET snapshot` 與 WebSocket 的學生連線已依裝置身分以 `for_group` 裁切，改用組號。
-- [ ] T040 [US2] **轉接層**：更新 `src/lecture_quiz/adapters/static/student.html` 與 `js/student.js`：
+- [x] T039 [US2] **轉接層**：在 `src/lecture_quiz/adapters/web/http_api.py` 實作 `POST /activities/{code}/groups/join`（本文 `groupNumber`、`credential` 原樣交給核心）；`GET snapshot` 與 WebSocket 的學生連線已依裝置身分以 `for_group` 裁切，改用組號。
+- [x] T040 [US2] **轉接層**：更新 `src/lecture_quiz/adapters/static/student.html` 與 `js/student.js`：
   - 加入表單：活動代碼（網址有 `?code=` 時預填）、組號、選填的憑證。
   - 成功後把裝置 token 存到 `sessionStorage`，網址改為 `?code=`，並常駐顯示「第 n 組」與「本組加入憑證」。
   - 重新整理時自動恢復身分。

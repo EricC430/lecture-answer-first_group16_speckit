@@ -1,7 +1,6 @@
-"""輸入規則（純函式）：組數上限、倒數秒數、選題、題號。
+"""輸入規則（純函式）：組數上限、組號、憑證、倒數秒數、選題、題號。
 
 驗證失敗時拋出 `InvalidInputError`，由狀態機轉成拒絕原因；不產生任何部分結果（FR-031）。
-組名正規化（`normalize_group_name`）待 US2 依組號決議實作。
 """
 
 from collections.abc import Sequence
@@ -10,6 +9,8 @@ from lecture_quiz.core.activity.results import RejectionReason
 
 MIN_MAX_GROUPS = 1
 MAX_MAX_GROUPS = 99
+_FULLWIDTH_DIGITS = str.maketrans("０１２３４５６７８９", "0123456789")
+_ASCII_DIGITS = frozenset("0123456789")
 MIN_COUNTDOWN = 1
 MAX_COUNTDOWN = 3600
 
@@ -54,6 +55,48 @@ class InputRules:
         if _is_int(raw) and MIN_MAX_GROUPS <= raw <= MAX_MAX_GROUPS:  # type: ignore[operator]
             return int(raw)  # type: ignore[call-overload]
         raise InvalidInputError(RejectionReason.INVALID_MAX_GROUPS)
+
+    @staticmethod
+    def normalize_group_number(raw: object, max_groups: int) -> int:
+        """把組號輸入轉成整數並檢查 1～N（FR-006、研究 R9）。
+
+        接受 JSON 整數（布林除外），或由半形／全形數字組成的字串；字串的首尾空白
+        （含全形空白）與前導零會被忽略。
+
+        Args:
+            raw: 原始輸入。
+            max_groups: 活動的組數上限 N。
+
+        Returns:
+            組號。
+
+        Raises:
+            InvalidInputError: 格式不符或不在 1～N 之間。
+        """
+        if _is_int(raw):
+            value = int(raw)  # type: ignore[call-overload]
+        elif isinstance(raw, str):
+            text = raw.strip().translate(_FULLWIDTH_DIGITS)
+            if not text or not set(text) <= _ASCII_DIGITS:
+                raise InvalidInputError(RejectionReason.INVALID_GROUP_NUMBER)
+            value = int(text)
+        else:
+            raise InvalidInputError(RejectionReason.INVALID_GROUP_NUMBER)
+        if not 1 <= value <= max_groups:
+            raise InvalidInputError(RejectionReason.INVALID_GROUP_NUMBER)
+        return value
+
+    @staticmethod
+    def normalize_credential(raw: object) -> str:
+        """憑證輸入去除首尾空白並轉大寫；不是字串時視為空字串。
+
+        Args:
+            raw: 原始輸入。
+
+        Returns:
+            正規化後的憑證。
+        """
+        return raw.strip().upper() if isinstance(raw, str) else ""
 
     @staticmethod
     def validate_countdown(raw: object) -> int | None:

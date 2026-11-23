@@ -1,8 +1,8 @@
-// 001 學生頁：以本分頁保存的裝置身分恢復並同步顯示活動狀態。
-// 加入表單待 US2（組號＋組數上限）實作；所有不可信文字一律用 textContent（原則 V）。
+// 001 學生頁：以組號加入組別、以本分頁保存的裝置身分恢復，並同步顯示活動狀態。
+// 所有不可信文字一律用 textContent（原則 V）。
 
-import { showError } from "./api.js";
-import { clearIdentity, getDeviceToken, normalizeCode } from "./identity.js";
+import { apiRequest, showError } from "./api.js";
+import { clearIdentity, getDeviceToken, normalizeCode, setDeviceToken } from "./identity.js";
 import { startCountdown } from "./countdown.js";
 import { connectSync } from "./sync.js";
 
@@ -29,11 +29,17 @@ export function onStudentSnapshot(render) {
   renderers.push(render);
 }
 
+function showJoinForm() {
+  $("student-info").hidden = true;
+  $("student-join").hidden = false;
+}
+
 function render(snapshot) {
-  $("student-join-pending").hidden = true;
+  $("student-join").hidden = true;
   $("student-info").hidden = false;
   $("student-code").textContent = snapshot.code;
-  $("student-group").textContent = snapshot.ownGroup ? snapshot.ownGroup.name : "";
+  $("student-group").textContent = snapshot.ownGroup ? `第 ${snapshot.ownGroup.number} 組` : "";
+  $("student-credential").textContent = snapshot.ownGroup ? snapshot.ownGroup.credential : "";
   $("student-success").textContent = snapshot.ownGroup ? String(snapshot.ownGroup.successCount) : "";
   $("student-stage").textContent = STAGE_LABELS[snapshot.stage] ?? snapshot.stage;
   $("student-round").textContent = snapshot.roundNumber ? `第 ${snapshot.roundNumber} 輪` : "";
@@ -49,24 +55,60 @@ function render(snapshot) {
   for (const fn of renderers) fn(snapshot);
 }
 
-function init() {
-  const code = normalizeCode(new URLSearchParams(location.search).get("code"));
-  if (!code) return;
-  const token = getDeviceToken(code);
-  if (!token) return;
-  connectSync(code, token, {
+const state = { code: null, sync: null };
+
+/** 讓後續 Story 取得目前活動代碼與裝置 token。 */
+export function currentIdentity() {
+  return { code: state.code, token: state.code ? getDeviceToken(state.code) : null };
+}
+
+/** 以本分頁的裝置身分開始同步；身分失效時回到加入畫面。 */
+export function startSync(code, token) {
+  state.code = code;
+  if (state.sync) state.sync.close();
+  state.sync = connectSync(code, token, {
     onSnapshot: render,
     onGone: () => {
-      $("student-info").hidden = true;
-      $("student-join-pending").hidden = false;
+      clearIdentity(code);
+      showJoinForm();
     },
     onUnauthorized: (reason) => {
       clearIdentity(code);
-      $("student-info").hidden = true;
-      $("student-join-pending").hidden = false;
-      showError($("student-error"), { message: UNAUTHORIZED_MESSAGES[reason] ?? UNAUTHORIZED_MESSAGES.INVALID_TOKEN });
+      showJoinForm();
+      showError($("student-error"), {
+        message: UNAUTHORIZED_MESSAGES[reason] ?? UNAUTHORIZED_MESSAGES.INVALID_TOKEN,
+      });
     },
   });
+}
+
+async function joinGroup(event) {
+  event.preventDefault();
+  const code = normalizeCode($("join-code").value);
+  const credential = $("join-credential").value.trim();
+  const button = $("student-join").querySelector("button");
+  button.disabled = true;
+  // 組號原樣送出，由後端正規化並回傳「組號須為 1～N 的整數」
+  const result = await apiRequest("POST", `/api/activities/${encodeURIComponent(code)}/groups/join`, {
+    body: { groupNumber: $("join-number").value, credential: credential || null },
+  });
+  button.disabled = false;
+  showError($("student-error"), result.ok ? null : result.error);
+  if (!result.ok) return;
+  setDeviceToken(code, result.data.deviceToken);
+  $("join-credential").value = "";
+  history.replaceState(null, "", `?code=${encodeURIComponent(code)}`);
+  startSync(code, result.data.deviceToken);
+}
+
+function init() {
+  $("student-join").addEventListener("submit", joinGroup);
+  const code = normalizeCode(new URLSearchParams(location.search).get("code"));
+  $("join-code").value = code;
+  if (!code) return;
+  const token = getDeviceToken(code);
+  if (!token) return;
+  startSync(code, token);
 }
 
 init();

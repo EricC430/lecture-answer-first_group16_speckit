@@ -32,6 +32,6 @@ def with_questions(activity: Activity, *numbers: int) -> Activity:
     return dataclasses.replace(activity, question_numbers=numbers or (1, 2, 3, 4))
 
 
-def with_groups(activity: Activity, *names: str) -> Activity:
-    groups = {**activity.groups, **{n: Group(n) for n in names}}
+def with_groups(activity: Activity, *numbers: int) -> Activity:
+    groups = {**activity.groups, **{n: Group(n, f"CRED{n:02d}") for n in numbers}}
     return dataclasses.replace(activity, groups=MappingProxyType(groups))

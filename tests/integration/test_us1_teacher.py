@@ -85,7 +85,7 @@ def test_student_device_token_is_rejected(client):
     學生裝置 token 送出老師專用請求 → 403，狀態不變，回應不含任何 token。
     """
     teacher = create_activity(client)
-    device_token = join_group(client, teacher.code, "第一組")
+    device_token = join_group(client, teacher.code, 1)
     version_before = _version(client, teacher)
     for method, path, body in TEACHER_ONLY_REQUESTS:
         response = getattr(client, method)(

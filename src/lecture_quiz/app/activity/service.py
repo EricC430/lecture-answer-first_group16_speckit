@@ -30,6 +30,7 @@ from lecture_quiz.app.activity.registry import ActivityRegistry, ProcessedKey
 from lecture_quiz.app.activity.secrets_gen import (
     hash_token,
     new_code,
+    new_credential,
     new_token,
     normalize_code_input,
     tokens_match,
@@ -81,8 +82,20 @@ class JoinedDevice:
     """加入組別的結果；`device_token` 只在這裡出現一次。"""
 
     device_token: str
-    group_name: str
+    group_number: int
+    credential: str
     version: int
+
+
+@dataclass(frozen=True)
+class DeviceContext:
+    """給 003 的裝置資訊；所屬組別一律由後端判定（FR-012）。"""
+
+    group_number: int
+    stage: Stage
+    round_number: int | None
+    open_questions: tuple[int, ...]
+    deadline: datetime | None
 
 
 @dataclass(frozen=True)
@@ -259,7 +272,7 @@ class ActivityService:
         if isinstance(requester, Device):
             device = activity.devices.get(requester.token_hash)
             if device is not None:
-                return SnapshotView.for_group(activity, device.group_name)
+                return SnapshotView.for_group(activity, device.group_number)
         return None
 
     def current_round(self, code: str) -> Round | None:
@@ -320,7 +333,7 @@ class ActivityService:
             question_numbers=activity.question_numbers,
             solved_questions=activity.solved_questions,
             unsolved_questions=activity.unsolved_questions,
-            groups=tuple(activity.groups.values()),
+            groups=tuple(g for _, g in sorted(activity.groups.items())),
         )
         return Outcome(ok=True, value=view)
 
@@ -391,33 +404,74 @@ class ActivityService:
         return Outcome(ok=True, value=result)
 
     async def join(
-        self, code: str, group_name: str, idempotency_key: str | None = None
+        self,
+        code: str,
+        number_raw: object,
+        credential_raw: object = None,
+        requester: Requester | None = None,
+        idempotency_key: str | None = None,
     ) -> Outcome[JoinedDevice]:
-        """最小的組別加入入口（暫時版本，尚無 HTTP 端點）。
-
-        US2 會依 alignment 2026-11-22 決議改為「組號＋組數上限」，並加上組別加入憑證。
+        """以組號加入組別（US2）；新組號建立組別並發憑證，既有組號比對憑證。
 
         Args:
             code: 活動代碼。
-            group_name: 組別識別。
+            number_raw: 組號的原始輸入。
+            credential_raw: 組別加入憑證的原始輸入。
+            requester: 已解析的身分；已是某組成員的裝置會被拒絕。
             idempotency_key: 前端送來的 key。
 
         Returns:
-            裝置 token（只出現這一次）、組別與版本。
+            裝置 token（只出現這一次）、組號、該組憑證與版本。
         """
         token = new_token()
-        issued = IssuedSecrets(device_token_hash=hash_token(token))
+        issued = IssuedSecrets(
+            device_token_hash=hash_token(token), group_credential=new_credential()
+        )
 
         def build(t: Transition, activity: Activity) -> JoinedDevice:
-            return JoinedDevice(token, group_name, activity.version)
+            device = activity.devices[hash_token(token)]
+            group = activity.groups[device.group_number]
+            return JoinedDevice(
+                token, group.number, group.join_credential, activity.version
+            )
 
         return await self._execute(
             code,
-            JoinGroup(Anonymous(), group_name),
+            JoinGroup(requester or Anonymous(), number_raw, credential_raw),
             idempotency_key,
             build,
             issued=issued,
         )
+
+    def resolve_device(self, code: str, device_token: str) -> Outcome[DeviceContext]:
+        """依裝置 token 取得所屬組別與目前輪次（給 003）。
+
+        Args:
+            code: 活動代碼。
+            device_token: 原始裝置 token。
+
+        Returns:
+            裝置資訊；活動不存在回傳 `ACTIVITY_GONE`，token 無效回傳 `NOT_IN_GROUP`。
+        """
+        activity = self.get(code)
+        if activity is None:
+            return _gone()
+        device = activity.devices.get(hash_token(device_token))
+        if device is None:
+            reason = RejectionReason.NOT_IN_GROUP
+            return Outcome(ok=False, rejection=reason, message=reason.default_message)
+        current = activity.current_round
+        is_open = activity.stage is Stage.ROUND_OPEN and current is not None
+        context = DeviceContext(
+            group_number=device.group_number,
+            stage=activity.stage,
+            round_number=current.number if current else None,
+            open_questions=current.rules.question_numbers
+            if is_open and current
+            else (),
+            deadline=current.rules.deadline if is_open and current else None,
+        )
+        return Outcome(ok=True, value=context)
 
     async def replace_questions(
         self, code: str, requester: Requester, question_numbers: tuple[int, ...]
@@ -644,7 +698,7 @@ class ActivityService:
                     ok=False,
                     rejection=transition.rejection,
                     message=describe_rejection(
-                        transition.rejection, activity.stage, command
+                        transition.rejection, activity.stage, command, activity
                     ),
                 )
             if key is not None:

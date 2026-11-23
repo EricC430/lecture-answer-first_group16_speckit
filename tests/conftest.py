@@ -153,8 +153,13 @@ def seed_questions(client: TestClient, teacher: TeacherSession, count: int = 4) 
     assert outcome.ok, outcome
 
 
-def join_group(client: TestClient, code: str, group_name: str) -> str:
-    """以最小的組別加入入口取得裝置 token（US2 完成後改用 HTTP 加入）."""
-    outcome = call(client, service_of(client).join, code, group_name)
-    assert outcome.ok, outcome
-    return outcome.value.device_token
+def join_group(
+    client: TestClient, code: str, number: int, credential: str | None = None
+) -> str:
+    """以 HTTP 加入組別並回傳裝置 token（US2）。"""
+    response = client.post(
+        f"/api/activities/{code}/groups/join",
+        json={"groupNumber": number, "credential": credential},
+    )
+    assert response.status_code == 200, response.text
+    return response.json()["deviceToken"]

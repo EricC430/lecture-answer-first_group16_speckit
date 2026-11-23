@@ -1,7 +1,7 @@
 """依角色裁切活動快照（contracts/sync-websocket.md「訊息格式」）。
 
-學生版只含本組資料，不含其他組的名稱、組數或進度（FR-030）；老師版含全部組別。
-組別加入憑證待 US2 補上（⚠ Q-06）。
+學生版只含本組資料（組號、憑證、成功次數），不含其他組的組號、組數或進度（FR-030）；
+老師版含組數上限與全部組別（依組號排序，含憑證）。
 """
 
 from collections.abc import Mapping
@@ -89,19 +89,20 @@ class SnapshotView:
         Returns:
             老師版 `ActivitySnapshot`。
         """
-        device_counts: dict[str, int] = {}
+        device_counts: dict[int, int] = {}
         for device in activity.devices.values():
-            device_counts[device.group_name] = (
-                device_counts.get(device.group_name, 0) + 1
+            device_counts[device.group_number] = (
+                device_counts.get(device.group_number, 0) + 1
             )
         groups = [
             {
-                "name": g.name,
+                "number": g.number,
+                "credential": g.join_credential,
                 "successCount": g.success_count,
                 "hasSubmissions": g.has_submissions,
-                "deviceCount": device_counts.get(g.name, 0),
+                "deviceCount": device_counts.get(g.number, 0),
             }
-            for g in activity.groups.values()
+            for _, g in sorted(activity.groups.items())
         ]
         extra: JsonDict = {
             "maxGroups": activity.max_groups,
@@ -111,19 +112,25 @@ class SnapshotView:
         return ActivitySnapshot("teacher", SnapshotView._common(activity), extra)
 
     @staticmethod
-    def for_group(activity: Activity, group_name: str) -> ActivitySnapshot:
+    def for_group(activity: Activity, group_number: int) -> ActivitySnapshot:
         """學生版快照：只含本組資料。
 
         Args:
             activity: 活動。
-            group_name: 請求者所屬的組別（由後端依裝置身分判定）。
+            group_number: 請求者所屬的組號（由後端依裝置身分判定）。
 
         Returns:
             學生版 `ActivitySnapshot`；組別不存在時 `ownGroup` 為 `None`。
         """
-        group = activity.groups.get(group_name)
+        group = activity.groups.get(group_number)
         own = (
-            {"name": group.name, "successCount": group.success_count} if group else None
+            {
+                "number": group.number,
+                "credential": group.join_credential,
+                "successCount": group.success_count,
+            }
+            if group
+            else None
         )
         return ActivitySnapshot(
             "student", SnapshotView._common(activity), {"ownGroup": own}

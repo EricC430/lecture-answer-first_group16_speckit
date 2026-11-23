@@ -39,7 +39,7 @@ def test_open_two_questions_pushes_round_open_to_all(client, teacher):
     選兩題開輪：建立第 1 輪，所有 WebSocket 連線都收到 stage == ROUND_OPEN。
     """
     seed_questions(client, teacher, 4)
-    device = join_group(client, teacher.code, "第一組")
+    device = join_group(client, teacher.code, 1)
     with (
         client.websocket_connect(f"/ws/activities/{teacher.code}") as t_ws,
         client.websocket_connect(f"/ws/activities/{teacher.code}") as s_ws,

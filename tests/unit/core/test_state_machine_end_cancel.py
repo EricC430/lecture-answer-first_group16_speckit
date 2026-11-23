@@ -83,7 +83,7 @@ def test_cancel_while_preparing_then_everything_rejected():
         transition = apply(cancelled, command, NOW)
         assert transition.rejection is RejectionReason.STAGE_NOT_ALLOWED
         assert transition.activity == cancelled
-    join = JoinGroup(TEACHER, "第一組")
+    join = JoinGroup(TEACHER, 1)
     rejected = apply(cancelled, join, NOW, IssuedSecrets(device_token_hash="d" * 64))
     assert rejected.rejection is RejectionReason.STAGE_NOT_ALLOWED
     assert (
@@ -109,7 +109,7 @@ def test_ended_rejects_join():
     訊息說明活動已結束（提交的拒絕見服務層 accepts_submission）。
     """
     ended = apply(finalized(), EndActivity(TEACHER), NOW).activity
-    join = JoinGroup(TEACHER, "新的組")
+    join = JoinGroup(TEACHER, 2)
     transition = apply(ended, join, NOW, IssuedSecrets(device_token_hash="d" * 64))
     assert transition.rejection is RejectionReason.STAGE_NOT_ALLOWED
     assert (

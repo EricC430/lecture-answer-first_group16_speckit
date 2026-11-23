@@ -45,7 +45,7 @@ class Anonymous:
 Actor = Teacher | Device | System | Anonymous
 
 
-def _no_increments() -> MappingProxyType[str, int]:
+def _no_increments() -> MappingProxyType[int, int]:
     return MappingProxyType({})
 
 
@@ -55,11 +55,11 @@ class FinalizeOutcome:
 
     Attributes:
         solved_questions: 本輪新成功的題號。
-        success_increments: 各組成功次數增量。
+        success_increments: 各組成功次數增量，key 為組號。
     """
 
     solved_questions: frozenset[int] = frozenset()
-    success_increments: Mapping[str, int] = field(default_factory=_no_increments)
+    success_increments: Mapping[int, int] = field(default_factory=_no_increments)
 
     def __post_init__(self) -> None:
         """把增量表轉成唯讀，避免呼叫端事後修改。"""
@@ -81,18 +81,17 @@ class CreateActivity:
 
 @dataclass(frozen=True)
 class JoinGroup:
-    """最小的組別加入入口（暫時版本）。
-
-    US2 會依 alignment 2026-11-22 決議改為「組號＋組數上限」並加上組別加入憑證；
-    目前只建立組別並登記裝置，不做組名正規化與憑證檢查，也沒有 HTTP 端點。
+    """以組號加入組別（US2）。
 
     Attributes:
-        actor: 操作者。
-        group_name: 組別識別。
+        actor: 操作者；已是某組成員的 `Device` 會被拒絕。
+        number_raw: 組號的原始輸入，由 `InputRules.normalize_group_number` 正規化。
+        credential_raw: 組別加入憑證的原始輸入（加入既有組時必填）。
     """
 
     actor: Actor
-    group_name: str
+    number_raw: object
+    credential_raw: object = None
 
 
 @dataclass(frozen=True)

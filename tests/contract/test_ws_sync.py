@@ -62,15 +62,17 @@ def test_teacher_receives_snapshot_with_teacher_fields(client):
 
 def test_student_receives_only_own_group(client):
     teacher = create_activity(client)
-    device = join_group(client, teacher.code, "第一組")
-    join_group(client, teacher.code, "第二組")
+    device = join_group(client, teacher.code, 1)
+    join_group(client, teacher.code, 2)
     with client.websocket_connect(f"/ws/activities/{teacher.code}") as ws:
         ws.send_json({"type": "auth", "token": device})
         snap = ws.receive_json()
     assert set(snap) == COMMON_FIELDS | {"ownGroup"}
     assert snap["role"] == "student"
-    assert snap["ownGroup"] == {"name": "第一組", "successCount": 0}
-    assert "第二組" not in str(snap)
+    own = snap["ownGroup"]
+    assert set(own) == {"number", "credential", "successCount"}
+    assert own["number"] == 1 and own["successCount"] == 0
+    assert "groups" not in snap
 
 
 def test_first_message_must_be_auth(client):
@@ -115,9 +117,9 @@ def test_state_change_is_pushed_and_extra_messages_ignored(client, caplog):
         ws.send_json({"type": "auth", "token": teacher.token})
         assert ws.receive_json()["version"] == 1
         ws.send_json({"type": "auth", "token": "ignored-after-auth"})
-        join_group(client, teacher.code, "第一組")
+        join_group(client, teacher.code, 1)
         snap = ws.receive_json()
     assert snap["version"] == 2
-    assert [g["name"] for g in snap["groups"]] == ["第一組"]
+    assert [g["number"] for g in snap["groups"]] == [1]
     assert any("多餘訊息" in r.getMessage() for r in caplog.records)
     assert all("ignored-after-auth" not in r.getMessage() for r in caplog.records)
