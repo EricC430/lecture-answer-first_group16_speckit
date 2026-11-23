@@ -79,7 +79,12 @@ class InputRules:
             text = raw.strip().translate(_FULLWIDTH_DIGITS)
             if not text or not set(text) <= _ASCII_DIGITS:
                 raise InvalidInputError(RejectionReason.INVALID_GROUP_NUMBER)
-            value = int(text)
+            digits = text.lstrip("0") or "0"
+            # 先比位數再轉整數：超過 4300 位數時 int() 會丟 ValueError
+            # （PR #15 第三次審查問題 1）
+            if len(digits) > len(str(max_groups)):
+                raise InvalidInputError(RejectionReason.INVALID_GROUP_NUMBER)
+            value = int(digits)
         else:
             raise InvalidInputError(RejectionReason.INVALID_GROUP_NUMBER)
         if not 1 <= value <= max_groups:

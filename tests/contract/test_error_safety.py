@@ -98,3 +98,21 @@ def test_404_and_invalid_request_are_safe(client):
         headers=teacher.headers,
     )
     _check(bad, (teacher.token,), "INVALID_REQUEST")
+
+
+def test_overlong_group_number_is_rejected_on_join_and_delete(client, teacher):
+    """超長組號在加入（400）與刪除（依契約 #5 回 404）兩個端點都不得變成 500
+    （PR #15 第三次審查問題 1）。"""
+    for digits in (4301, 5000):
+        join = client.post(
+            f"/api/activities/{teacher.code}/groups/join",
+            json={"groupNumber": "9" * digits},
+        )
+        assert join.status_code == 400, join.text
+        assert join.json()["error"]["code"] == "INVALID_GROUP_NUMBER"
+        delete = client.delete(
+            f"/api/activities/{teacher.code}/groups/{'9' * digits}",
+            headers=teacher.headers,
+        )
+        assert delete.status_code == 404, delete.text
+        assert delete.json()["error"]["code"] == "GROUP_NOT_FOUND"

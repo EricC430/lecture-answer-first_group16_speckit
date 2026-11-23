@@ -38,3 +38,21 @@ def test_normalize_credential():
     assert InputRules.normalize_credential(" q8mz3r ") == "Q8MZ3R"
     assert InputRules.normalize_credential(None) == ""
     assert InputRules.normalize_credential(123) == ""
+
+
+@pytest.mark.parametrize("length", [4, 4300, 4301, 5000, 100_000])
+def test_overlong_digit_string_is_invalid_not_crash(length):
+    """超長的數字字串一律回 INVALID_GROUP_NUMBER，不得因 int() 位數上限丟出 ValueError
+    （PR #15 第三次審查問題 1；FR-031、SC-008）。"""
+    with pytest.raises(InvalidInputError) as exc:
+        InputRules.normalize_group_number("9" * length, 99)
+    assert exc.value.reason is RejectionReason.INVALID_GROUP_NUMBER
+
+
+def test_overlong_fullwidth_digits_is_invalid():
+    with pytest.raises(InvalidInputError):
+        InputRules.normalize_group_number("９" * 5000, 99)
+
+
+def test_leading_zeros_still_accepted_within_length():
+    assert InputRules.normalize_group_number("007", 99) == 7
