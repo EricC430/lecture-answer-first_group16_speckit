@@ -121,6 +121,8 @@ src/lecture_quiz/
 ├── core/guided_notes_import/        # 純函式層：只依賴標準函式庫
 │   ├── models.py                    # CellRef、CellValue、MergeRange、SheetSnapshot、Question、Blank、StructureSnapshot、ValidationIssue、ParseResult
 │   ├── numbers.py                   # 題號正規化（research R5）
+│   ├── grid.py                      # 合併範圍查詢、儲存格文字
+│   ├── hints.py                     # 每個 IssueKind 的修正建議、欄字母、引用截斷
 │   ├── headers.py                   # 找表頭、判定歧義
 │   ├── rows.py                      # 逐列分類：題號繼承、子編號、答案格、忽略空白列
 │   ├── validator.py                 # 分組、連續性、重疊、孤立子空格

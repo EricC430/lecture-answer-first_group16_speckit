@@ -2,7 +2,7 @@
 
 **用途**：實作完成後，證明 002 端到端可用的執行與人工驗證腳本。本檔只記錄「怎麼驗證、預期結果」；**實際執行的日期、指令與結果數字要在執行當下填入下方的紀錄表，沒有跑過就保持空白，不得預填**（憲章原則 VI）。
 
-**目前狀態（2026-11-22）**：尚未實作，下列所有驗證都還沒有執行過。
+**目前狀態（2026-11-23）**：已實作；A 區自動化驗證已執行並記錄在紀錄表。**B 區真實路徑（含 SC-009）尚未執行**，紀錄表中對應列保持空白，沒有跑過不得預填。
 
 ## 前置條件
 
@@ -68,9 +68,10 @@ pytest -m "not real_google and not perf"
 |---|---|---|---|
 | 1 | 按「匯入學習單」，在 Google 授權畫面按**取消** | 回到頁面，說明「尚未授權、未匯入任何題目」並提供重新授權；活動題目不變 | US1-AS3 |
 | 2 | 再按一次，同意授權 | 回到頁面，顯示已授權 | US1-AS1 |
-| 3 | 在選檔畫面按取消 | 維持原狀，沒有留下半途來源 | US1-AS5 |
+| 3 | 在選檔畫面按取消 | 維持原狀，沒有留下半途來源（前端行為，只有人工驗證，已知限制） | US1-AS5 |
 | 4 | 選一份 Google 文件或 PDF（若 Picker 允許）| 被拒並說明「請選擇 Google 試算表」 | US1-AS6、FR-005 |
 | 5 | 選版面 2 的試算表 | 列出工作表，要求明確選一張（`inspect` 的 `autoSelectSheetId` 為 `null`） | US1-AS1 |
+| 5a | 另選一份**只有一張工作表**的試算表 | 不再要求選工作表，畫面自動選用並顯示試算表與工作表名稱（`inspect` 的 `autoSelectSheetId` 有值） | US1-AS2、FR-002 |
 | 6 | 選正確的那張工作表，按匯入 | 預覽「4 題、6 格」與每題格數；記錄從按下確認到看見預覽的秒數 | US3-AS1、US5-AS1、SC-006 |
 | 7 | 重新整理頁面 | 預覽恢復 | US5 |
 | 8 | 改選版面 1 再匯入 | 整份取代，結果相同、無舊題目殘留 | US5-AS2、SC-003 |
@@ -93,10 +94,10 @@ pytest -m "not real_google and not perf"
 
 | 日期 | 執行者 | 指令或操作 | 結果數字 | 備註 |
 |---|---|---|---|---|
-| | | `ruff check .` | | |
-| | | `ruff format --check .` | | |
-| | | `mypy src` | | |
-| | | `pytest -m "not real_google and not perf"` | passed／failed／總數： | |
+| 2026-11-23 | EricC430 的環境（Claude Code 執行） | `ruff check .` | All checks passed | 分支 feature/6-guided-notes-import-impl |
+| 2026-11-23 | 同上 | `ruff format --check .` | 190 files already formatted | |
+| 2026-11-23 | 同上 | `mypy`（設定檔已指定 src） | Success: no issues found in 47 source files | |
+| 2026-11-23 | 同上 | `pytest -m "not real_google and not perf"` | 708 passed、0 failed、2 deselected（perf 與 real_google 各 1 組） | 含 001 的既有測試；002 部分：核心 96、應用層 94、Google 轉接層 67、HTTP 契約 29（參數化展開後更多）、架構 29 |
 | | | 真實路徑 B-1～B-13（版面 1、版面 2） | | |
 
 - **實作者**：EricC430。**非實作者人工驗證**：jacky0407（執行 B 區並簽名，記錄日期與結果）。

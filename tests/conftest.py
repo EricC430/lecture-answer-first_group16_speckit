@@ -183,3 +183,48 @@ def join_group(
     )
     assert response.status_code == 200, response.text
     return response.json()["deviceToken"]
+
+
+# ── 002-guided-notes-import：只追加，不改 001 既有 fixture 的預設行為 ──
+
+
+@pytest.fixture
+def fake_auth_gateway():
+    """002 的測試替身：授權連接埠（預設已授權；不連 Google）。"""
+    from tests.unit.app.guided_notes_import.fakes import FakeAuthGateway
+
+    return FakeAuthGateway(authorized=True)
+
+
+@pytest.fixture
+def fake_sheets_reader():
+    """002 的測試替身：Sheets 讀取連接埠，含版面 A、版面 B 與單一工作表試算表。"""
+    from tests.fixtures.guided_notes_layouts import layout_a, layout_b
+    from tests.unit.app.guided_notes_import.fakes import FakeSheetsReader
+
+    reader = FakeSheetsReader()
+    snapshot_a, _ = layout_a()
+    snapshot_b, _ = layout_b()
+    reader.add(
+        "sheet-1", "學習單", [(0, "版面A", snapshot_a), (7, "版面B", snapshot_b)]
+    )
+    reader.add("single-sheet", "只有一張", [(0, "唯一", snapshot_a)])
+    return reader
+
+
+@pytest.fixture
+def import_client(
+    fake_clock: FakeClock,
+    manual_scheduler: ManualScheduler,
+    fake_auth_gateway,
+    fake_sheets_reader,
+) -> Iterator[TestClient]:
+    """使用 001 真實 ActivityService、只把 Google 連接埠換成 Fake 的 TestClient。"""
+    app = make_app(
+        fake_clock,
+        manual_scheduler,
+        import_auth_gateway=fake_auth_gateway,
+        import_sheets_reader=fake_sheets_reader,
+    )
+    with TestClient(app) as test_client:
+        yield test_client
