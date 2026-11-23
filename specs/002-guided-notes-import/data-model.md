@@ -50,7 +50,7 @@
 | 型別 | 欄位 | 說明 |
 |---|---|---|
 | `SourceRef` | `spreadsheet_id: str`、`sheet_id: int` | 來源識別（FR-002） |
-| `SpreadsheetInfo` | `spreadsheet_id`、`title: str`、`sheets: tuple[SheetInfo, ...]`、`auto_select_sheet_id: int \| None` | 檢視結果；`SheetInfo` 含 `sheet_id`、`title`。`auto_select_sheet_id` 由服務計算：`sheets` 恰好一張時為其 `sheet_id`，否則 `None`（FR-002） |
+| `SpreadsheetInfo` | `spreadsheet_id`、`title: str`、`sheets: tuple[SheetInfo, ...]`、`auto_select_sheet_id: int \| None` | 檢視結果；`SheetInfo` 含 `sheet_id`、`title`。`sheets` 只含可見工作表（隱藏的不列入、不計張數，2026-11-23 澄清）。`auto_select_sheet_id` 由服務計算：`sheets` 恰好一張時為其 `sheet_id`，否則 `None`（FR-002） |
 | `SourceSelection` | `source: SourceRef`、`sheet_title: str` | 老師選定的來源；取消選檔不寫入 |
 | `ImportRecord` | `source: SourceRef`、`sheet_title: str`、`blanks: tuple[Blank, ...]`、`structure: StructureSnapshot`、`question_numbers: tuple[int, ...]` | 最後一次成功匯入；每次成功**整份取代**（FR-019、FR-024） |
 | `ImportPreview` | `question_numbers`、`blanks_per_question: Mapping[int, int]`、`total_questions`、`total_blanks` | 題組只算一題；總格數累計子空格（FR-017、FR-018） |

@@ -64,7 +64,7 @@
 
 - 以官方的 `google-api-python-client`（Sheets v4、Drive v3）搭配 `google-auth`、`google-auth-oauthlib`。它們是同步程式庫，轉接層以 `asyncio.to_thread` 呼叫，避免阻塞事件迴圈。
 - **兩次讀取**，都只用讀取方法：
-  1. **檢視（inspect）**：`spreadsheets.get`，`fields=properties.title,sheets.properties(sheetId,title,hidden,gridProperties)`。取得工作表清單，用於「多張要明確選、一張自動選」（FR-002）。
+  1. **檢視（inspect）**：`spreadsheets.get`，`fields=properties.title,sheets.properties(sheetId,title,hidden,gridProperties)`。取得工作表清單（`hidden` 為真者濾除，不列入也不計張數，spec 2026-11-23 澄清），用於「多張要明確選、一張自動選」（FR-002）。
   2. **讀取工作表快照**：先以工作表標題組出 `ranges=['<標題>']`（標題以單引號包住並跳脫），再用 `spreadsheets.get`，欄位遮罩為
      `sheets(properties(sheetId,title,gridProperties),merges,data(startRow,startColumn,rowData(values(effectiveValue,formattedValue))))`。
      因為設定 `fields` 時 `includeGridData` 會被忽略，所以不需要再傳該參數。

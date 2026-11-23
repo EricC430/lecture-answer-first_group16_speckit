@@ -20,8 +20,8 @@
 - **`ImportResult`**：`{"imported": true, "sheetTitle": str, "questionNumbers": [int], "blanksPerQuestion": {"<題號>": int}, "totalQuestions": int, "totalBlanks": int, "version": int}`。`version` 是 001 `replace_questions` 回傳的新版本。
 - **#2 回呼**是瀏覽器導向，不是 fetch；它以 `state` 找回活動代碼與老師身分，不需要 `Authorization` 標頭。`state` 只能用一次、有有效期限；不符、過期、重複使用都導回 `auth=error`，且**不交換 token**。
 - **#4**：access token 只含 `drive.file` 範圍，只回給該活動老師，且**不寫入日誌**。
-- **#5 inspect**：不改任何狀態；用來列出工作表。檔案不是 Google 試算表回 `NOT_A_SPREADSHEET`。**`autoSelectSheetId` 由後端決定**：`sheets` 恰好一張時為該張的 `sheetId`，否則為 `null`（FR-002）。前端只依它行事，不自己數工作表。
-- **#6**：只在驗證所選 `sheetId` 屬於該試算表之後才寫入；失敗時舊的選定來源不變。前端在 `autoSelectSheetId` 有值時自動呼叫它，否則等老師明確選一張（FR-002）。
+- **#5 inspect**：不改任何狀態；用來列出工作表。檔案不是 Google 試算表回 `NOT_A_SPREADSHEET`。**`autoSelectSheetId` 由後端決定**：`sheets` 只含**可見**的工作表（隱藏的不回傳也不計張數；沒有任何可見工作表回 `SHEET_NOT_FOUND`，訊息為「沒有可選的工作表」）；`sheets` 恰好一張時為該張的 `sheetId`，否則為 `null`（FR-002）。前端只依它行事，不自己數工作表。
+- **#6**：只在驗證所選 `sheetId` 屬於該試算表**且可見**之後才寫入（選到隱藏工作表回 `SHEET_NOT_FOUND`）；失敗時舊的選定來源不變。前端在 `autoSelectSheetId` 有值時自動呼叫它，否則等老師明確選一張（FR-002）。
 - **#7**：流程與順序見 [research.md](../research.md) R6。成功時回傳 `ImportResult`；驗證失敗回 422 並附 `issues`。
 - **#8**：頁面重新整理後恢復預覽用；沒有匯入過回 `{"imported": false}`。
 
