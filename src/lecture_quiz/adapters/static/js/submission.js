@@ -148,3 +148,45 @@ export function renderBoard(container, current, groups, questionShapes) {
   }
   container.replaceChildren(table);
 }
+
+/**
+ * 已公開輪次（US5，研究 R11）：每輪每題列出各組答案與送出先後。
+ * `noSubmission` 顯示「未成功」；`judgedWrong` 為真顯示「答錯」（Q-26，由 004 提供）。
+ * 「搶答失敗」需要 004 的勝者資訊，004 完成前不顯示，未被判錯的候選只列出先後。
+ * 全部 textContent。
+ * @param {HTMLElement} container
+ * @param {Array<{roundNumber: number, questions: Array<{questionNumber: number, noSubmission: boolean, entries: Array}>}>} published
+ */
+export function renderPublished(container, published) {
+  if (!published || published.length === 0) {
+    container.replaceChildren(el("p", "還沒有已公開的輪次。", "muted"));
+    return;
+  }
+  const blocks = published.map((round) => {
+    const block = el("section", "", "published-round");
+    block.append(el("h3", `第 ${round.roundNumber} 輪（依送出先後，不是順位）`));
+    const list = el("ul", "", "published-questions");
+    for (const q of round.questions) {
+      const item = el("li");
+      item.append(el("strong", `第 ${q.questionNumber} 題`));
+      if (q.noSubmission) {
+        item.append(el("p", "未成功（沒有組別送出）", "muted"));
+      } else {
+        const entries = el("ol", "", "published-entries");
+        for (const entry of q.entries) {
+          const row = el("li");
+          const label = `第 ${entry.groupNumber} 組・第 ${entry.order} 個送出・${formatTime(entry.receivedAt)}`;
+          row.append(el("p", label, "muted"));
+          if (entry.judgedWrong === true) row.append(el("p", "答錯", "error-message"));
+          row.append(renderAnswers(entry.answers));
+          entries.append(row);
+        }
+        item.append(entries);
+      }
+      list.append(item);
+    }
+    block.append(list);
+    return block;
+  });
+  container.replaceChildren(...blocks);
+}

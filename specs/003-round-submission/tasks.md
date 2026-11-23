@@ -168,14 +168,14 @@ description: "003-round-submission 任務清單"
 
 ### Tests for User Story 5（先寫、確認失敗）⚠️
 
-- [ ] T047 [P] [US5] 在 `tests/unit/core/round_submission/test_view_published.py` 測試：關輪（`RESULT_PENDING`）後 `for_group` 的 `published` 包含本輪全部組的提交、答案、`order`（`Scenario: US5-AS1` ↔ OpenSpec「結果公布與後續輪次」）；無人提交的題 `noSubmission: true`（`Scenario: US5-AS2`）；每筆有 `judgedWrong: false`，且 `STUDENT_SEES_JUDGED_WRONG` 為真時學生版也有此欄位（`Scenario: US5-AS5`；Q-26）；第 2 輪開放中，甲組的 `published` 有第 1 輪全部資料、`current` 只有甲組自己的第 2 輪提交（`Scenario: US5-AS3`）
-- [ ] T048 [P] [US5] 在 `tests/integration/test_us5_published.py` 測試：關輪後所有學生 WebSocket 收到 `version + 1` 的快照且含公開提交（`Scenario: US5-AS1`）；第 2 輪中乙組提交時甲組收不到訊息、甲組快照仍有第 1 輪公開資料（`Scenario: US5-AS3`）；關輪後的快照 `version` 嚴格大於搶答中的快照，前端 `sync.js` 依 001 規則丟棄較舊版本（`Scenario: US5-AS4` ↔ OpenSpec「延遲回應」；版本遞增在此驗證，前端丟棄行為沿用 001 測試與 quickstart 第 12 步）；`SubmissionReader.round_submissions` 與 `all_submissions` 回傳排序後的不可變 tuple（FR-036）；第 1 輪提交後關輪、定案、該學生離開本組並加入另一組 → 第 1 輪公開資料中該提交仍屬原組（`Scenario: US2-AS6`，由 T031 移入）
+- [X] T047 [P] [US5] 在 `tests/unit/core/round_submission/test_view_published.py` 測試：關輪（`RESULT_PENDING`）後 `for_group` 的 `published` 包含本輪全部組的提交、答案、`order`（`Scenario: US5-AS1` ↔ OpenSpec「結果公布與後續輪次」）；無人提交的題 `noSubmission: true`（`Scenario: US5-AS2`）；每筆有 `judgedWrong: false`，且 `STUDENT_SEES_JUDGED_WRONG` 為真時學生版也有此欄位（`Scenario: US5-AS5`；Q-26）；第 2 輪開放中，甲組的 `published` 有第 1 輪全部資料、`current` 只有甲組自己的第 2 輪提交（`Scenario: US5-AS3`）。**實作註記**：`for_group` 另加 `student_sees_judged_wrong` 參數（預設取 `STUDENT_SEES_JUDGED_WRONG`），方便測試 Q-26 改為假時學生版不含 `judgedWrong`
+- [X] T048 [P] [US5] 在 `tests/integration/test_us5_published.py` 測試：關輪後所有學生 WebSocket 收到 `version + 1` 的快照且含公開提交（`Scenario: US5-AS1`）；第 2 輪中乙組提交時甲組收不到訊息、甲組快照仍有第 1 輪公開資料（`Scenario: US5-AS3`）；關輪後的快照 `version` 嚴格大於搶答中的快照，前端 `sync.js` 依 001 規則丟棄較舊版本（`Scenario: US5-AS4` ↔ OpenSpec「延遲回應」；版本遞增在此驗證，前端丟棄行為沿用 001 測試與 quickstart 第 12 步）；`SubmissionReader.round_submissions` 與 `all_submissions` 回傳排序後的不可變 tuple（FR-036）；第 1 輪提交後關輪、定案、該學生離開本組並加入另一組 → 第 1 輪公開資料中該提交仍屬原組（`Scenario: US2-AS6`，由 T031 移入）。**實作註記**：讀取介面測試在實作前就通過（T040 已完成）
 
 ### Implementation for User Story 5
 
-- [ ] T049 [US5] 在 `<core>/view.py` 實作「已公開輪次」部分（研究 R11：輪次編號小於目前輪次，或等於目前輪次且階段不是 `ROUND_OPEN`）：`published` 依輪次遞增，每題含 `noSubmission`、`entries`（`groupNumber`、`answers`、`receivedAt`、`order`、`judgedWrong`）；`current` 在本輪已關閉時為 `None`（依賴 T047）
-- [ ] T050 [US5] 在 `<app>/service.py` 完成 `round_submissions`、`all_submissions`（`SubmissionReader`，給 004、005），擴充函式輸出 `published`（依賴 T048、T049）
-- [ ] T051 [US5] 前端：`submission.js` 新增 `renderPublished(container, published)`（每輪每題列出各組答案與先後，`noSubmission` 顯示「未成功」，`judgedWrong` 為真顯示「答錯」，全部 `textContent`；「搶答失敗」需要 004 提供的勝者資訊，004 完成前不顯示，未被判錯的候選只列出先後）；老師頁與學生頁在 `RESULT_PENDING`／`RESULT_FINAL`／`ENDED` 與之後的輪次都顯示歷史
+- [X] T049 [US5] 在 `<core>/view.py` 實作「已公開輪次」部分（研究 R11：輪次編號小於目前輪次，或等於目前輪次且階段不是 `ROUND_OPEN`）：`published` 依輪次遞增，每題含 `noSubmission`、`entries`（`groupNumber`、`answers`、`receivedAt`、`order`、`judgedWrong`）；`current` 在本輪已關閉時為 `None`（依賴 T047）
+- [X] T050 [US5] 在 `<app>/service.py` 完成 `round_submissions`、`all_submissions`（`SubmissionReader`，給 004、005），擴充函式輸出 `published`（依賴 T048、T049）。**實作註記**：讀取方法已在 T040 完成；擴充函式直接轉出 `SubmissionView` 的結果，本任務只更新說明
+- [X] T051 [US5] 前端：`submission.js` 新增 `renderPublished(container, published)`（每輪每題列出各組答案與先後，`noSubmission` 顯示「未成功」，`judgedWrong` 為真顯示「答錯」，全部 `textContent`；「搶答失敗」需要 004 提供的勝者資訊，004 完成前不顯示，未被判錯的候選只列出先後）；老師頁與學生頁在 `RESULT_PENDING`／`RESULT_FINAL`／`ENDED` 與之後的輪次都顯示歷史。**實作註記**：老師頁與學生頁各新增「已公開的作答」區塊（`published-section`），分別由 `round-submission-teacher.js`、`round-submission.js` 呼叫；有已公開輪次時才顯示
 
 **Checkpoint**: 公開與歷史正確，新輪保密
 

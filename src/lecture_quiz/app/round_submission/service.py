@@ -200,7 +200,8 @@ class SubmissionService:
 
         活動還沒有格數資料（尚未匯入題目）時不帶任何 003 欄位。
         `questionShapes`：老師為全部題的格數；學生只有本輪開放題的格數。
-        `submissions`：依角色裁切（`SubmissionView`）；學生只有本組（FR-021）。
+        `submissions`：依角色裁切（`SubmissionView`）；`current` 學生只有本組
+        （FR-021），`published` 是已關輪的輪次，所有角色都看得到全部組（研究 R11）。
 
         Args:
             activity: 活動。

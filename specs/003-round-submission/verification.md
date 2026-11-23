@@ -85,6 +85,20 @@
 | `mypy` | Success: no issues found in 36 source files |
 | `pytest` | **507 passed**, 1 deselected（新增 9 個；001 既有測試未修改） |
 
+## US5（T047～T051）
+
+- 日期：2026-11-24；環境同上。
+- **先寫測試並確認失敗**：T047、T048 先寫；執行這 2 個檔結果 7 failed、1 passed。失敗原因都是 `published` 為空（或 `for_group` 沒有 `student_sees_judged_wrong` 參數）。通過的 1 個是讀取介面已排序且不可修改，T040 已完成。
+- **公開規則**（研究 R11）：輪次編號小於目前輪次，或等於目前輪次且不在搶答中，就列入 `published`；所有角色都看得到全部組、送出先後與 `noSubmission`。`judgedWrong` 一律為 `false`，等 004 提供真值。
+- **US2-AS6**（由 T031 移入）：第 1 組送出後關輪、定案，該裝置離組並加入第 2 組；公開資料與 `round_submissions` 中該提交仍屬第 1 組。
+- **前端**：`submission.js` 新增 `renderPublished`；老師頁與學生頁各新增「已公開的作答」區塊。`node --check` 通過，尚未在瀏覽器手動操作。
+
+| 指令 | 結果 |
+|---|---|
+| `ruff check .`、`ruff format --check .` | All checks passed!；160 files already formatted |
+| `mypy` | Success: no issues found in 36 source files |
+| `pytest` | **515 passed**, 1 deselected（新增 8 個；001 既有測試未修改） |
+
 ## 實作問題紀錄
 
 實作 003 過程中發現的問題、偏離與待辦，依發現順序編號。狀態：**已處理**（已改程式或文件）、**已記錄**（行為不變，只需知道）、**待辦**（之後的任務要處理）、**待決定**（需要組員或 OpenSpec 組決定）。
@@ -99,17 +113,18 @@
 | P-06 | US1 | 日誌直接記學生送來的題號，可能寫進任意內容或超長整數 | 只記 0～9999 的整數題號，其餘記 `-` | 已處理 |
 | P-07 | US1 | 學生頁的程式依 DEVELOPMENT.md「一個子功能一個 module」放在 `js/round-submission.js`；tasks 原寫 `student.js` | T028 已註記。**影響 T053、T054**：靜態檢查與倒數停用表單要改為檢查 `round-submission.js`（及老師頁的 `round-submission-teacher.js`） | 待辦（US6） |
 | P-08 | US1 | 作答表單需要每題格數，原排在 US4 的 `questionShapes` 提前在 US1 做 | T028 已註記 | 已記錄 |
-| P-09 | US1～US4 | 前端只做過 `node --check`，沒有在瀏覽器實際操作 | 留到 quickstart 人工驗證（T064，非實作者 EricC430） | 待辦 |
-| P-10 | US2 | T031 的「同組另一台收到答案」（US2-AS1 推送）與「離組後提交仍屬原組」（US2-AS6）需要快照提交資料 | 前者已在 US4 的 `test_submission_visibility.py` 完成；後者移到 T048 | 待辦（US5） |
+| P-09 | US1～US5 | 前端只做過 `node --check`，沒有在瀏覽器實際操作 | 留到 quickstart 人工驗證（T064，非實作者 EricC430） | 待辦 |
+| P-10 | US2 | T031 的「同組另一台收到答案」（US2-AS1 推送）與「離組後提交仍屬原組」（US2-AS6）需要快照提交資料 | 前者已在 US4 的 `test_submission_visibility.py` 完成；後者在 US5 的 `test_us5_published.py` 完成 | 已處理 |
 | P-11 | US2 | 快照帶本組提交時把表單改唯讀的前端程式，在 US4 提供資料前沒有作用 | US4 已提供 `submissions.current.own`；瀏覽器操作仍待 P-09 | 已處理 |
 | P-12 | US3 | 截止邊界測試在實作前就通過 | 原因是 001 的 `RecordSubmission` 已在鎖內檢查截止時間；現在由 003 判定先擋下，兩層一致 | 已記錄 |
 | P-13 | US3 | 「還沒有任何輪次」與「已截止／已關輪」共用一句訊息「本輪已結束（或尚未開始），不能再送出。」；research R10 原寫兩種語意 | 判定結果沒有欄位可區分，要分成兩句需在 `SubmissionDecision` 加欄位 | 待決定 |
 | P-14 | US3 | `round_submissions`、`all_submissions`（給 004、005）原排在 T050 | 提前在 T040 完成並測試；T050 只剩 `published` | 已記錄 |
-| P-15 | US4 | **關輪後老師看板與學生頁暫時是空的**：`current` 只在搶答中有內容，關輪後的 `published` 要到 US5 才實作 | US5（T049、T050）完成前，關輪後看不到本輪提交 | 待辦（US5） |
+| P-15 | US4 | **關輪後老師看板與學生頁暫時是空的**：`current` 只在搶答中有內容，關輪後的 `published` 要到 US5 才實作 | US5 已實作 `published`，關輪後老師頁與學生頁的「已公開的作答」顯示本輪全部組的提交 | 已處理 |
 | P-16 | US4 | T046 原要求學生頁另有 `renderOwnSubmissions` 清單；學生頁的作答表單已在送出後顯示本組答案與時間（P-11），另列一份會重複 | 不另做清單，由表單顯示；`renderBoard` 照做 | 已記錄 |
 | P-17 | US4 | 新測試的預期時區寫成 `+00:00`，FakeClock 是 `+08:00` | 修測試，程式碼未改 | 已處理 |
 | P-18 | US4 | T053 規定「`已送出` 只出現在成功處理函式內」；`round-submission.js` 依快照顯示「本組已送出」時也用到這個字，且不在 HTTP 成功分支 | 這是依後端快照顯示，不違反 FR-032（未收到成功前不顯示成功），但 T053 的字串規則要調整，排除快照來源 | 待辦（US6） |
 | P-19 | 跨子功能 | 每題格數由 002 實作 `QuestionShapeSource`（與 EricC430 口頭約定）；002 合併前只能用 dev seed | T065 真實路徑驗證要等 002 合併 | 待辦（002） |
 | P-20 | 跨子功能 | 「搶答失敗」要等 004 提供勝者；全部判錯顯示「未成功」也由 004 決定 | 已寫在 tasks Notes 的 004 交接 | 待辦（004） |
 | P-21 | 環境 | 在本機執行 `pytest -p no:logging` 會讓用到 `caplog` 的 12 個測試報錯（不是程式問題） | 驗證一律用不加參數的 `pytest` | 已記錄 |
-| P-22 | US1～US4 | 類別圖與程式的小差異：可見性常數在程式是 `view.py` 的模組常數，圖畫成 `SubmissionView` 的屬性；`SubmissionRules.describe` 不在圖上；`SubmissionView.for_group` 多了 `student_sees_own_success` 參數（方便測試 Q-22 改為假） | 留給 Polish 的圖表一致性任務一併更新類別圖並重新輸出 PNG | 待辦（Polish） |
+| P-22 | US1～US4 | 類別圖與程式的小差異：可見性常數在程式是 `view.py` 的模組常數，圖畫成 `SubmissionView` 的屬性；`SubmissionRules.describe` 不在圖上；`SubmissionView.for_group` 多了 `student_sees_own_success`、`student_sees_judged_wrong` 兩個參數（方便測試 Q-22、Q-26 改為假） | 留給 Polish 的圖表一致性任務一併更新類別圖並重新輸出 PNG | 待辦（Polish） |
+| P-23 | US5 | 每次推送快照都帶全部已公開輪次，資料量隨輪次增加 | 一堂課的輪次與組數有限；留給 T060 效能測試觀察，超標再改成只送差異 | 待辦（Polish） |
