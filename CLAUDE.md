@@ -11,10 +11,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 堆疊與環境：Python 3.11 以上 + FastAPI；Google Sheets 匯入／寫回使用 Google Sheets API（OAuth，由老師授權）；Windows 本機執行，後端只監聽 localhost；活動狀態只存在記憶體，不用資料庫。
 - 程式碼風格：PEP 8；公開函式／類別／方法必須有型別提示與 docstring；lint／格式化用 Ruff（`ruff check`、`ruff format`），型別檢查用 mypy（`src/`），設定在 `pyproject.toml`，提交前三者都要通過（憲章 v1.0.1）。
 - 日誌：只用 `logging`（INFO、stdout），不用 `print`；不得記錄 token、授權碼、client secret。
-- 效能：狀態變更 2 秒內反映到所有畫面（WebSocket 或 SSE 由 plan 決定）；效能驗證組數 N 由 001 plan 決定；組數上限由老師建立活動時指定（alignment 2026-11-22 決議，Q-07），系統不自訂固定上限。
+- 效能：狀態變更 2 秒內反映到所有畫面（001 採 WebSocket 只推送、HTTP 負責操作）；效能驗證為老師 + 6 組、每組 2 條連線（001 研究 R2）；組數上限由老師建立活動時指定（1～99，alignment 2026-11-23 A2）。
 - **架構（NON-NEGOTIABLE）**：核心邏輯（學習單解析、提交判定、順位計算）是不依賴網路、框架與系統時鐘的純函式，時間由呼叫端傳入；Google、API、畫面在外層轉接層，相依只能由外層指向核心。
 
-**目前還沒有任何應用程式碼，也沒有 build／lint／test 指令。** 不要憑空假設指令或目錄結構，程式碼出現後再補上本節。下一步是依序執行子功能 `001-activity-session` → `002-guided-notes-import` → `003-round-submission` → `004-ranking-review` → `005-result-export` 的 `/speckit-specify`（各自另開 Issue）。
+**共用骨架**（Issue #5，`chore/5-project-skeleton`）：`pyproject.toml`、`src/lecture_quiz/{core,app,adapters}/`、`main.py`、共用 HTTP 錯誤／日誌（`adapters/web/common.py`）、前端共用 `static/js/{api,sync,identity}.js`、`tests/conftest.py`（`FakeClock`）、`tests/architecture/test_core_is_pure.py`。完整說明與子功能擴充約定見 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)。指令（Windows，先 `py -3.11 -m venv .venv`，再 `.venv\Scripts\python -m pip install -e ".[dev]"`；專案路徑含中文時要改 `.pth`、只跑不改時可用一般安裝 `pip install ".[dev]"`，三種做法見 DEVELOPMENT.md「專案路徑含中文時」，不要用 `PYTHONUTF8`）：
+
+- lint／格式：`ruff check .`、`ruff format --check .`；型別：`mypy`（只檢查 `src/`）；測試：`pytest`（預設排除 `perf`；單一測試：`pytest tests/contract/test_http_common.py::test_health`）。
+- 啟動：`python -m lecture_quiz`（只監聽 127.0.0.1:8000）。
+
+**001-activity-session 已實作**（`feature/5-001-activity-session`，PR #15）：`src/lecture_quiz/core/activity/`（純函式狀態機、輸入規則、快照裁切）、`app/activity/`（`ActivityService`、registry、ports）、`adapters/web/{http_api,ws_sync}.py`、`adapters/static/{teacher,student}.html`。組別以組號識別（`Group.number: int`），`Activity.max_groups` 為組數上限；給 002～005 的服務介面見 `specs/001-activity-session/contracts/service-interfaces.md`。
+
+子功能依序為 `001-activity-session` → `002-guided-notes-import` → `003-round-submission` → `004-ranking-review` → `005-result-export`（各自另開 Issue）。
 
 回覆與文件一律使用台灣繁體中文。
 

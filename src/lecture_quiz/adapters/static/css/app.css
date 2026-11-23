@@ -1,0 +1,100 @@
+/* 共用樣式：版面、狀態列、「同步中斷」橫幅、錯誤訊息。各子功能的樣式可追加在檔案最後。 */
+
+:root {
+  --color-text: #1f2328;
+  --color-muted: #59636e;
+  --color-border: #d1d9e0;
+  --color-danger-bg: #ffebe9;
+  --color-danger-text: #82071e;
+  --color-banner-bg: #fff8c5;
+  --color-banner-text: #6b4b00;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, "Microsoft JhengHei", "Noto Sans TC", sans-serif;
+  color: var(--color-text);
+  line-height: 1.6;
+}
+
+header,
+main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+main > section {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+/* 「同步中斷」橫幅（sync.js 控制） */
+#sync-banner {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  padding: 0.5rem 1rem;
+  background: var(--color-banner-bg);
+  color: var(--color-banner-text);
+  font-weight: bold;
+  text-align: center;
+}
+
+/* 同步中斷時隱藏所有「成功」提示（FR-028） */
+body.sync-broken .success-hint {
+  display: none !important;
+}
+
+/* 右下角狀態列：v{version}｜延遲 */
+#sync-status {
+  position: fixed;
+  right: 0.5rem;
+  bottom: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  font: 12px/1.4 ui-monospace, Consolas, monospace;
+}
+
+#sync-status:empty {
+  display: none;
+}
+
+.error-message {
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  background: var(--color-danger-bg);
+  color: var(--color-danger-text);
+}
+
+.muted {
+  color: var(--color-muted);
+}
+
+/* ── 001 活動 ── */
+.activity-code {
+  font: bold 1.5rem/1.2 ui-monospace, Consolas, monospace;
+  letter-spacing: 0.15em;
+}
+
+.countdown {
+  margin-left: 0.5rem;
+  font-weight: bold;
+}
+
+.controls button {
+  margin-right: 0.5rem;
+}
