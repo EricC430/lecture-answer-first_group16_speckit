@@ -2,7 +2,7 @@
 
 **日期**：2026-11-21 | **對應**：[plan.md](plan.md)、[spec.md](spec.md)
 
-每一項依「決定／理由／考慮過的替代方案」記錄。凡受 alignment 待確認提案影響的項目，標示「⚠ 提案相依」，並彙整在 [plan.md](plan.md) 的「受待確認提案影響的設計點」。
+每一項依「決定／理由／考慮過的替代方案」記錄。原本受 alignment 待確認提案影響的項目，已於 2026-11-23 全部獲 OpenSpec 組確認（見 [plan.md](plan.md)「OpenSpec 組確認後的設計調整」）；R9、R10 是依 Clarifications 新增的決定。
 
 ---
 
@@ -97,13 +97,13 @@
 
 **決定**：
 
-- **老師身分**（⚠ 提案相依 Q-04）：建立活動時，後端產生 32 bytes 的隨機 token（`secrets.token_urlsafe`）。前端存在 `localStorage`，key 是 `teacher:{活動代碼}`。
+- **老師身分**（alignment 2026-11-23 C6）：建立活動時，後端產生 32 bytes 的隨機 token（`secrets.token_urlsafe`）。前端存在 `localStorage`，key 是 `teacher:{活動代碼}`。
   - 同一瀏覽器的所有分頁共用這個 token。換瀏覽器或換裝置就沒有，因此拿不到老師身分。
   - 請求時以 `Authorization: Bearer <token>` 送出。
 - **裝置身分**：加入組別時，後端產生裝置 token。前端存在 `sessionStorage`，key 是 `device:{活動代碼}`。
   - `sessionStorage` 每個分頁獨立，重新整理後仍在。這樣同一瀏覽器的多個分頁可以模擬不同組的裝置，而重新整理時身分會恢復（FR-012）。
   - 已知取捨：關掉分頁再開就會失去身分，這時要重新加入。同組其他裝置畫面上看得到憑證（⚠ 提案相依 Q-06），所以重新加入很容易。
-- **活動代碼與組別加入憑證**（⚠ 提案相依 Q-06）：都由 `secrets.choice` 從 32 個字元中產生 6 碼。字元集是 `ABCDEFGHJKLMNPQRSTUVWXYZ23456789`，排除 0、O、1、I。
+- **活動代碼與組別加入憑證**（alignment 2026-11-23 B3）：都由 `secrets.choice` 從 32 個字元中產生 6 碼。字元集是 `ABCDEFGHJKLMNPQRSTUVWXYZ23456789`，排除 0、O、1、I。
   - 活動代碼產生時，要檢查不與存續中的活動重複。
   - 憑證只在同一組內使用，不需要全域唯一。
 - **WebSocket 認證**：連線後，第一則訊息是 `{"type": "auth", "token": ...}`。token 不放在 URL，避免出現在存取紀錄裡。
@@ -160,7 +160,7 @@
 **決定**：
 
 - **頁面**：由 FastAPI 直接提供靜態檔，包括 `teacher.html`、`student.html`，以及原生 JavaScript（ES modules）與一份 CSS。不使用前端框架，也不需要建置工具。
-- **不可信文字**：組名等文字一律以 `textContent` 輸出（原則 V）。
+- **不可信文字**：伺服端回傳的文字一律以 `textContent` 輸出（原則 V）。
 
 **理由**：
 
