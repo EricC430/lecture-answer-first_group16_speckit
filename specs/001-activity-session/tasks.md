@@ -543,8 +543,10 @@ description: "001-activity-session 任務清單"
 - [x] T104 前端：老師頁新增「開放加入」按鈕（準備中顯示，沒有題目時停用）、開輪面板改在開放加入與結果已定案顯示、取消按鈕在準備中與開放加入顯示、搶答中不顯示「刪除」組別按鈕；學生頁與老師頁加入「開放加入」階段名稱。前端沒有自動化測試，請在 T084 人工驗證。
 - [x] T105 既有測試改為先開放加入再加入／開輪（`tests/conftest.py` 新增 `open_joining`、`create_joinable`；`tests/unit/core/helpers.py` 新增 `joining_activity`）；刪除組別的「搶答中並行」測試改為驗證「搶答中一律拒絕刪除、不會產生孤兒答案」；`tests/SCENARIO_MAP.md` 重新掃描（57 個 Scenario，未對應：無）。
 - [x] T106 文件同步：spec（FR-008、FR-011、FR-013、FR-025、FR-034、FR-035、新增 FR-038、US8、US2-AS10、US7-AS7、US7-AS8、Clarifications、Traceability）、data-model、contracts（HTTP #12、WebSocket 階段列舉、service-interfaces）、research R11、plan、quickstart（改為 27 步）、類別圖與時序圖的 `.puml`、`docs/alignment.md`（三列 2026-11-23 決議）。
-- [ ] T107 重新產生三張 PNG：`.puml` 在 T106 又改過，現有 PNG 落後；需要在有 `plantuml.jar` 的本機 Windows 執行 `java -jar plantuml.jar -charset UTF-8 "./diagrams/001-*.puml"` 並目視確認（原則 II）。T095 的證據對應的是更早的版本。
+- [x] T107 重新產生三張 PNG：`.puml` 在 T106 又改過，需要重新產生（原則 II）。
+  - 2026-11-23：用本機 `plantuml.jar` 執行 `java -DPLANTUML_LIMIT_SIZE=16384 -jar plantuml.jar -charset UTF-8 "./diagrams/001-*.puml"`，並目視確認類別圖的 Stage 含「開放加入」、RejectionReason 含「尚未開放加入」「搶答中不可刪除組別」，時序圖含「開放加入」段落。**注意**：PlantUML 預設圖片尺寸上限 4096 像素，舊的時序圖（高 3982）與這次的類別圖（寬 4203）、時序圖（高 4711）超過上限時會被截掉，所以要加 `-DPLANTUML_LIMIT_SIZE=16384`；產生後三張尺寸為類別圖 4203×1836、組件圖 2405×818、時序圖 1522×4711。
 - [x] T108 Ctrl+C 關機保護（緩解，未在回報者的環境驗證）：`python -m lecture_quiz` 加上 `timeout_graceful_shutdown=3`，最多等 3 秒就取消剩下的連線並退出。EricC430 回報按 Ctrl+C 後後端沒有結束；本機（Windows、Python 3.14、uvicorn 0.54）以 8 條自動重連的 WebSocket 模擬，修改前後都在 0.2 秒內正常結束，所以**無法重現**，這項只是保險，需要 T084 第 26 步在回報者的環境再確認。
+- [x] T109 結束或取消之後的畫面一致（EricC430 在 T084 回報）：老師頁與學生頁一律維持在結果畫面，老師按「建立新活動」、學生按「加入其他活動」才回到建立／加入畫面（`teacher.js` 的 `showCreateForm`、`student.js` 的 `joinAnother`；後端重啟的 gone 畫面共用 `showCreateForm`）。前端沒有自動化測試，只做了 `node --check` 語法檢查；請在 T084 重跑 quickstart 第 24、27 步確認。
 - 2026-11-23 驗證（Windows 11、Python 3.14.7；與 T083 的 3.11.5 不同）：`ruff check .` All checks passed；`ruff format --check .` 115 files already formatted；`mypy` Success: no issues found in 26 source files；`pytest` 389 passed、1 deselected；`pytest -m perf` 1 passed。
 
 ---

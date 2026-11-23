@@ -77,10 +77,7 @@ function start(code, token) {
   if (state.sync) state.sync.close();
   state.sync = connectSync(code, token, {
     onSnapshot: render,
-    onGone: () => {
-      $("activity-info").hidden = true;
-      $("activity-create").hidden = false;
-    },
+    onGone: showCreateForm,
     onUnauthorized: () => showError($("activity-error"), { message: "需要該活動的老師身分。" }),
   });
 }
@@ -201,6 +198,21 @@ function renderClosing(snapshot) {
   $("ended-summary").hidden = snapshot.stage !== "ENDED";
   $("ended-unsolved").textContent = formatQuestions(snapshot.unsolvedQuestions);
   $("cancelled-summary").hidden = snapshot.stage !== "CANCELLED";
+  // 已結束或已取消：維持在結果畫面，由老師按「建立新活動」才回到建立畫面
+  $("new-activity").hidden = !["ENDED", "CANCELLED"].includes(snapshot.stage);
+}
+
+/** 回到建立活動畫面（只在已結束或已取消後由老師按鈕觸發；與後端重啟後的 gone 畫面一致）。 */
+function showCreateForm() {
+  if (state.sync) state.sync.close();
+  state.sync = null;
+  state.snapshot = null;
+  state.code = null;
+  state.token = null;
+  showError($("activity-error"), null);
+  $("activity-info").hidden = true;
+  $("activity-create").hidden = false;
+  history.replaceState(null, "", location.pathname);
 }
 
 onTeacherSnapshot(renderClosing);
@@ -269,6 +281,7 @@ function init() {
   $("end-activity").addEventListener("click", () => teacherAction("POST", "/end", {}));
   $("open-joining").addEventListener("click", () => teacherAction("POST", "/open-joining", {}));
   $("cancel-activity").addEventListener("click", () => teacherAction("POST", "/cancel", {}));
+  $("new-activity").addEventListener("click", showCreateForm);
   detectDevSeed();
   const code = normalizeCode(new URLSearchParams(location.search).get("code"));
   if (!code) return;

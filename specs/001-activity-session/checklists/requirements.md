@@ -34,7 +34,7 @@
 - [x] 原則 I：6 條 OpenSpec Requirement、12 個 Scenario 全部出現在 Traceability 表；偏離與新增行為都已記入 `docs/alignment.md`（2026-11-23 A1～C10），並在表中引用
 - [x] 原則 I：上述偏離與新增行為已由 OpenSpec 組於 2026-11-23 全部確認（alignment.md A1～C10）
 - [x] 原則 II：`diagrams/001-activity-session-{component,class,sequence}.puml` 已建立，並已納入組別更正流程
-- [ ] 原則 II：PNG 已轉出 — 2026-11-23 的「開放加入」決議又修改了 `.puml`，PNG 落後，待 tasks T107 在有 `plantuml.jar` 的本機重新產生（T095 對應更早的版本）
+- [x] 原則 II：PNG 已轉出（tasks T107：`java -DPLANTUML_LIMIT_SIZE=16384 -jar plantuml.jar -charset UTF-8 "./diagrams/001-*.puml"`，預設的 4096 像素上限會截掉大圖）
 - [x] 原則 III：開輪條件依 002 的成功匯入結果判定；匯入被拒時保留既有題目（Assumptions）
 - [x] 原則 IV：身分、階段、關輪一次、重送去重皆由後端判定（FR-012、FR-019、FR-033）
 - [x] 原則 V：權限（FR-004、FR-005）、資料可見性（FR-007、FR-030）、輸入驗證與錯誤訊息（FR-031、Edge Cases）

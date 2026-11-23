@@ -110,6 +110,20 @@ function renderLeave(snapshot) {
   $("leave-group").hidden = terminal;
   $("leave-group").disabled = roundOpen;
   $("leave-hint").hidden = !roundOpen || terminal;
+  // 已結束或已取消：維持在結果畫面，由學生按「加入其他活動」才回到加入畫面
+  $("new-join").hidden = !terminal;
+}
+
+/** 離開已結束或已取消的活動，回到加入畫面。 */
+function joinAnother() {
+  const { code } = currentIdentity();
+  if (state.sync) state.sync.close();
+  state.sync = null;
+  if (code) clearIdentity(code);
+  state.code = null;
+  showError($("student-error"), null);
+  showJoinForm();
+  history.replaceState(null, "", location.pathname);
 }
 
 onStudentSnapshot(renderLeave);
@@ -133,6 +147,7 @@ async function leaveGroup() {
 function init() {
   $("student-join").addEventListener("submit", joinGroup);
   $("leave-group").addEventListener("click", leaveGroup);
+  $("new-join").addEventListener("click", joinAnother);
   const code = normalizeCode(new URLSearchParams(location.search).get("code"));
   $("join-code").value = code;
   if (!code) return;
