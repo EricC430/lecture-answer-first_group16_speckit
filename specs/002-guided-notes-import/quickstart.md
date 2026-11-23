@@ -34,7 +34,7 @@
       - 建立後會顯示**用戶端 ID**與**用戶端密鑰**：分別是 `GOOGLE_CLIENT_ID`、`GOOGLE_CLIENT_SECRET`。密鑰只貼到本機 `.env`，**不要貼到聊天、Issue、PR 或任何追蹤的檔案**。
    5. **建立 API 金鑰**（Picker 用）：憑證 → 建立憑證 → API 金鑰，這就是 `GOOGLE_API_KEY`。建議先只把「API 限制」設為 **Google Picker API**，**先不要設網站（HTTP 參照網址）限制**：Picker 會在 Google 網域的畫面裡載入，網站限制設錯會出現「API developer key is invalid」。真實驗證通過後若要再收緊，再加限制並重新驗證（此項列入 [plan.md](plan.md)「待真實驗證的假設」）。
    6. 若授權時看到「這個應用程式未經 Google 驗證」：測試中的應用程式正常會出現，按「進階」→「前往（不安全）」即可；`drive.file` 是非敏感範圍，不需要送審。
-4. 複製 `.env.example` 為 `.env`（`.env` 已被 `.gitignore` 排除），填入 `GOOGLE_CLIENT_ID`、`GOOGLE_CLIENT_SECRET`、`GOOGLE_API_KEY`、`GOOGLE_APP_ID`、`OAUTH_REDIRECT_URI`；用 `python -m lecture_quiz` 啟動時會自動載入（見上表）。**任何一項是空字串都視為未設定**，匯入端點會明確回 `GOOGLE_NOT_CONFIGURED`。
+4. 複製 `.env.example` 為 `.env`（`.env` 已被 `.gitignore` 排除），填入 `GOOGLE_CLIENT_ID`、`GOOGLE_CLIENT_SECRET`、`GOOGLE_API_KEY`、`GOOGLE_APP_ID`、`OAUTH_REDIRECT_URI`；用 `python -m lecture_quiz` 啟動時會自動載入（見上表）。**任何一項是空字串都視為未設定**，匯入端點會明確回 `GOOGLE_NOT_CONFIGURED`。**`GOOGLE_APP_ID` 必須是 Cloud「專案編號」**（純數字，約 12 位，在專案首頁或設定頁；不是專案 ID，也不是 Client ID），並與 `GOOGLE_CLIENT_ID` 開頭的數字一致；不是純數字時同樣視為未設定。填錯的話 Picker 仍能選檔，但 Drive 會回 404 `notFound`（後端日誌會有 `Google API 錯誤：status=404 reason=notFound`）。
 
 ## A. 自動化驗證（預設不呼叫真實 Google）
 
@@ -104,6 +104,7 @@ pytest -m "not real_google and not perf"
 | 2026-11-23 | 同上 | `pytest -m "not real_google and not perf"` | 708 passed、0 failed、2 deselected（perf 與 real_google 各 1 組） | 含 001 的既有測試；002 部分：核心 96、應用層 94、Google 轉接層 67、HTTP 契約 29（參數化展開後更多）、架構 29 |
 | 2026-11-23 | EricC430 | T028 授權 → Picker → inspect | 通過（使用者回報） | 細節依使用者決定不記錄；先前因 `GOOGLE_APP_ID` 填成非專案編號而 404 `notFound`，更正後通過 |
 | 2026-11-23 | EricC430 | 真實路徑 B-1～B-13（版面 1、版面 2） | 通過（使用者回報） | 細節依使用者決定不記錄，**沒有 SC-006 秒數與題數可對照** |
+| 2026-11-23 | EricC430 的環境（Claude Code 執行） | T080～T082 後：`ruff check .`、`ruff format --check .`、`mypy`、`pytest -m "not real_google and not perf"` | 通過；188 個檔案格式正確；46 個檔案無型別問題；715 passed、2 deselected | 新增 `GOOGLE_APP_ID` 純數字驗證（紅燈 5 個測試後轉綠） |
 | | jacky0407 | T076 非實作者人工驗證 | | 尚未執行 |
 
 - **實作者**：EricC430。**非實作者人工驗證**：jacky0407（執行 B 區並簽名，記錄日期與結果）。

@@ -415,3 +415,9 @@ Task: "<core>/headers.py（T036）"
 - 預設測試不得呼叫真實 Google；任何真實呼叫都必須明確標記並指定真實轉接器。
 - 沒有實際執行過的指令，不得在 quickstart 紀錄表、PR 或任務清單寫成已通過。
 - Commit after each task or logical group；`docs/alignment.md` 只追加。
+
+## Phase 10: Convergence
+
+- [X] T080 更新 `CLAUDE.md` 的 002 段落：T028、T071 已由 EricC430 回報通過（細節未記錄）、T072 不做、T076 待 jacky0407，並移除「尚未執行」的過時描述 per tasks T078、plan: 待真實驗證的假設 (contradicts)
+- [X] T081 在 `src/lecture_quiz/adapters/google/config.py` 驗證 `GOOGLE_APP_ID` 為純數字（Cloud 專案編號），非數字時視為設定錯誤並明確失敗（匯入端點回未設定類拒絕、日誌只記變數名稱不記值），並在 `tests/unit/adapters/google/test_config.py` 與 `tests/contract/guided_notes_import/` 補測試（先確認紅燈）per FR-022、US1 (partial)
+- [X] T082 在 `.env.example` 與 `quickstart.md` 前置條件說明 `GOOGLE_APP_ID` 是 Cloud「專案編號」（純數字、與 `GOOGLE_CLIENT_ID` 開頭數字一致），填錯時 Drive 回 404 `notFound`；並確認 quickstart 已列出啟用 Drive、Sheets、Picker 三個 API 的步驟 per plan: 待真實驗證的假設 (partial)

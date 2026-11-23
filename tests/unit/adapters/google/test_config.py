@@ -53,3 +53,20 @@ def test_repr_does_not_leak_secrets():
     config = load_config(FULL)
     assert config is not None
     assert "s3cret-value" not in repr(config) and "key-value" not in repr(config)
+
+
+@pytest.mark.parametrize(
+    "bad",
+    ["my-project-123", "123456-abc.apps.googleusercontent.com", "12 34", "١٢٣", "-1"],
+)
+def test_app_id_must_be_the_numeric_project_number(bad):
+    """GOOGLE_APP_ID 非 Cloud 專案編號時視為設定錯誤，不等到選檔後才變成 404。"""
+    env = {**FULL, "GOOGLE_APP_ID": bad}
+    assert load_config(env) is None
+    assert missing_variables(env) == ["GOOGLE_APP_ID"]
+
+
+def test_numeric_app_id_with_surrounding_spaces_is_accepted():
+    env = {**FULL, "GOOGLE_APP_ID": " 123456789012 "}
+    config = load_config(env)
+    assert config is not None and config.app_id == "123456789012"

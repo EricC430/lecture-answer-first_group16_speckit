@@ -219,3 +219,19 @@ def test_expired_token_without_refresh_token_needs_reauthorization():
     assert (
         run(gateway.valid_credentials(CODE)).rejection is ImportRejection.AUTH_EXPIRED
     )
+
+
+def test_non_numeric_app_id_is_not_configured_not_a_late_404():
+    """GOOGLE_APP_ID 填成專案 ID 時，授權前就明確回未設定（不等到選檔後 404）。"""
+    FakeFlow.instances = []
+    bad_env = {**ENV, "GOOGLE_APP_ID": "my-project-id"}
+    gateway = GoogleAuthGateway(
+        ImportStore(),
+        FakeClock(),
+        config_provider=lambda: load_config(bad_env),
+        flow_factory=lambda _c: FakeFlow(),
+        refresher=lambda creds: None,
+    )
+    assert not gateway.is_configured()
+    result = run(gateway.start_authorization(CODE, TEACHER))
+    assert result.rejection is ImportRejection.GOOGLE_NOT_CONFIGURED
