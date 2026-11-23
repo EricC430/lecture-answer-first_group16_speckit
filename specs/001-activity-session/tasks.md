@@ -11,7 +11,7 @@ description: "001-activity-session 任務清單"
 
 **Tests**: REQUIRED（專案覆寫，憲章原則 VI）。
 
-- spec 共有 44 個 Acceptance Scenario，每一個至少對應一個自動化測試；測試的 docstring 第一行寫 `Scenario: USn-ASm`。
+- spec 共有 47 個 Acceptance Scenario（2026-11-23 clarify 後：US1 新增 AS7、AS8，US2 新增 AS9），每一個至少對應一個自動化測試；測試的 docstring 第一行寫 `Scenario: USn-ASm`。
 - 測試先寫，並確認在實作前是失敗的。
 - 本子功能不使用 Google，不需要 mock，也不需要真實路徑驗證。
 
@@ -23,7 +23,7 @@ description: "001-activity-session 任務清單"
 - **服務層**：`src/lecture_quiz/app/activity/`。
 - **轉接層**：`src/lecture_quiz/adapters/`。
 
-**⚠ 提案相依**：標示的任務受 `docs/alignment.md` 2026-11-21 尚待確認的提案影響（Q-04、Q-06、Q-08、Q-09／Q-33、離開本組、刪除空組）。組內開會或 OpenSpec 組回覆後，依 [plan.md](plan.md)「受待確認提案影響的設計點」調整；這些任務在對方確認前不得合併。
+**2026-11-23 更新（`/speckit-clarify` 後重跑 `/speckit-tasks`）**：`docs/alignment.md` 2026-11-21 的提案已於 2026-11-23 全部獲 OpenSpec 組確認，原本的「⚠ 提案相依」標記全部解除。依 Clarifications 新增 US1 的組數上限與 C7 任務（T089～T094），改寫 US2（組號）、US7 任務，並新增 T095（在有 plantuml.jar 的環境重新產生 PNG）。已完成任務的 ID 不重排。
 
 **Organization**: 依 User Story 分組。P1 依 US1 → US2 → US3 → US4 → US6 的順序（後面的故事需要前面的狀態），接著是 P2 的 US5、US7。
 
@@ -75,18 +75,18 @@ description: "001-activity-session 任務清單"
 
 ### 核心（純函式）
 
-- [ ] T007 [P] ⏸ 部分完成（`Group.join_credential` 待 US2）。在 `src/lecture_quiz/core/activity/models.py` 建立 frozen dataclass，欄位與規則照 [data-model.md](data-model.md) 原文：
+- [ ] T007 [P] 部分完成；US2 時一併完成（`Activity.max_groups`、`Group.number`、`Group.join_credential`、`DeviceIdentity.group_number`、各 Mapping 以組號為 key，研究 R9）。在 `src/lecture_quiz/core/activity/models.py` 建立 frozen dataclass，欄位與規則照 [data-model.md](data-model.md) 原文：
   - `Stage`（`PREPARING`、`ROUND_OPEN`、`RESULT_PENDING`、`RESULT_FINAL`、`ENDED`、`CANCELLED`；`is_terminal` 屬性）。
-  - `TeacherIdentity(token_hash)`、`Group(name, join_credential, success_count, has_submissions)`、`DeviceIdentity(token_hash, group_name)`。
+  - `TeacherIdentity(token_hash)`、`Group(number, join_credential, success_count, has_submissions)`、`DeviceIdentity(token_hash, group_number)`。
   - `RoundRules(question_numbers, fair_mode, countdown_seconds, deadline)`。
   - `Round(number, rules, opened_at, baseline, closed, closed_at, close_cause)`。
-  - `Activity(code, stage, version, changed_at, teacher, question_numbers, solved_questions, groups, devices, rounds)`，含 `current_round`、`unsolved_questions` 衍生屬性。
+  - `Activity(code, stage, version, changed_at, teacher, max_groups, question_numbers, solved_questions, groups, devices, rounds)`，含 `current_round`、`unsolved_questions` 衍生屬性。
   - 集合欄位一律使用 `tuple`、`frozenset`、`MappingProxyType`。
   - 每個公開類別都有 Google 風格 docstring。
-- [ ] T008 [P] ⏸ 部分完成：已有 Actor、`CreateActivity`、`OpenRound`、`CloseRound`、`Finalize`、`EndActivity`、`CancelActivity`、`ReplaceQuestions`、`FinalizeOutcome`；`JoinGroup` 目前是最小入口 `JoinGroup(group_name)`，`LeaveGroup`、`DeleteGroup`、`MarkGroupSubmitted` 待 US2／US7。在 `src/lecture_quiz/core/activity/commands.py` 建立：
+- [ ] T008 [P] 部分完成；US2、US7 時一併完成（`CreateActivity(max_groups_raw)`、`JoinGroup(number_raw, credential_raw)`、`LeaveGroup`、`DeleteGroup(number_raw)`、`MarkGroupSubmitted(group_number)`）。在 `src/lecture_quiz/core/activity/commands.py` 建立：
   - Actor 型別：`Teacher(token_hash)`、`Device(token_hash)`、`System`、`Anonymous`。
-  - Command 型別：`CreateActivity`、`JoinGroup(name_raw, credential_raw)`、`LeaveGroup`、`DeleteGroup(name)`、`OpenRound(question_numbers, fair_mode, countdown_raw)`、`CloseRound`、`Finalize(outcome)`、`EndActivity`、`CancelActivity`、`ReplaceQuestions(question_numbers)`、`MarkGroupSubmitted(group_name)`。
-  - `FinalizeOutcome(solved_questions: frozenset[int], success_increments: Mapping[str, int])`。
+  - Command 型別：`CreateActivity(max_groups_raw)`、`JoinGroup(number_raw, credential_raw)`、`LeaveGroup`、`DeleteGroup(number_raw)`、`OpenRound(question_numbers, fair_mode, countdown_raw)`、`CloseRound`、`Finalize(outcome)`、`EndActivity`、`CancelActivity`、`ReplaceQuestions(question_numbers)`、`MarkGroupSubmitted(group_number)`。
+  - `FinalizeOutcome(solved_questions: frozenset[int], success_increments: Mapping[int, int])`（key 為組號）。
 - [x] T009 [P] 在 `src/lecture_quiz/core/activity/results.py` 建立：
   - `RejectionReason` 列舉，11 個值，每個值附 HTTP 狀態碼與 [data-model.md](data-model.md) 表中的中文訊息；`STAGE_NOT_ALLOWED` 的訊息由「階段 × 操作」產生。
   - `IssuedSecrets(group_credential, device_token_hash)`，由服務層傳入。
@@ -149,7 +149,7 @@ description: "001-activity-session 任務清單"
 - [x] T022 [P] 建立前端共用模組，都放在 `src/lecture_quiz/adapters/static/`：
   - `css/app.css`：狀態列與「同步中斷」橫幅樣式。
   - `js/api.js`：fetch 包裝，自動帶 `Authorization` 與每次操作的 `Idempotency-Key`（UUID），重試時沿用同一個 key；錯誤時顯示 `error.message`。
-  - `js/identity.js`：老師 token 存在 `localStorage["teacher:{code}"]`，裝置 token 存在 `sessionStorage["device:{code}"]`（⚠ 提案相依 Q-04）。
+  - `js/identity.js`：老師 token 存在 `localStorage["teacher:{code}"]`，裝置 token 存在 `sessionStorage["device:{code}"]`（alignment 2026-11-23 C6）。
   - `js/sync.js`：
     - 先送 `auth`。
     - 重連依序等 0.5、1、2、4 秒，之後每次 4 秒。
@@ -182,8 +182,8 @@ description: "001-activity-session 任務清單"
   - 錯誤回應不含 `Traceback`、檔案路徑或 token。
 - [x] T025 [P] [US1] 在 `tests/integration/test_us1_teacher.py` 測試：
   - `Scenario: US1-AS1`：已有一個活動時再建立一個，兩個代碼都是 6 碼，字元都在字元集內，而且互不相同。
-  - `Scenario: US1-AS2` ⚠ 提案相依 Q-04：用同一個 token 建立新的 client（模擬重新整理或新分頁），仍可取得老師快照並操作。
-  - `Scenario: US1-AS3` ⚠ 提案相依 Q-04：沒有 token 的 client 操作時回 403 `NOT_TEACHER`。
+  - `Scenario: US1-AS2` （C6）：用同一個 token 建立新的 client（模擬重新整理或新分頁），仍可取得老師快照並操作。
+  - `Scenario: US1-AS3` （C6）：沒有 token 的 client 操作時回 403 `NOT_TEACHER`。
   - `Scenario: US1-AS4`：學生裝置 token 操作時回 403，回應中不含任何 credential 或 token。
   - `Scenario: US1-AS5`：活動 B 的老師 token 操作活動 A 時回 403，A 的 `version` 不變。
   - `Scenario: US1-AS6`：只帶活動代碼、不帶 token 時回 403，訊息為「需要這個活動的老師身分才能操作。」
@@ -197,66 +197,85 @@ description: "001-activity-session 任務清單"
   - `snapshot(code, requester)`。
 - [x] T028 [US1] **轉接層**：在 `src/lecture_quiz/adapters/web/http_api.py` 實作 `POST /activities` 與 `GET /activities/{code}/snapshot`。snapshot 在活動不存在時：帶 token 回 410 `ACTIVITY_GONE`，不帶 token 回 404。
 - [x] T029 [US1] **轉接層**：建立 `src/lecture_quiz/adapters/static/teacher.html` 與 `js/teacher.js`：
-  - 「建立活動」按鈕，建立後顯示代碼，token 存到 `identity.js`（⚠ 提案相依 Q-04）。
+  - 「建立活動」按鈕，建立後顯示代碼，token 存到 `identity.js`（alignment 2026-11-23 C6）。
   - 網址帶 `?code=` 時，從 `localStorage` 取 token 並連線同步；沒有 token 時顯示「需要該活動的老師身分」。
+
+### US1 補充：組數上限與一位老師一個活動（2026-11-23 clarify，FR-036、FR-037）
+
+- [ ] T089 [P] [US1] 在 `tests/unit/core/test_input_rules_max_groups.py` 與 `tests/unit/core/test_state_machine_create_and_permissions.py` 測試：
+  - `Scenario: US1-AS7`：`InputRules.validate_max_groups` 接受 `1`、`99`；拒絕 `0`、`-1`、`100`、`2.5`、`"6"`、`""`、`None`、`True`，回傳 `INVALID_MAX_GROUPS`；`CreateActivity(max_groups_raw=…)` 不合法時 `Transition.ok is False` 且沒有活動。
+  - `Scenario: US1-AS1`：`CreateActivity(max_groups_raw=6)` 後 `activity.max_groups == 6`。
+- [ ] T090 [P] [US1] 在 `tests/contract/test_http_activities.py` 與 `tests/integration/test_us1_teacher.py` 測試：
+  - 契約：`POST /api/activities {"maxGroups": 6}` 回 `201 {"code", "teacherToken", "maxGroups", "version"}`；`maxGroups` 不合法時回 `400 INVALID_MAX_GROUPS`；老師快照含 `maxGroups`。
+  - `Scenario: US1-AS8`：帶著存續中活動 K 的老師 token 建立新活動時回 `409 TEACHER_HAS_ACTIVE_ACTIVITY`，訊息含 K，活動數不增加；K 結束或取消後，同一 token 可以建立；token 找不到活動（模擬重啟）時可以建立。
+  - 同一個 `Idempotency-Key` 重送時，仍回傳同一個活動（不因 C7 檢查而拒絕重送）。
+- [ ] T091 [US1] **核心**：在 `input_rules.py` 實作 `validate_max_groups`（1～99 的 `int`，排除 `bool`）；在 `commands.py` 為 `CreateActivity` 加 `max_groups_raw`；在 `models.py` 為 `Activity` 加 `max_groups`；在 `results.py` 新增 `INVALID_MAX_GROUPS`、`TEACHER_HAS_ACTIVE_ACTIVITY`；`state_machine._create` 驗證後寫入 `max_groups`。
+- [ ] T092 [US1] **服務層**：在 `registry.py` 實作 `find_by_teacher(token_hash)`；在 `service.py` 把 `create` 改為 `create(max_groups_raw, teacher_token, idempotency_key) -> Outcome[CreatedActivity]`：建立鎖內先查重送表，再做 C7 檢查（研究 R10），最後呼叫狀態機。
+- [ ] T093 [US1] **轉接層**：`http_api.py` 的 `POST /activities` 接收本文 `maxGroups`（原樣交給核心）與選填的 `Authorization`，回應加上 `maxGroups`；`SnapshotView.for_teacher` 加上 `maxGroups`。
+- [ ] T094 [US1] **轉接層**：`teacher.html`、`teacher.js` 加入「組數上限」輸入（預設 6，`min=1 max=99`）；建立時附上 `localStorage["teacher:last"]` 那個活動的老師 token；建立成功後更新 `teacher:last`；畫面顯示組數上限。`identity.js` 新增 `getLastTeacherCode`／`setLastTeacherCode`。
 
 **Checkpoint**: US1 可以獨立測試
 
 ---
 
-## Phase 4: User Story 2 - 學生以組別加入，多裝置同組並可恢復身分 (Priority: P1)
+## Phase 4: User Story 2 - 學生以組號加入，多裝置同組並可恢復身分 (Priority: P1)
 
-> **⏸ 暫緩（2026-11-23）**：組別將依 alignment 2026-11-22 決議改為「組號＋老師指定組數上限」，組別加入憑證也在等 OpenSpec 組回覆。目前 core 只有最小入口 `JoinGroup(group_name)`（建立組別並登記裝置，不做正規化與憑證檢查），服務層 `ActivityService.join(code, group_name)` 沒有 HTTP 端點，只給 US1、US3 之後的測試使用（`tests/conftest.py` 的 `join_group`）。實作 US2 時要改掉這個最小入口與相關測試。
+> 2026-11-23 依 Clarifications 改寫：組號（1～N）取代組名；組別加入憑證已獲 OpenSpec 組確認（B3）。原本測試用的最小入口 `JoinGroup(group_name)`、`ActivityService.join(code, group_name)` 與 `tests/conftest.py` 的 `join_group` 要一併改成正式流程。
 
-**Goal**: 學生用代碼加組名加入；既有組要附上憑證；本組裝置看得到憑證；重新整理後恢復身分
+**Goal**: 學生用代碼加組號加入；既有組要附上憑證；本組裝置看得到憑證；重新整理後恢復身分
 
-**Independent Test**: 兩個 client 加入同一組（第二個附憑證），第三個加入另一組；確認同組身分與憑證一致、他組看不到；再測錯誤代碼、空白組名、錯誤憑證、重新整理與中途加入
+**Independent Test**: 兩個 client 加入同一組（第二個附憑證），第三個加入另一組；確認同組身分與憑證一致、他組看不到；再測錯誤代碼、超出範圍或格式錯誤的組號、錯誤憑證、重新整理、中途加入與重複加入
 
 ### Tests for User Story 2 (REQUIRED) ⚠️
 
-- [ ] T030 [P] [US2] 在 `tests/unit/core/test_input_rules_group_name.py` 測試 `normalize_group_name`：
-  - `" 第一組 "` 會變成 `"第一組"`。
-  - 空字串與純空白（含全形空白 `"　"`）回傳 `INVALID_GROUP_NAME`。
-  - 含 `\n`、`\t` 等 Unicode `Cc` 類別字元時回傳 `INVALID_GROUP_NAME`。
-  - 長度 500 的組名可以接受（不設長度上限，Q-07）。
-  - `"ABC"` 與 `"abc"` 視為不同組名。
+- [ ] T030 [P] [US2] 在 `tests/unit/core/test_input_rules_group_number.py` 測試 `normalize_group_number(raw, max_groups=6)`：
+  - 接受 `3`、`"3"`、`" 3 "`、`"03"`、`"３"`、`"０３"`、`6`、`1`，都回傳整數。
+  - 拒絕 `0`、`7`、`-1`、`2.5`、`"2.5"`、`"三"`、`"3組"`、`""`、`"　"`、`None`、`True`、`[3]`，回傳 `INVALID_GROUP_NUMBER`；訊息為「組號須為 1～6 的整數。」。
+  - `normalize_credential`：`" q8mz3r "` 變成 `"Q8MZ3R"`；`None` 變成 `""`。
 - [ ] T031 [P] [US2] 在 `tests/unit/core/test_state_machine_join.py` 測試：
-  - `Scenario: US2-AS1`：新組名建立 `Group`，並為該裝置建立 `DeviceIdentity`。
-  - `Scenario: US2-AS2`：既有組名加上正確憑證時，新增裝置，不新增組。
-  - `Scenario: US2-AS4`：既有組名不附憑證或憑證錯誤時，回傳 `BAD_CREDENTIAL`，`activity` 不變。
-  - `Scenario: US2-AS5`：空白組名、含控制字元的組名被拒，`activity` 不變。
+  - `Scenario: US2-AS1`：組號 `" ０３ "` 建立第 3 組，並為該裝置建立 `DeviceIdentity(group_number=3)`；憑證來自 `issued.group_credential`。
+  - `Scenario: US2-AS2`：既有組號加上正確憑證（大小寫、首尾空白不影響）時，新增裝置，不新增組。
+  - `Scenario: US2-AS4`：既有組號不附憑證或憑證錯誤時，回傳 `BAD_CREDENTIAL`，`activity` 不變，訊息含組號、不含憑證。
+  - `Scenario: US2-AS5`：組號格式錯誤或超出 1～N 時回傳 `INVALID_GROUP_NUMBER`，`activity` 不變。
   - `Scenario: US2-AS6`：`ENDED`、`CANCELLED` 時拒絕加入，訊息依階段寫成「活動已結束／已取消」。
   - `Scenario: US2-AS7`：在 `ROUND_OPEN` 加入新組，`success_count == 0`，`stage` 不變。
+  - `Scenario: US2-AS9`：`Device` 已在 `devices` 中時回傳 `ALREADY_IN_GROUP`，`activity` 不變。
 - [ ] T032 [P] [US2] 在 `tests/unit/core/test_snapshot_view_groups.py` 測試：
-  - `Scenario: US2-AS3` ⚠ 提案相依 Q-06：`for_group` 只含 `ownGroup`（名稱、憑證、成功次數）；`for_teacher` 的 `groups` 含每一組的憑證。
-  - FR-030：`for_group` 的序列化 JSON 不含任何其他組的名稱、憑證，也不含組數。
+  - `Scenario: US2-AS3`：`for_group` 只含 `ownGroup`（`number`、`credential`、`successCount`）；`for_teacher` 的 `groups` 依組號排序，含每一組的 `credential`。
+  - FR-030：`for_group` 的序列化 JSON 不含任何其他組的組號、憑證，也不含 `groups`、`maxGroups`。
 - [ ] T033 [P] [US2] 在 `tests/contract/test_http_join.py` 測試契約：
-  - `POST /groups/join` 回 `200 {"deviceToken", "groupName", "credential", "version"}`。
-  - 代碼輸入 `" k7qh2m "` 視為 `K7QH2M`。
-  - 已帶有效裝置 token 再加入時，回 409「請先離開本組」。
-- [ ] T034 [P] [US2] 在 `tests/integration/test_us2_join.py` 以 HTTP 加 WebSocket 測試 `Scenario: US2-AS1`～`US2-AS8`：
+  - `POST /groups/join {"groupNumber": 3}` 回 `200 {"deviceToken", "groupNumber", "credential", "version"}`。
+  - 代碼輸入 `" k7qh2m "` 視為 `K7QH2M`；代碼不存在且未帶 token 時回 404。
+  - 已帶有效裝置 token 再加入時，回 `409 ALREADY_IN_GROUP`「請先離開本組」。
+  - 錯誤回應不含任何憑證或 token。
+- [ ] T034 [P] [US2] 在 `tests/integration/test_us2_join.py` 以 HTTP 加 WebSocket 測試 `Scenario: US2-AS1`～`US2-AS9`：
   - AS2：兩個裝置的快照中，`ownGroup` 相同。
-  - AS3 ⚠ Q-06：其他組的快照中沒有第一組的憑證。
+  - AS3：其他組的快照中沒有第 3 組的憑證；老師快照有每一組的憑證。
   - AS4：錯誤訊息含「向同組同學查看本組加入憑證」，而且不含憑證本身。
   - AS8：用同一個裝置 token 重新連 WebSocket，取得原組別。
 
 ### Implementation for User Story 2
 
-- [ ] T035 [P] [US2] **核心**：在 `src/lecture_quiz/core/activity/input_rules.py` 實作 `InputRules.normalize_group_name`（去除首尾空白、不可為空、不可含 `unicodedata.category == "Cc"` 的字元、不設長度上限）。
-- [ ] T036 [US2] **核心**：在 `src/lecture_quiz/core/activity/state_machine.py` 實作 `JoinGroup`：
+- [ ] T035 [P] [US2] **核心**：在 `src/lecture_quiz/core/activity/input_rules.py` 實作 `normalize_group_number(raw, max_groups)`（研究 R9：`int` 或半形／全形數字字串、前導零與首尾空白、1～N）與 `normalize_credential(raw)`；`results.py` 把 `INVALID_GROUP_NAME` 改為 `INVALID_GROUP_NUMBER`，新增 `ALREADY_IN_GROUP`，`BAD_CREDENTIAL` 訊息改為組號版；訊息需要帶入組號或 N 時由 `describe_rejection` 產生。
+- [ ] T036 [US2] **核心**：在 `src/lecture_quiz/core/activity/state_machine.py` 實作 `JoinGroup(number_raw, credential_raw)`：
   - 允許的階段：非終止階段。
-  - 新組名：使用 `issued.group_credential`。
-  - 既有組名：用 `hmac.compare_digest` 比對憑證。
-  - 新增 `DeviceIdentity`，`token_hash` 來自 `issued`。
-- [ ] T037 [US2] **核心**：在 `src/lecture_quiz/core/activity/snapshot_view.py` 補上 `for_group` 的 `ownGroup`（含憑證）與 `for_teacher` 的 `groups`（`name`、`credential`、`successCount`、`hasSubmissions`、`deviceCount`）及 `questionNumbers`（⚠ 提案相依 Q-06）。
+  - `Device` 已在 `devices` 中時拒絕（`ALREADY_IN_GROUP`）。
+  - 新組號：使用 `issued.group_credential` 建立 `Group(number, join_credential)`。
+  - 既有組號：用 `hmac.compare_digest` 比對正規化後的憑證。
+  - 新增 `DeviceIdentity(token_hash, group_number)`，`token_hash` 來自 `issued`。
+  - `models.py`：`Group.number`、`DeviceIdentity.group_number`，`groups`、`Round.baseline` 以組號為 key；`FinalizeOutcome.success_increments` 以組號為 key（T007、T008 一併完成）。
+- [ ] T037 [US2] **核心**：在 `src/lecture_quiz/core/activity/snapshot_view.py` 補上 `for_group(activity, group_number)` 的 `ownGroup`（`number`、`credential`、`successCount`）與 `for_teacher` 的 `groups`（依組號排序：`number`、`credential`、`successCount`、`hasSubmissions`、`deviceCount`）。
 - [ ] T038 [US2] **服務層**：在 `src/lecture_quiz/app/activity/service.py` 實作：
-  - `join(code, name_raw, credential_raw, requester, idempotency_key)`：產生憑證與裝置 token，回傳原始 token 一次。
-  - `resolve_device(code, device_token)`：給 003 使用。
-- [ ] T039 [US2] **轉接層**：在 `src/lecture_quiz/adapters/web/http_api.py` 實作 `POST /activities/{code}/groups/join`，讓 `GET snapshot` 支援裝置 token；`ws_sync.py` 的學生連線改用 `for_group` 裁切。
-- [ ] T040 [US2] **轉接層**：建立 `src/lecture_quiz/adapters/static/student.html` 與 `js/student.js`：
-  - 加入表單：代碼、組名、選填的憑證。
-  - 成功後把裝置 token 存到 `sessionStorage`，並常駐顯示「本組加入憑證」（⚠ 提案相依 Q-06）。
+  - `join(code, number_raw, credential_raw, requester, idempotency_key) -> Outcome[JoinedDevice]`：產生憑證與裝置 token，回傳原始 token 一次與該組憑證。
+  - `resolve_device(code, device_token) -> Outcome[DeviceContext]`：給 003 使用。
+  - `ExportView.groups` 依組號排序。
+- [ ] T039 [US2] **轉接層**：在 `src/lecture_quiz/adapters/web/http_api.py` 實作 `POST /activities/{code}/groups/join`（本文 `groupNumber`、`credential` 原樣交給核心）；`GET snapshot` 與 WebSocket 的學生連線已依裝置身分以 `for_group` 裁切，改用組號。
+- [ ] T040 [US2] **轉接層**：更新 `src/lecture_quiz/adapters/static/student.html` 與 `js/student.js`：
+  - 加入表單：活動代碼（網址有 `?code=` 時預填）、組號、選填的憑證。
+  - 成功後把裝置 token 存到 `sessionStorage`，網址改為 `?code=`，並常駐顯示「第 n 組」與「本組加入憑證」。
   - 重新整理時自動恢復身分。
+  - 老師頁的組別清單顯示每一組的組號、憑證、裝置數、成功次數。
+  - 更新 `tests/conftest.py` 的 `join_group(client, code, number)` 改走 HTTP，以及 `tests/perf/test_sync_latency.py`、`dev_seed` 相關測試的組別寫法。
 
 **Checkpoint**: US1 與 US2 都能獨立運作
 
@@ -271,7 +290,7 @@ description: "001-activity-session 任務清單"
 ### Tests for User Story 3 (REQUIRED) ⚠️
 
 - [x] T041 [P] [US3] 在 `tests/unit/core/test_input_rules_round.py` 測試：
-  - `Scenario: US3-AS6` ⚠ 提案相依 Q-08：`validate_countdown` 接受 `None`、`1`、`3600`；拒絕 `0`、`-1`、`3601`、`2.5`、`"10"`、`""`、`True`，回傳 `INVALID_COUNTDOWN`，訊息為「倒數秒數須為 1～3600 的整數。」
+  - `Scenario: US3-AS6` （C9）：`validate_countdown` 接受 `None`、`1`、`3600`；拒絕 `0`、`-1`、`3601`、`2.5`、`"10"`、`""`、`True`，回傳 `INVALID_COUNTDOWN`，訊息為「倒數秒數須為 1～3600 的整數。」
   - `validate_selection` 拒絕空清單、重複題號、不存在的題號、已成功的題號，回傳 `INVALID_SELECTION`。
 - [x] T042 [P] [US3] 在 `tests/unit/core/test_state_machine_open_round.py` 測試：
   - `Scenario: US3-AS1`：`question_numbers=None` 時選取全部未成功題，`fair_mode` 預設為 `False`，`deadline` 為 `None`。
@@ -294,7 +313,7 @@ description: "001-activity-session 任務清單"
 ### Implementation for User Story 3
 
 - [x] T046 [P] [US3] **核心**：在 `src/lecture_quiz/core/activity/input_rules.py` 實作：
-  - `validate_countdown(raw)`：`None` 或 1～3600 的 `int`，排除 `bool`（⚠ 提案相依 Q-08）。
+  - `validate_countdown(raw)`：`None` 或 1～3600 的 `int`，排除 `bool`（alignment 2026-11-23 C9）。
   - `validate_selection(selected, imported, solved)`：`selected` 為 `None` 時回傳全部未成功題；其餘照 T041 的規則。
 - [x] T047 [US3] **核心**：在 `src/lecture_quiz/core/activity/state_machine.py` 實作：
   - `OpenRound`：允許 `PREPARING`（必須有題目）與 `RESULT_FINAL`；建立 `RoundRules` 與 `Round`，`deadline = now + countdown_seconds`。
@@ -309,7 +328,7 @@ description: "001-activity-session 任務清單"
   - 在 `tests/integration/test_dev_seed.py` 測試：預設不存在（404）、啟用後學生呼叫時回 403。
   - 依據：研究 R8、Complexity Tracking。
 - [x] T051 [US3] **轉接層**：在 `src/lecture_quiz/adapters/static/teacher.html` 與 `js/teacher.js` 加入：
-  - 開輪面板：題目核取方塊預設全選未成功題、公平模式預設關閉、倒數輸入選填（⚠ 提案相依 Q-08）。
+  - 開輪面板：題目核取方塊預設全選未成功題、公平模式預設關閉、倒數輸入選填（alignment 2026-11-23 C9）。
   - 「放入假題目」按鈕：只在 seed 端點存在時顯示。
 
 **Checkpoint**: US1～US3 可以獨立運作
@@ -378,7 +397,7 @@ description: "001-activity-session 任務清單"
   - `Scenario: US6-AS2`：伺服端在斷線期間不會因為推送失敗而影響其他連線或狀態。前端「同步中斷」的畫面行為由 quickstart 第 17 步人工驗證補足（純前端行為，沒有自動化瀏覽器測試）。
   - `Scenario: US6-AS3`：斷線期間發生變更，重連後第一則 `snapshot` 就是最新版本。
   - `Scenario: US6-AS4`：建立新的 `create_app()`（模擬重啟）後，舊老師 token 與舊裝置 token 的 WebSocket 都收到 `gone`，HTTP snapshot 回 410（SC-007）。
-  - `Scenario: US6-AS5`：在 `ROUND_OPEN` 時，學生收到的每一則訊息都不含其他組的組名、憑證或 `hasSubmissions`（SC-009）。
+  - `Scenario: US6-AS5`：在 `ROUND_OPEN` 時，學生收到的每一則訊息都不含其他組的組號、憑證或 `hasSubmissions`（SC-009）。
 - [x] T062 [P] [US6] 2026-11-23 本機執行 `pytest -m perf`：1 passed；最大延遲 開輪 6.5 ms、關輪 5.1 ms、定案 5.0 ms、結束 5.4 ms（各 10 次、13 條連線）。在 `tests/perf/test_sync_latency.py` 撰寫 `@pytest.mark.perf` 效能測試（SC-001、研究 R2）：
   - 在背景執行緒以 `127.0.0.1` 啟動真實 uvicorn，連上老師 1 條與 6 組各 2 條，共 13 條 WebSocket。
   - 開輪、關輪、定案、結束各做 10 次，量測「送出 HTTP → 13 條連線都收到新版本」的時間。
@@ -386,7 +405,7 @@ description: "001-activity-session 任務清單"
 
 ### Implementation for User Story 6
 
-- [ ] T063 [US6] ⏸ 部分完成（`disconnect_device` 待 US7；其餘項目已在 T020 完成並由 T060、T061 驗證）。**轉接層**：在 `src/lecture_quiz/adapters/web/ws_sync.py` 完成：
+- [ ] T063 [US6] 部分完成（`disconnect_device` 在 US7 時完成；其餘項目已在 T020 完成並由 T060、T061 驗證）。**轉接層**：在 `src/lecture_quiz/adapters/web/ws_sync.py` 完成：
   - 只有 `changed` 時才推送。
   - 推送時逐一連線送出，任一連線失敗時只關閉該連線，並記錄 `INFO`（不含 token）。
   - 支援 `disconnect_device(code, token_hash, reason)`，給離開本組與刪除組別使用。
@@ -412,20 +431,20 @@ description: "001-activity-session 任務清單"
 - [x] T065 [P] [US5] 在 `tests/unit/core/test_state_machine_end_cancel.py` 測試：
   - `Scenario: US5-AS1`：在 `RESULT_FINAL` 結束後為 `ENDED`，`unsolved_questions` 含第 3 題。
   - `Scenario: US5-AS3`：在 `ROUND_OPEN`、`RESULT_PENDING` 結束時回傳 `STAGE_NOT_ALLOWED`，訊息含「請先關輪並確認定案」。
-  - `Scenario: US5-AS4` ⚠ 提案相依 Q-09：在 `PREPARING` 取消後為 `CANCELLED`，之後任何操作都被拒。
+  - `Scenario: US5-AS4` （C8）：在 `PREPARING` 取消後為 `CANCELLED`，之後任何操作都被拒。
   - `Scenario: US5-AS5`：`ENDED` 時加入被拒，`accepts_submission` 為 `False`。
   - `Scenario: US5-AS6`：在 `PREPARING` 送 `EndActivity` 被拒，訊息為「準備中只能取消活動」。
 - [x] T066 [P] [US5] 在 `tests/integration/test_us5_end_cancel.py` 以 HTTP 加 WebSocket 測試 `Scenario: US5-AS1`～`US5-AS6`：
   - AS1：所有頁面的快照都有 `unsolvedQuestions`。
   - `Scenario: US5-AS2`：`export_view` 在 `ENDED` 時可以使用，未成功題標示為未成功。
-  - AS4 ⚠ Q-09／Q-33：在 `CANCELLED` 時呼叫 `export_view`，回傳 `STAGE_NOT_ALLOWED`。
+  - AS4 （C8）：在 `CANCELLED` 時呼叫 `export_view`，回傳 `STAGE_NOT_ALLOWED`。
 
 ### Implementation for User Story 5
 
-- [x] T067 [US5] **核心**：在 `src/lecture_quiz/core/activity/state_machine.py` 實作 `EndActivity`（只允許 `RESULT_FINAL`）與 `CancelActivity`（只允許 `PREPARING`，⚠ 提案相依 Q-09）；`snapshot_view.py` 在 `ENDED` 時填入 `unsolvedQuestions`。
+- [x] T067 [US5] **核心**：在 `src/lecture_quiz/core/activity/state_machine.py` 實作 `EndActivity`（只允許 `RESULT_FINAL`）與 `CancelActivity`（只允許 `PREPARING`，alignment 2026-11-23 C8）；`snapshot_view.py` 在 `ENDED` 時填入 `unsolvedQuestions`。
 - [x] T068 [US5] **服務層**：在 `src/lecture_quiz/app/activity/service.py` 實作：
   - `end(code, requester)`、`cancel(code, requester)`：兩者都呼叫 `scheduler.cancel`。
-  - 給 005 的 `export_view(code, requester)`：只限老師，`CANCELLED` 時拒絕（⚠ 提案相依 Q-09／Q-33）。
+  - 給 005 的 `export_view(code, requester)`：只限老師，`CANCELLED` 時拒絕（alignment 2026-11-23 C8）。
 - [x] T069 [US5] **轉接層**：在 `src/lecture_quiz/adapters/web/http_api.py` 實作 `POST /activities/{code}/end`（回傳 `unsolvedQuestions`）與 `POST /activities/{code}/cancel`。
 - [x] T070 [US5] **轉接層**：在 `teacher.html`、`teacher.js`、`student.html`、`student.js` 加入：
   - 「結束活動」按鈕：只在已定案時可按。
@@ -437,7 +456,7 @@ description: "001-activity-session 任務清單"
 
 ---
 
-## Phase 9: User Story 7 - 學生改正選錯的組別，老師清除多建的空組 (Priority: P2) ⚠ 提案相依
+## Phase 9: User Story 7 - 學生改正選錯的組別，老師清除多建的空組 (Priority: P2)
 
 **Goal**: 非搶答中可以離開本組並改加入其他組；老師可以刪除沒有提交紀錄的組別
 
@@ -445,15 +464,16 @@ description: "001-activity-session 任務清單"
 
 ### Tests for User Story 7 (REQUIRED) ⚠️
 
-- [ ] T071 [P] [US7] 在 `tests/unit/core/test_state_machine_group_correction.py` 測試，以下全部 ⚠ 提案相依：
+- [ ] T071 [P] [US7] 在 `tests/unit/core/test_state_machine_group_correction.py` 測試（alignment 2026-11-23 B4、B5）：
   - `Scenario: US7-AS1`：在 `PREPARING`、`RESULT_PENDING`、`RESULT_FINAL` 執行 `LeaveGroup`，只移除該裝置；組別、其他裝置與 `success_count` 不變。
   - `Scenario: US7-AS2`：離開後可以加入另一組。
   - `Scenario: US7-AS3`：在 `ROUND_OPEN` 離開時回傳 `NO_GROUP_SWITCH_DURING_ROUND`。
   - `Scenario: US7-AS4`：原組的 `has_submissions` 在裝置離開後仍為 `True`。
-  - `Scenario: US7-AS5`：刪除 `has_submissions=False` 的組時，移除組與其所有裝置，組名可以再使用。
+  - `Scenario: US7-AS5`：刪除 `has_submissions=False` 的組時，移除組與其所有裝置，組號可以再使用（再次加入時建立新組與新憑證）。
+  - 另外測試：刪除不存在的組號回傳 `GROUP_NOT_FOUND`；`Anonymous` 或不在任何組的裝置離開時回傳 `NOT_IN_GROUP`；學生刪除組別回傳 `NOT_TEACHER`。
   - `Scenario: US7-AS6`：刪除 `has_submissions=True` 的組時回傳 `GROUP_HAS_SUBMISSIONS`，`activity` 不變。
   - 另外測試：`MarkGroupSubmitted` 只在 `ROUND_OPEN` 時生效。
-- [ ] T072 [P] [US7] 在 `tests/integration/test_us7_group_correction.py` 以 HTTP 加 WebSocket 測試 `Scenario: US7-AS1`～`US7-AS6`，以下全部 ⚠ 提案相依：
+- [ ] T072 [P] [US7] 在 `tests/integration/test_us7_group_correction.py` 以 HTTP 加 WebSocket 測試 `Scenario: US7-AS1`～`US7-AS6`：
   - 離開時，該裝置的 WebSocket 收到 `unauthorized`、`reason == "LEFT_GROUP"`。
   - 刪除組別時，原組裝置收到 `reason == "GROUP_DELETED"`。
   - 在 `ROUND_OPEN` 刪除空組成功。
@@ -461,14 +481,14 @@ description: "001-activity-session 任務清單"
 
 ### Implementation for User Story 7
 
-- [ ] T073 [US7] **核心**：在 `src/lecture_quiz/core/activity/state_machine.py` 實作 `LeaveGroup`、`DeleteGroup`、`MarkGroupSubmitted`，允許的階段照 spec「不改變階段的組別操作」表（⚠ 提案相依）。
-- [ ] T074 [US7] **服務層**：在 `src/lecture_quiz/app/activity/service.py` 實作，以下全部 ⚠ 提案相依：
+- [ ] T073 [US7] **核心**：在 `src/lecture_quiz/core/activity/state_machine.py` 實作 `LeaveGroup`、`DeleteGroup`、`MarkGroupSubmitted`，允許的階段照 spec「不改變階段的組別操作」表；`LeaveGroup` 在 `ROUND_OPEN` 回傳 `NO_GROUP_SWITCH_DURING_ROUND`；`results.py` 新增 `NOT_IN_GROUP`、`GROUP_NOT_FOUND`。
+- [ ] T074 [US7] **服務層**：在 `src/lecture_quiz/app/activity/service.py` 實作：
   - `leave_group(code, requester)`。
-  - `delete_group(code, requester, name)`：名稱先解碼再正規化。
-  - 給 003 的 `mark_group_submitted(code, group_name)`。
-  - 成功後呼叫 `SyncPublisher.disconnect_device`。
-- [ ] T075 [US7] **轉接層**：在 `src/lecture_quiz/adapters/web/http_api.py` 實作 `POST /activities/{code}/groups/leave` 與 `DELETE /activities/{code}/groups/{name}`（⚠ 提案相依）。
-- [ ] T076 [US7] **轉接層**：在 `student.html`、`student.js` 加入「離開本組」按鈕（搶答中停用並說明原因）；在 `teacher.html`、`teacher.js` 的組別清單，對 `hasSubmissions == false` 的組顯示「刪除」按鈕（⚠ 提案相依）。
+  - `delete_group(code, requester, number_raw)`：組號交給核心正規化。
+  - 給 003 的 `mark_group_submitted(code, group_number)`。
+  - 成功後呼叫 `SyncPublisher.disconnect_device`（`ports.py` 的 `SyncPublisher` 新增此方法）。
+- [ ] T075 [US7] **轉接層**：在 `src/lecture_quiz/adapters/web/http_api.py` 實作 `POST /activities/{code}/groups/leave` 與 `DELETE /activities/{code}/groups/{number}`。
+- [ ] T076 [US7] **轉接層**：在 `student.html`、`student.js` 加入「離開本組」按鈕（搶答中停用並說明原因）；在 `teacher.html`、`teacher.js` 的組別清單，對 `hasSubmissions == false` 的組顯示「刪除」按鈕。
 
 **Checkpoint**: 全部 User Story 完成
 
@@ -476,7 +496,7 @@ description: "001-activity-session 任務清單"
 
 ## Phase N: Polish & Cross-Cutting Concerns
 
-- [ ] T077 [P] 建立 `tests/SCENARIO_MAP.md`：列出 44 個 `USn-ASm` 與對應的測試函式。用 `grep -rn "Scenario:" tests/` 核對沒有遺漏（原則 VI）。
+- [ ] T077 [P] 建立 `tests/SCENARIO_MAP.md`：列出 47 個 `USn-ASm` 與對應的測試函式。用 `grep -rn "Scenario:" tests/` 核對沒有遺漏（原則 VI）。
 - [ ] T078 [P] 在 `tests/integration/test_idempotency.py` 測試 SC-004：建立活動、加入組別、開輪各用相同的 `Idempotency-Key` 重送 20 次，重複的活動、組別、輪次數都是 0，每次回應都相同。
 - [ ] T079 [P] 在 `tests/contract/test_error_safety.py` 測試 SC-008：觸發每一種 `RejectionReason`、404、400 `INVALID_REQUEST`、500，確認回應都有中文 `message`，而且不含 `Traceback`、`File "`、`.py`、任何 token、任何憑證。
 - [ ] T080 [P] 在 `tests/integration/test_logging.py` 檢查日誌（技術限制 3）：
@@ -486,11 +506,12 @@ description: "001-activity-session 任務清單"
 - [x] T082 程式碼與圖表一致性驗證：逐一比對 `diagrams/001-activity-session-*.puml` 的組件、類別、方法名稱、時序與實作（例如 `ActivityService` 的方法、`RejectionReason` 的值）。有差異時，先更新圖表並重新轉出 PNG（原則 II）。
   - 2026-11-23（US1、US3～US6 範圍）：依 jacky0407 決定，以程式碼與 data-model 為準更新類別圖（Command、Identity 只存雜湊、Round／RoundRules 欄位、ActivityService 簽名、ports 與外層實作）、時序圖（onDeadline、openRound／closeRound 參數、publish(activity)）、組件圖（ports、common.py、鎖內去重）並重新轉出 PNG；US2／US7 尚未實作的項目保留在圖上並標「待 US2／US7」，實作後需再驗證一次。
 - [ ] T083 執行 `pytest` 與 `pytest -m perf`，記錄日期、指令，以及通過、失敗、略過的數字；perf 記錄四種操作的最大延遲（原則 VI、品質關卡 4）。
-- [ ] T084 由非實作者依 [quickstart.md](quickstart.md) 的 21 步人工驗證，記錄在 `specs/001-activity-session/verification.md`：日期、每一步的操作與結果、第 10、12 步的延遲 ms，以及 SC-005「1 分鐘內兩組加入」、SC-010「30 秒內換組」的實際時間（原則 VI）。
+- [ ] T084 由非實作者依 [quickstart.md](quickstart.md) 的 23 步人工驗證，記錄在 `specs/001-activity-session/verification.md`：日期、每一步的操作與結果、第 12、14 步的延遲 ms，以及 SC-005「1 分鐘內兩組加入」、SC-010「30 秒內換組」的實際時間（原則 VI）。
 - [ ] T085 [P] 指令或流程與文件不同時，更新 `specs/001-activity-session/quickstart.md`；在 `CLAUDE.md` 的「專案現況」補上 build、lint、test 指令與 `src/lecture_quiz` 三層結構（現在已有程式碼）。
 - [ ] T086 用全新 clone 在乾淨的 venv 重跑安裝與 `pytest`，確認不依賴任何本機未提交的檔案（規章第 9 節）。
 - [ ] T087 追蹤開發用 seed API 的移除：在 Issue #6（002）留言，註明「002 合併後的第一個 PR 移除 `src/lecture_quiz/adapters/web/dev_seed.py`、`LECTURE_QUIZ_DEV_SEED` 與 `tests/integration/test_dev_seed.py`」。本子功能內不刪除。
-- [ ] T088 確認 ⚠ 提案相依的任務狀態：若 `docs/alignment.md` 2026-11-21 的 6 列仍是「待確認」，在 PR 描述中列出並標明不得合併；若已確認且結論不同，依 plan「受待確認提案影響的設計點」修改後重跑 T081～T084。
+- [x] T088 確認提案相依的任務狀態：`docs/alignment.md` 2026-11-21 的 6 列已於 2026-11-23 全部獲 OpenSpec 組確認（新增一列決議），結論與提案一致；另依 Clarifications 增加組號、組數上限與 C7，已重跑 clarify → plan → tasks。
+- [ ] T095 在有 `plantuml.jar` 的環境（本機 Windows）執行 `java -jar plantuml.jar "./diagrams/001-*.puml"`，重新產生三張 PNG 並目視檢查（原則 II；2026-11-23 的 `.puml` 修改是在無法執行 PlantUML 的雲端環境完成）。
 
 ---
 
@@ -532,14 +553,14 @@ description: "001-activity-session 任務清單"
 
 ```bash
 # 同時撰寫 US2 的測試：
-Task: "T030 tests/unit/core/test_input_rules_group_name.py"
+Task: "T030 tests/unit/core/test_input_rules_group_number.py"
 Task: "T031 tests/unit/core/test_state_machine_join.py"
 Task: "T032 tests/unit/core/test_snapshot_view_groups.py"
 Task: "T033 tests/contract/test_http_join.py"
 Task: "T034 tests/integration/test_us2_join.py"
 
 # 測試失敗後，核心規則可以先並行實作：
-Task: "T035 src/lecture_quiz/core/activity/input_rules.py normalize_group_name"
+Task: "T035 src/lecture_quiz/core/activity/input_rules.py normalize_group_number"
 ```
 
 ---
@@ -550,12 +571,12 @@ Task: "T035 src/lecture_quiz/core/activity/input_rules.py normalize_group_name"
 
 1. Phase 1 + Phase 2（基礎，包含架構測試）→ 單獨 PR 先合併（見下方「共用骨架先合併」）。
 2. 依序完成 US1 → US2 → US3 → US4 → US6（全部 P1），每完成一個 Story 就執行該 Story 的整合測試。
-3. **STOP and VALIDATE**：完成 P1 後，跑 quickstart 第 1～14、17、19、20 步。
+3. **STOP and VALIDATE**：完成 P1 後，跑 quickstart 第 1～12、14～16、19、21、22 步。
 
 ### Incremental Delivery
 
-1. 加上 US5（結束與取消）→ 驗證 quickstart 第 18、21 步。
-2. 加上 US7（組別更正，⚠ 提案相依）→ 驗證 quickstart 第 11、15、16 步。若 OpenSpec 組不同意這兩項新增行為，整個 Phase 9 可以單獨移除，不影響其他 Story。
+1. 加上 US5（結束與取消）→ 驗證 quickstart 第 20、23 步。
+2. 加上 US7（組別更正，alignment 2026-11-23 B4、B5）→ 驗證 quickstart 第 13、17、18 步。
 3. 完成 Polish → 開 PR（`Closes #5`），由 EricC430 審查。
 
 ### 共用骨架先合併
