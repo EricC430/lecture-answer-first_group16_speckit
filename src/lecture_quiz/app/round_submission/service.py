@@ -32,6 +32,7 @@ from lecture_quiz.core.round_submission.models import (
     SubmissionRejection,
 )
 from lecture_quiz.core.round_submission.rules import SubmissionRules
+from lecture_quiz.core.round_submission.view import SubmissionView
 
 logger = logging.getLogger(__name__)
 
@@ -199,7 +200,7 @@ class SubmissionService:
 
         活動還沒有格數資料（尚未匯入題目）時不帶任何 003 欄位。
         `questionShapes`：老師為全部題的格數；學生只有本輪開放題的格數。
-        提交資料（`submissions`）在 US4、US5 加入。
+        `submissions`：依角色裁切（`SubmissionView`）；學生只有本組（FR-021）。
 
         Args:
             activity: 活動。
@@ -211,11 +212,14 @@ class SubmissionService:
         shapes = self._shapes.blanks_per_question(activity.code)
         if shapes is None:
             return {}
+        ledger = self._store.get(activity.code)
         if isinstance(viewer, TeacherViewer):
             visible = sorted(shapes)
+            fields = SubmissionView.for_teacher(ledger, activity)
         else:
             current = activity.current_round
             is_open = activity.stage is Stage.ROUND_OPEN and current is not None
             open_questions = current.rules.question_numbers if current else ()
             visible = [q for q in open_questions if q in shapes] if is_open else []
-        return {"questionShapes": {str(q): shapes[q] for q in visible}}
+            fields = SubmissionView.for_group(ledger, activity, viewer.group_number)
+        return {"questionShapes": {str(q): shapes[q] for q in visible}, **fields}

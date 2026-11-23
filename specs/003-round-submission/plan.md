@@ -21,7 +21,7 @@
 - **核心**（`core/round_submission/`，純函式）：`SubmissionRules.decide(ledger, context, code, attempt, now)`（序號取自 `ledger.next_sequence`） 依固定順序判定「接受／本組已送出／拒絕」；`AnswerRules` 集中 Q-20 的答案規則；`SubmissionView` 產生老師版、學生版、關輪公開版資料，依（接收時間, 接收序號）排序。
 - **服務層**（`app/round_submission/`）：`SubmissionService` 不自己持有鎖，而是呼叫 001 新增的 `ActivityService.record_submission(...)`，在 **001 的同一把活動鎖內**完成「解析裝置 → 取時間 → 判定 → 標記組別 → 保存」，鎖外推送（研究 R2）。提交資料存在 003 自己的記憶體 `SubmissionStore`（研究 R1）。
 - **快照**：001 新增「快照擴充」機制，003 註冊一個擴充函式，把本組提交（學生）或全部提交（老師）併入 001 既有的快照；推送沿用 001 的 `WebSocketHub` 與版本規則（研究 R4、R5）。
-- **外層**：`POST /api/activities/{code}/submissions`（研究 R7）；`student.js` 加作答表單、`teacher.js` 加提交看板，所有文字用 `textContent`。
+- **外層**：`POST /api/activities/{code}/submissions`（研究 R7）；學生頁作答表單（`js/round-submission.js`）、老師頁提交看板（`js/round-submission-teacher.js`），所有文字用 `textContent`。
 - **002 介面**：003 定義 `QuestionShapeSource.blanks_per_question(code)`，由 002 實作（已與 EricC430 口頭協調）；002 合併前以 dev seed 的假實作驗證（研究 R6）。
 
 ## Technical Context
@@ -110,9 +110,10 @@ src/lecture_quiz/
     │   └── dev_seed.py              # 小改：seed 可指定每題格數（002 合併前）
     └── static/
         ├── student.html / js/student.js   # 作答表單、本組提交、公開結果
-        ├── teacher.html / js/teacher.js   # 提交看板
+        ├── teacher.html                   # 提交看板區塊（js/teacher.js 不改）
         ├── js/submission.js               # 作答表單與看板共用的繪製函式（textContent）
-        └── js/round-submission.js         # 學生端接線（onStudentSnapshot），依 DEVELOPMENT.md 一個子功能一個 module
+        ├── js/round-submission.js         # 學生端接線（onStudentSnapshot），依 DEVELOPMENT.md 一個子功能一個 module
+        └── js/round-submission-teacher.js # 老師端看板接線（onTeacherSnapshot）
 
 tests/
 ├── unit/core/round_submission/      # decide 各順序、AnswerRules、排序、View 裁切

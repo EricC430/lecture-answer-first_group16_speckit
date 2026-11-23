@@ -98,3 +98,9 @@ body.sync-broken .success-hint {
 .controls button {
   margin-right: 0.5rem;
 }
+
+/* 003 老師作答看板 */
+.submission-board { border-collapse: collapse; width: 100%; }
+.submission-board caption { text-align: left; font-weight: bold; padding: 0.25rem 0; }
+.submission-board th, .submission-board td { border: 1px solid #ccc; padding: 0.25rem 0.5rem; vertical-align: top; text-align: left; }
+.answer-text { white-space: pre-wrap; overflow-wrap: anywhere; }

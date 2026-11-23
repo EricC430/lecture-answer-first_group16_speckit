@@ -103,3 +103,48 @@ export function renderAnswerForm({ questionNumber, blanks, onSubmit }) {
     },
   };
 }
+
+/**
+ * 老師看板：本輪每題 × 每組的提交（US4）。已送出顯示答案、接收時間與送出先後；
+ * 未送出顯示「尚未送出」。`order` 是送出先後，不是順位（Q-21）。全部 textContent。
+ * @param {HTMLElement} container
+ * @param {{roundNumber: number, questions: Array<{questionNumber: number, entries: Array}>}|null} current
+ * @param {Array<{number: number}>} groups 老師快照的 groups
+ * @param {Object<string, number>} questionShapes
+ */
+export function renderBoard(container, current, groups, questionShapes) {
+  if (!current) {
+    container.replaceChildren(el("p", "目前沒有進行中的輪次。", "muted"));
+    return;
+  }
+  const numbers = new Set(groups.map((g) => g.number));
+  for (const q of current.questions) for (const e of q.entries) numbers.add(e.groupNumber);
+  const columns = [...numbers].sort((a, b) => a - b);
+  const table = el("table", "", "submission-board");
+  const caption = el("caption", `第 ${current.roundNumber} 輪作答（依送出先後，不是順位）`);
+  const head = el("tr");
+  head.append(el("th", "題號"));
+  for (const n of columns) head.append(el("th", `第 ${n} 組`));
+  table.append(caption, head);
+  for (const q of current.questions) {
+    const row = el("tr");
+    const blanks = questionShapes?.[String(q.questionNumber)];
+    row.append(el("th", blanks > 1 ? `第 ${q.questionNumber} 題（${blanks} 格）` : `第 ${q.questionNumber} 題`));
+    const byGroup = new Map(q.entries.map((e) => [e.groupNumber, e]));
+    for (const n of columns) {
+      const cell = el("td");
+      const entry = byGroup.get(n);
+      if (entry) {
+        cell.append(
+          el("p", `第 ${entry.order} 個送出・${formatTime(entry.receivedAt)}`, "muted"),
+          renderAnswers(entry.answers),
+        );
+      } else {
+        cell.append(el("p", "尚未送出", "muted"));
+      }
+      row.append(cell);
+    }
+    table.append(row);
+  }
+  container.replaceChildren(table);
+}

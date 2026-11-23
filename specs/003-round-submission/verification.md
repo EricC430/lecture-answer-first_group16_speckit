@@ -1,6 +1,6 @@
 # 驗證紀錄：003-round-submission
 
-依憲章原則 VI：記錄日期、實際執行的指令與結果數字。人工驗證與真實路徑驗證在本檔後段（尚未進行）。
+依憲章原則 VI：記錄日期、實際執行的指令與結果數字。人工驗證與真實路徑驗證在本檔後段（尚未進行）。實作中發現的問題集中在文末「實作問題紀錄」。
 
 ## 基準（T002，實作前）
 
@@ -71,3 +71,45 @@
 | `ruff check .`、`ruff format --check .` | All checks passed!；155 files already formatted |
 | `mypy` | Success: no issues found in 35 source files |
 | `pytest` | **498 passed**, 1 deselected（新增 18 個；001 既有測試未修改） |
+
+## US4（T042～T046）
+
+- 日期：2026-11-23；環境同上。
+- **先寫測試並確認失敗**：T042、T043 先寫。`test_view_open_round.py` 收集失敗（`view.py` 不存在）；`test_submission_visibility.py` 1 failed、3 passed。通過的 3 個：學生收不到他組任何資料、沒有查詢提交的端點（兩個）。它們在加入 003 欄位前就成立，代表 001 本來就沒外流。實作後再跑一次，確認加入提交資料後仍然成立。
+- 實作後 `test_view_open_round.py` 有 1 個失敗：測試自己的預期時區寫錯（`+00:00`，FakeClock 是 `+08:00`）。修的是測試，程式碼未改（問題紀錄 P-17）。
+- **前端**：老師頁新增「作答看板」區塊，程式在 `js/round-submission-teacher.js`（`renderBoard` 在 `submission.js`）；`node --check` 通過，尚未在瀏覽器手動操作。
+
+| 指令 | 結果 |
+|---|---|
+| `ruff check .`、`ruff format --check .` | All checks passed!；158 files already formatted |
+| `mypy` | Success: no issues found in 36 source files |
+| `pytest` | **507 passed**, 1 deselected（新增 9 個；001 既有測試未修改） |
+
+## 實作問題紀錄
+
+實作 003 過程中發現的問題、偏離與待辦，依發現順序編號。狀態：**已處理**（已改程式或文件）、**已記錄**（行為不變，只需知道）、**待辦**（之後的任務要處理）、**待決定**（需要組員或 OpenSpec 組決定）。
+
+| # | 階段 | 問題 | 處理 | 狀態 |
+|---|---|---|---|---|
+| P-01 | Foundational | T018 dev seed 的 `blanks` 測試在實作之後才補寫，不符「先寫測試」 | 補寫後通過；在此記錄 | 已記錄 |
+| P-02 | Foundational | `test_record_submission` 的 setup 沒清 `locked_during_publish`，比對到建立活動時的推送 | 修測試，程式碼未改 | 已處理 |
+| P-03 | Foundational | 在快照加 `questionShapes` 會打壞 001 檢查快照欄位的測試 | 活動沒有格數資料時不帶任何 003 欄位；`seed_questions` 只在給 `blanks` 時設格數；已寫進同步契約。001 斷言未放寬 | 已處理 |
+| P-04 | Foundational | 若放寬 001 的 `Outcome.rejection` 讓它容納 003 的拒絕原因，`http_api.unwrap` 讀 `reason.http_status` 會出錯（analyze I2） | 003 的拒絕改為放在 `value` 的判定結果，`Outcome` 不改 | 已處理 |
+| P-05 | US1 | `rules.py` 與 `answer_rules.py` 互相匯入 | 型別移到 `models.py`，`rules.py` 重新匯出；plan 已同步 | 已處理 |
+| P-06 | US1 | 日誌直接記學生送來的題號，可能寫進任意內容或超長整數 | 只記 0～9999 的整數題號，其餘記 `-` | 已處理 |
+| P-07 | US1 | 學生頁的程式依 DEVELOPMENT.md「一個子功能一個 module」放在 `js/round-submission.js`；tasks 原寫 `student.js` | T028 已註記。**影響 T053、T054**：靜態檢查與倒數停用表單要改為檢查 `round-submission.js`（及老師頁的 `round-submission-teacher.js`） | 待辦（US6） |
+| P-08 | US1 | 作答表單需要每題格數，原排在 US4 的 `questionShapes` 提前在 US1 做 | T028 已註記 | 已記錄 |
+| P-09 | US1～US4 | 前端只做過 `node --check`，沒有在瀏覽器實際操作 | 留到 quickstart 人工驗證（T064，非實作者 EricC430） | 待辦 |
+| P-10 | US2 | T031 的「同組另一台收到答案」（US2-AS1 推送）與「離組後提交仍屬原組」（US2-AS6）需要快照提交資料 | 前者已在 US4 的 `test_submission_visibility.py` 完成；後者移到 T048 | 待辦（US5） |
+| P-11 | US2 | 快照帶本組提交時把表單改唯讀的前端程式，在 US4 提供資料前沒有作用 | US4 已提供 `submissions.current.own`；瀏覽器操作仍待 P-09 | 已處理 |
+| P-12 | US3 | 截止邊界測試在實作前就通過 | 原因是 001 的 `RecordSubmission` 已在鎖內檢查截止時間；現在由 003 判定先擋下，兩層一致 | 已記錄 |
+| P-13 | US3 | 「還沒有任何輪次」與「已截止／已關輪」共用一句訊息「本輪已結束（或尚未開始），不能再送出。」；research R10 原寫兩種語意 | 判定結果沒有欄位可區分，要分成兩句需在 `SubmissionDecision` 加欄位 | 待決定 |
+| P-14 | US3 | `round_submissions`、`all_submissions`（給 004、005）原排在 T050 | 提前在 T040 完成並測試；T050 只剩 `published` | 已記錄 |
+| P-15 | US4 | **關輪後老師看板與學生頁暫時是空的**：`current` 只在搶答中有內容，關輪後的 `published` 要到 US5 才實作 | US5（T049、T050）完成前，關輪後看不到本輪提交 | 待辦（US5） |
+| P-16 | US4 | T046 原要求學生頁另有 `renderOwnSubmissions` 清單；學生頁的作答表單已在送出後顯示本組答案與時間（P-11），另列一份會重複 | 不另做清單，由表單顯示；`renderBoard` 照做 | 已記錄 |
+| P-17 | US4 | 新測試的預期時區寫成 `+00:00`，FakeClock 是 `+08:00` | 修測試，程式碼未改 | 已處理 |
+| P-18 | US4 | T053 規定「`已送出` 只出現在成功處理函式內」；`round-submission.js` 依快照顯示「本組已送出」時也用到這個字，且不在 HTTP 成功分支 | 這是依後端快照顯示，不違反 FR-032（未收到成功前不顯示成功），但 T053 的字串規則要調整，排除快照來源 | 待辦（US6） |
+| P-19 | 跨子功能 | 每題格數由 002 實作 `QuestionShapeSource`（與 EricC430 口頭約定）；002 合併前只能用 dev seed | T065 真實路徑驗證要等 002 合併 | 待辦（002） |
+| P-20 | 跨子功能 | 「搶答失敗」要等 004 提供勝者；全部判錯顯示「未成功」也由 004 決定 | 已寫在 tasks Notes 的 004 交接 | 待辦（004） |
+| P-21 | 環境 | 在本機執行 `pytest -p no:logging` 會讓用到 `caplog` 的 12 個測試報錯（不是程式問題） | 驗證一律用不加參數的 `pytest` | 已記錄 |
+
