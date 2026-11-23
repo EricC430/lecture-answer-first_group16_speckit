@@ -19,10 +19,39 @@
       例如：<section id="import-section" data-feature="002-guided-notes-import"></section>
     -->
     <!-- ── 子功能區塊開始 ── -->
+    <section id="activity-section" data-feature="001-activity-session">
+      <h2>活動</h2>
+      <p id="student-error" class="error-message" role="alert" hidden></p>
+      <form id="student-join" novalidate>
+        <h3>加入組別</h3>
+        <label>活動代碼：<input type="text" id="join-code" autocomplete="off" maxlength="12"></label>
+        <label>組號：<input type="text" id="join-number" inputmode="numeric" autocomplete="off" maxlength="8"></label>
+        <label>本組加入憑證（同組已有同學加入時才需要，請看同學的畫面）：
+          <input type="text" id="join-credential" autocomplete="off" maxlength="12"></label>
+        <button type="submit">加入</button>
+      </form>
+      <div id="student-info" hidden>
+        <p>活動代碼：<strong id="student-code" class="activity-code"></strong></p>
+        <p>本組：<strong id="student-group"></strong>
+          <span class="muted">歷史成功次數：<span id="student-success"></span></span></p>
+        <p>本組加入憑證：<strong id="student-credential" class="activity-code"></strong>
+          <span class="muted">（同組同學用這個憑證加入同一組）</span></p>
+        <p><button type="button" id="leave-group">離開本組</button>
+          <span id="leave-hint" class="muted" hidden>搶答進行中不能換組，請在本輪關閉後再操作，這段期間可以用同組同學的裝置作答。</span></p>
+        <p>目前階段：<strong id="student-stage"></strong>
+          <span id="student-round" class="muted"></span></p>
+        <p id="student-open" hidden>本輪開放題目：<span id="student-open-questions"></span>
+          <span id="student-countdown" class="countdown"></span></p>
+        <p id="student-ended" hidden>活動已結束。未成功題：<span id="student-unsolved"></span></p>
+        <p id="student-cancelled" hidden>活動已取消。</p>
+        <p><button type="button" id="new-join" hidden>加入其他活動</button></p>
+      </div>
+    </section>
     <!-- ── 子功能區塊結束 ── -->
   </main>
   <div id="sync-status" aria-live="polite"></div>
   <!-- ── 子功能 script 開始（每個子功能一行）── -->
+  <script type="module" src="js/student.js"></script>
   <!-- ── 子功能 script 結束 ── -->
 </body>
 </html>

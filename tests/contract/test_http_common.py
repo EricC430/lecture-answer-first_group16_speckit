@@ -51,11 +51,17 @@ def _app_with_probe_routes():
         raise RuntimeError(f"boom {SECRET} C:/secret/path.py")
 
     app.include_router(router)
-    # 靜態檔掛在 "/" 且必須最後匹配，把它移回路由表最後
+    # /api fallback 與掛在 "/" 的靜態檔必須最後匹配，把它們移回路由表最後
     routes = app.router.routes
-    static = next(r for r in routes if getattr(r, "name", "") == "static")
-    routes.remove(static)
-    routes.append(static)
+    tail = [
+        r
+        for r in routes
+        if getattr(r, "name", "") == "static"
+        or getattr(r, "path", "") == "/api/{rest:path}"
+    ]
+    for route in tail:
+        routes.remove(route)
+    routes.extend(sorted(tail, key=lambda r: getattr(r, "name", "") == "static"))
     return app
 
 
@@ -173,8 +179,8 @@ def test_request_log_path_template_for_nested_and_static(client, caplog):
     lines = [r.getMessage() for r in caplog.records if r.name == "lecture_quiz.request"]
     assert "path=/api/health " in lines[0]
     assert "path=<static> " in lines[1]
-    # 未知路徑會落到掛在 "/" 的靜態檔，同樣只記 <static>，不記原始網址
-    assert "path=<static> " in lines[2] and "status=404" in lines[2]
+    # 未知的 /api 路徑由 fallback 路由回 404，只記樣板，不記原始網址
+    assert "path=/api/{rest} " in lines[2] and "status=404" in lines[2]
     assert all(SECRET not in line for line in lines)
 
 
@@ -222,3 +228,9 @@ def test_annotate_request_log_also_validates_activity_code(probe_client, caplog)
     assert "\n" not in line
     assert "activity=<invalid>" in line
     assert "result=<invalid>" in line
+
+
+def test_unknown_api_post_is_404_not_405(client):
+    response = client.post("/api/does-not-exist", json={})
+    assert response.status_code == 404
+    assert response.json()["error"]["code"] == "NOT_FOUND"

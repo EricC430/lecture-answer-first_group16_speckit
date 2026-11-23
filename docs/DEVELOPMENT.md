@@ -19,13 +19,20 @@ py -3.11 -m venv .venv
 
 原因：`pip install -e` 會把專案的絕對路徑寫進 `.venv\Lib\site-packages\_editable_impl_lecture_quiz.pth`，而 Python 3.11／3.12 用系統地區編碼（cp950）讀這個檔案。
 
-- **首選：把 `.pth` 改成 ASCII 相對路徑。** 每次執行 `pip install -e` 之後都要再執行一次：
+三種做法，依用途選一種：
 
-  ```powershell
-  Set-Content .venv\Lib\site-packages\_editable_impl_lecture_quiz.pth "../../../src" -Encoding ascii
-  ```
+| 做法 | 適合 | 指令 | 注意 |
+|---|---|---|---|
+| **首選：可編輯安裝 + 改 `.pth`** | 平常開發（會改程式） | 照上方 `pip install -e ".[dev]"`，再執行下面的 `Set-Content` | 每次重新執行 `pip install -e` 之後都要再改一次 |
+| **一般安裝（不加 `-e`）** | 只想跑起來或驗證，例如助教、全新 clone 重跑（tasks T086） | `.venv\Scripts\python -m pip install ".[dev]"` | 會把程式**複製**進 `.venv`，不寫入含路徑的 `.pth`，所以不會出錯。但 pytest 與 `python -m lecture_quiz` 用的是複製的那份：**改了 `src/` 之後要重新執行這個安裝指令才會生效**，否則測試跑的是舊程式 |
+| **改用 Python 3.13 以上** | 可以另外安裝 Python 的人 | `py -3.13 -m venv .venv` 後照上方可編輯安裝 | 3.13 起會先用 UTF-8 讀 `.pth`，不需要任何處理 |
 
-- **備案：改用 Python 3.13 以上。** 3.13 起會先用 UTF-8 讀 `.pth`，不需要任何處理。建立 venv 時改成 `py -3.13 -m venv .venv`。
+可編輯安裝要改 `.pth` 的指令（改成 ASCII 相對路徑）：
+
+```powershell
+Set-Content .venv\Lib\site-packages\_editable_impl_lecture_quiz.pth "../../../src" -Encoding ascii
+```
+
 - **注意：`PYTHONUTF8=1` 沒有用。** Python 3.11 的 `site.py` 以 `encoding="locale"` 讀 `.pth`，這個設定不受 UTF-8 模式影響。實測開啟 UTF-8 模式後，一樣會出現上面的錯誤。
 
 ## 常用指令
