@@ -259,16 +259,6 @@ def create_router(app: FastAPI) -> APIRouter:
             },
         )
 
-    @router.post("/activities/{code}/rounds/current/finalize")
-    async def finalize(
-        request: Request, code: str, token: Token, key: IdempotencyKey
-    ) -> JsonDict:
-        """確認定案（#8；004 會擴充本文）。"""
-        code = normalize_code_input(code)
-        outcome = await service().finalize(code, requester_for(code, token), None, key)
-        version = unwrap(request, code, token, outcome)
-        return ok(request, code, version, {"version": version})
-
     @router.post("/activities/{code}/end")
     async def end(
         request: Request, code: str, token: Token, key: IdempotencyKey

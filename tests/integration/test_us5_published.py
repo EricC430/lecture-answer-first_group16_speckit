@@ -92,7 +92,7 @@ def test_second_round_keeps_history_and_hides_new_answers(client, round1):
         history = a_first["submissions"]["published"]
         assert [r["roundNumber"] for r in history] == [1]
         assert (
-            submit(client, code, devices["b"], 2, 1, ["乙新", "乙新"]).status_code
+            submit(client, code, devices["b"], 2, 2, ["乙新", "乙新"]).status_code
             == 201
         )
         after = _snapshot(client, code, devices["a"])

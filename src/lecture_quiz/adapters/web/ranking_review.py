@@ -6,7 +6,7 @@
 from typing import Annotated, TypeVar
 
 from fastapi import APIRouter, FastAPI, Path, Request
-from pydantic import BaseModel, ConfigDict, StrictBool
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictInt
 
 from lecture_quiz.app.activity.secrets_gen import normalize_code_input
 from lecture_quiz.app.ranking_review.ports import ReviewOutcome
@@ -28,6 +28,14 @@ class JudgementBody(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     wrong: StrictBool
+
+
+class FinalizeBody(BaseModel):
+    """`POST .../finalize` 的本文：老師所見的結果版本。"""
+
+    model_config = ConfigDict(extra="ignore", populate_by_name=True)
+
+    result_version: StrictInt = Field(alias="resultVersion")
 
 
 def unwrap(
@@ -109,6 +117,24 @@ def create_router(app: FastAPI) -> APIRouter:
             "changed": result.changed,
             "resultVersion": result.result_version,
             "affectedQuestions": list(result.affected_questions),
+        }
+
+    @router.post("/activities/{code}/rounds/current/finalize")
+    async def finalize(
+        request: Request, code: str, body: FinalizeBody, token: Token
+    ) -> JsonDict:
+        """老師確認定案（E3）；重複確認同一版本回覆既有定案。"""
+        code = normalize_code_input(code)
+        requester = app.state.activity_service.resolve_requester(code, token)
+        outcome = await service().finalize(code, requester, body.result_version)
+        result = unwrap(request, code, token, outcome)
+        annotate_request_log(
+            request, activity_code=code, result="OK", version=result.version
+        )
+        return {
+            "version": result.version,
+            "resultVersion": result.result_version,
+            "alreadyFinalized": result.already_finalized,
         }
 
     return router

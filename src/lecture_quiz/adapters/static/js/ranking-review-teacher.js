@@ -35,6 +35,17 @@ function actionButton(label, round, question, group, wrong) {
   return button;
 }
 
+// 確認定案：送出畫面上最新的 resultVersion；版本過期時不自動套用（FR-018）。
+function finalizeButton(round) {
+  const button = el("button", "確認定案", "ranking-finalize");
+  button.type = "button";
+  // 版本過期時後端回 STALE_RESULT_VERSION，teacherAction 會顯示「結果已更新，請重新檢視後再確認。」
+  button.addEventListener("click", () => {
+    teacherAction("POST", "/rounds/current/finalize", { resultVersion: round.resultVersion });
+  });
+  return button;
+}
+
 function questionBlock(snapshot, round, question) {
   const block = el("div", "", "ranking-question");
   block.append(el("h4", `第 ${question.questionNumber} 題`));
@@ -76,6 +87,11 @@ function render(snapshot) {
         .map(([group, count]) => `第 ${group} 組 ${count} 次`)
         .join("、");
       wrapper.append(el("p", `處理完本輪後各組暫算成功次數：${counts}`, "muted"));
+    }
+    if (round.final) {
+      wrapper.append(el("p", "結果已定案", "ranking-final"));
+    } else {
+      wrapper.append(finalizeButton(round));
     }
     for (const question of round.questions) wrapper.append(questionBlock(snapshot, round, question));
     container.append(wrapper);

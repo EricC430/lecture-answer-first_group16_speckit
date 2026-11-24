@@ -26,6 +26,7 @@
 | Phase 5 完成（T037～T042，US3） | 2026-11-24 | `pytest -q`；`ruff check .`；`ruff format --check .`；`mypy` | 611 passed, 2 deselected（+13）；ruff All checks passed；format 217 files already formatted；mypy Success: no issues found in 48 source files。**未做到先紅後綠**：`rank_fair` 在 US2 實作 `recompute` 時一併完成，所以 US3 測試一寫完就通過；改以突變檢查補強：暫時把公平排序鍵的成功次數改成常數 0，`test_rank_fair.py`＋`test_fair_layouts.py` 11 項中 5 failed、6 passed，還原後 41 passed（`tests/unit/core/ranking_review`）。前端（T042）無自動化測試，待 T094 |
 | Phase 6 完成（T043～T052、T055，US4） | 2026-11-24 | `pytest -q`；`ruff check .`；`ruff format --check .`；`mypy` | 693 passed, 2 deselected（+82）；ruff All checks passed；format 224 files already formatted；mypy Success: no issues found in 48 source files。測試先行：`test_review_rules_mark.py` 先 ImportError（`RoundReviewRules` 不存在）、服務層 3 個測試檔先 `NotImplementedError`、HTTP 契約與端對端 19 項先全數失敗（`19 failed`），實作後 `19 passed`。`test_diff.py` 的 3 項在 `diff` 於 US2 已實作時就通過（同 P-06）。前端判錯／撤銷按鈕（T052）無自動化測試，待 T094 人工驗證 |
 | Phase 7 完成（T053～T054、T056～T059，US5） | 2026-11-24 | `pytest -q`；`ruff check .`；`ruff format --check .`；`mypy` | 703 passed, 2 deselected（+10）；ruff All checks passed；format 227 files already formatted；mypy Success: no issues found in 48 source files。依 T058 說明，重算在 US2～US4 已實作，所以這組測試一寫完就通過（不要求先失敗）；鑑別力由 T054 負對照證明：累加式錯誤實作 `accumulating_recompute` 跑完判錯、撤銷後與初始結果不同（`!=` 斷言通過），正確實作相同。前端「結果已更新」與版本守衛（T059）無自動化測試，待 T094 |
+| Phase 8 完成（T060～T070，US6） | 2026-11-24 | `pytest -q`；`ruff check .`；`ruff format --check .`；`mypy` | 733 passed, 2 deselected（+30）；ruff All checks passed；format 235 files already formatted；mypy Success: no issues found in 48 source files。測試先行：`test_finalize_plan.py` 先 `AttributeError`（無 `finalize_plan`），其餘 US6 測試在實作前因 `finalize` 為 `NotImplementedError` 失敗。實作後 001 的空定案路由已移除，既有 2 個測試因行為變化調整（見 P-09、P-10）。老師頁「確認定案」按鈕（T070）無自動化測試，待 T094 |
 
 ## 效能（T082～T083）
 
@@ -51,3 +52,6 @@
 | P-06 | Phase 5 | tasks 要求 US3 測試先失敗再實作，但 `rank_fair` 已在 US2 完成 | 如實記錄於上表，並以突變檢查證明測試能分辨對錯 |
 | P-07 | Phase 6 | 測試寫「已取消且有輪次」的活動判錯，但 001 只允許第一輪之前取消，該情境不可能發生 | 改為對「取消後（沒有輪次）的活動」判錯，回 `ACTIVITY_CANCELLED`；判定順序仍是取消先於 `NO_ROUND` |
 | P-08 | Phase 6 | 佈線測試原本用 `app.routes` 的 `path` 找路由，但巢狀 router 的 path 是空字串，斷言恆為 0（上一版的 `<= 1` 是假綠燈） | 改用 `app.openapi()["paths"]`，斷言恰有一條 `PUT .../judgement` |
+| P-09 | Phase 8 | `test_finalize_during_round_is_409` 斷言搶答中定案的訊息為「請先關輪，再確認定案。」；004 接手後預設訊息變成「本輪尚未關閉，無法判錯。」 | 定案時的 `ROUND_STILL_OPEN` 沿用原訊息，測試斷言未改 |
+| P-10 | Phase 8 | `test_second_round_keeps_history_and_hides_new_answers` 在第 2 輪提交題一，但 001 空定案換成 004 真定案後題一已成功、提交被拒（400） | 該測試改提交題二；這是定案行為從「不記成果」變成「記成功題」的預期後果，未放寬任何斷言 |
+| P-11 | Phase 8 | 我寫的 US6 測試有三處預期算錯（沒判錯時乙只成功題二，次數應為 1 而不是 2）；第 2 輪「全題成功後開輪」001 回 400 而非 409 | 修正測試預期，實作未改 |

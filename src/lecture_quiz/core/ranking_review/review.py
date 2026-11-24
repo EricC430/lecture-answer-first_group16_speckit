@@ -11,6 +11,7 @@ from enum import StrEnum
 from lecture_quiz.core.ranking_review.models import (
     RankingInput,
     RoundResult,
+    as_final,
     freeze_mapping,
 )
 from lecture_quiz.core.ranking_review.order import QuestionOrder
@@ -214,3 +215,34 @@ class RoundReviewRules:
             replaced=replaced,
         )
         return MarkDecision(True, True, new)
+
+    @staticmethod
+    def finalize_plan(
+        review: RoundReview, baseline: Mapping[int, int]
+    ) -> FinalizedResult:
+        """由目前結果算出定案成果（交給 001 的新成功題與各組次數增量）。
+
+        題組成功只算一次（`wins` 以題為單位）；`final_counts` 為基準加本輪成功題數。
+
+        Args:
+            review: 目前的審閱狀態。
+            baseline: 開輪時各組的成功次數。
+
+        Returns:
+            定案結果（名次 1 已是 `CORRECT`）。
+        """
+        result = review.result
+        counts = RankingCalculator.initial_counts(baseline, result.group_counts)
+        for group, won in result.wins.items():
+            counts[group] += won
+        return FinalizedResult(
+            version=review.version,
+            rankings=as_final(result.rankings),
+            final_counts=counts,
+            solved_questions=frozenset(
+                r.question_number
+                for r in result.rankings
+                if r.success_group is not None
+            ),
+            success_increments=dict(result.wins),
+        )

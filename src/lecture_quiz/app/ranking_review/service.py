@@ -24,6 +24,7 @@ from lecture_quiz.app.ranking_review.ports import (
 )
 from lecture_quiz.app.ranking_review.store import ReviewStore
 from lecture_quiz.app.round_submission.ports import SubmissionReader
+from lecture_quiz.core.activity.commands import FinalizeOutcome
 from lecture_quiz.core.activity.models import Activity, Round, Stage
 from lecture_quiz.core.activity.snapshot_view import JsonDict
 from lecture_quiz.core.ranking_review.models import Candidate, RankingInput
@@ -310,7 +311,7 @@ class RankingService:
     async def finalize(
         self, code: str, requester: Requester, result_version: int
     ) -> ReviewOutcome[FinalizeResult]:
-        """確認定案。
+        """確認定案：老師看到的版本必須是最新版本（FR-018～FR-021）。
 
         Args:
             code: 活動代碼。
@@ -318,9 +319,70 @@ class RankingService:
             result_version: 老師所見的結果版本。
 
         Returns:
-            判定結果。
+            判定結果；對已定案同一版本的重複確認回覆既有結果（不再呼叫 001）。
         """
-        raise NotImplementedError
+        async with self._store.lock(normalize_code_input(code)):
+            activity = self._activities.get(code)
+            if activity is None:
+                return _rejected(ReviewRejection.ACTIVITY_NOT_FOUND)
+            if not self._activities.is_teacher(code, requester):
+                return _rejected(ReviewRejection.NOT_TEACHER)
+            if activity.stage is Stage.CANCELLED:
+                return _rejected(ReviewRejection.ACTIVITY_CANCELLED)
+            round_ = activity.current_round
+            if round_ is None:
+                return _rejected(ReviewRejection.NO_ROUND)
+            if not round_.closed:
+                return ReviewOutcome(
+                    ok=False,
+                    rejection=ReviewRejection.ROUND_STILL_OPEN,
+                    message="請先關輪，再確認定案。",
+                )
+            review = self._review_of(activity, round_)
+            if self._is_final(activity, round_):
+                done = review.finalized
+                if done is not None and done.version == result_version:
+                    logger.info(
+                        "定案 activity=%s round=%s version=%s already=True",
+                        activity.code,
+                        round_.number,
+                        result_version,
+                    )
+                    return ReviewOutcome(
+                        ok=True,
+                        value=FinalizeResult(activity.version, done.version, True),
+                    )
+                return ReviewOutcome(
+                    ok=False,
+                    rejection=ReviewRejection.RESULT_ALREADY_FINAL,
+                    message=(f"本輪已定案（結果版本 {review.version}），不能再修改。"),
+                )
+            if result_version != review.version:
+                return _rejected(ReviewRejection.STALE_RESULT_VERSION)
+            plan = RoundReviewRules.finalize_plan(review, round_.baseline)
+            done_001 = await self._activities.finalize(
+                code,
+                requester,
+                FinalizeOutcome(plan.solved_questions, dict(plan.success_increments)),
+            )
+            if not done_001.ok:
+                return ReviewOutcome(
+                    ok=False,
+                    rejection=ReviewRejection.FINALIZE_REJECTED,
+                    message=done_001.message
+                    or ReviewRejection.FINALIZE_REJECTED.default_message,
+                )
+            self._store.put(activity.code, review.with_finalized(plan))
+            new_version = done_001.value if done_001.value is not None else 0
+            logger.info(
+                "定案 activity=%s round=%s version=%s already=False",
+                activity.code,
+                round_.number,
+                plan.version,
+            )
+            return ReviewOutcome(
+                ok=True, value=FinalizeResult(new_version, plan.version, False)
+            )
 
     def finalized_rounds(self, code: str) -> tuple[FinalizedRound, ...]:
         """已定案輪次的唯讀視圖（給 005）。
@@ -331,4 +393,12 @@ class RankingService:
         Returns:
             已定案輪次，依輪次遞增。
         """
-        raise NotImplementedError
+        activity = self._activities.get(code)
+        if activity is None:
+            return ()
+        out: list[FinalizedRound] = []
+        for round_ in activity.rounds:
+            stored = self._store.get(activity.code, round_.number)
+            if stored is not None and stored.finalized is not None:
+                out.append(FinalizedRound(round_.number, stored.finalized))
+        return tuple(out)
