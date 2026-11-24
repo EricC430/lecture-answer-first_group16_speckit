@@ -4,9 +4,9 @@
 業務失敗由服務回傳 `ExportRejection`，在這裡轉成 `{"error": {"code", "message"}}`。
 """
 
-from typing import TypeVar
+from typing import Annotated, TypeVar
 
-from fastapi import APIRouter, FastAPI, Request
+from fastapi import APIRouter, FastAPI, Path, Request
 from pydantic import BaseModel, ConfigDict, Field, StrictStr
 
 from lecture_quiz.app.activity.ports import Requester
@@ -21,6 +21,8 @@ from .common import ApiError, annotate_request_log
 from .http_api import ACTIVITY_NOT_FOUND, ACTIVITY_NOT_FOUND_MESSAGE, Token
 
 T = TypeVar("T")
+
+Positive = Annotated[int, Path(ge=1)]
 
 
 class WriteBody(BaseModel):
@@ -100,6 +102,39 @@ def create_router(app: FastAPI) -> APIRouter:
         attempt = unwrap(request, code, token, result)
         annotate_request_log(request, activity_code=code, result=attempt.status.value)
         return attempt_json(attempt)
+
+    @router.post("/activities/{code}/export/writes/{attempt_id}/recheck")
+    async def recheck(
+        request: Request, code: str, attempt_id: Positive, token: Token
+    ) -> JsonDict:
+        """重新讀取核對（X3）：只讀取，不寫入、不做結構檢查。"""
+        code = normalize_code_input(code)
+        result = await service().recheck(code, requester_for(code, token), attempt_id)
+        attempt = unwrap(request, code, token, result)
+        annotate_request_log(request, activity_code=code, result=attempt.status.value)
+        return attempt_json(attempt)
+
+    @router.post("/activities/{code}/export/writes/{attempt_id}/retry")
+    async def retry(
+        request: Request, code: str, attempt_id: Positive, token: Token
+    ) -> JsonDict:
+        """重試（X4）：同一份快照，重新檢查結構後寫入。"""
+        code = normalize_code_input(code)
+        result = await service().retry(code, requester_for(code, token), attempt_id)
+        attempt = unwrap(request, code, token, result)
+        annotate_request_log(request, activity_code=code, result=attempt.status.value)
+        return attempt_json(attempt)
+
+    @router.get("/activities/{code}/export/writes/latest")
+    async def latest(request: Request, code: str, token: Token) -> JsonDict:
+        """最近一次寫回嘗試（X5）；沒有時 `{"attempt": null}`。"""
+        code = normalize_code_input(code)
+        result = service().latest_attempt(code, requester_for(code, token))
+        if not result.ok:
+            unwrap(request, code, token, result)
+        annotate_request_log(request, activity_code=code, result="OK")
+        attempt = result.value
+        return {"attempt": None if attempt is None else attempt_json(attempt)}
 
     @router.post("/activities/{code}/export/authorization")
     async def authorization(request: Request, code: str, token: Token) -> JsonDict:

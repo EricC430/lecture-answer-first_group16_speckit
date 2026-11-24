@@ -4,6 +4,7 @@
 替換讀取器內的 `SheetSnapshot`，所以寫入後的再讀取與再辨識看得到新內容。
 """
 
+import asyncio
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 
@@ -32,6 +33,8 @@ class FakeSheetsWriter:
     write_calls: list[tuple[tuple[CellRef, str], ...]] = field(default_factory=list)
     read_calls: int = 0
     before_write: Callable[[], None] | None = None
+    gate: asyncio.Event | None = None  # 併發測試：寫入前等待
+    started: asyncio.Event | None = None  # 併發測試：寫入已開始
     # 以 (試算表, 工作表) 紀錄使用者輸入（區分文字與其他型別）
     other_cells: dict[tuple[str, int, CellRef], CurrentCell] = field(
         default_factory=dict
@@ -70,6 +73,10 @@ class FakeSheetsWriter:
         self.write_calls.append(tuple(cells))
         if self.before_write is not None:
             self.before_write()
+        if self.started is not None:
+            self.started.set()
+        if self.gate is not None:
+            await self.gate.wait()
         result = self.next_result
         applied = result.outcome is OutcomeStatus.SUCCESS or (
             result.outcome is OutcomeStatus.PENDING and self.apply_on_pending

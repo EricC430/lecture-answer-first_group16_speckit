@@ -122,6 +122,25 @@
         <p>學習單的結構與匯入時不同，已停止寫回；請還原學習單後重新預覽：</p>
         <ul id="export-structure-list"></ul>
       </div>
+      <div id="export-status" hidden>
+        <h3>最近一次寫回</h3>
+        <p id="export-status-text"></p>
+        <p id="export-status-counts" class="muted"></p>
+        <p id="export-status-reason" class="muted"></p>
+        <div class="controls">
+          <button type="button" id="export-recheck-button">重新讀取核對</button>
+          <button type="button" id="export-retry-button">重試</button>
+        </div>
+        <div id="export-checks" hidden>
+          <p class="muted">核對只讀取匯入時記錄的位置，不檢查學習單結構是否被改動，若您修改過學習單請自行確認。</p>
+          <table class="export-table">
+            <thead>
+              <tr><th>題號</th><th>子空格</th><th>預期答案</th><th>目前內容</th><th>是否相符</th></tr>
+            </thead>
+            <tbody id="export-checks-body"></tbody>
+          </table>
+        </div>
+      </div>
       <div id="export-preview" hidden>
         <p id="export-preview-summary"></p>
         <table class="export-table">

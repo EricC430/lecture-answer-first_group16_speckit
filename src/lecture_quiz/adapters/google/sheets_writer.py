@@ -19,6 +19,8 @@ import logging
 from collections.abc import Mapping, Sequence
 from typing import Any
 
+from googleapiclient.errors import HttpError
+
 from lecture_quiz.adapters.google.errors import CAUGHT, map_exception
 from lecture_quiz.adapters.google.sheets_reader import (
     TITLE_FIELDS,
@@ -33,6 +35,7 @@ from lecture_quiz.app.guided_notes_import.models import (
     Result,
     SourceRef,
 )
+from lecture_quiz.app.result_export.models import AttemptReason
 from lecture_quiz.app.result_export.ports import WriteResult
 from lecture_quiz.core.guided_notes_import.models import CellRef
 from lecture_quiz.core.result_export.models import CellKind, CurrentCell, OutcomeStatus
@@ -65,6 +68,37 @@ def _current_cell(raw: Mapping[str, Any]) -> CurrentCell:
     if "formulaValue" in entered:
         return CurrentCell(CellKind.OTHER, None, str(entered["formulaValue"]))
     return CurrentCell(CellKind.OTHER, None, "?")
+
+
+def _credential_reason(rejection: ImportRejection | None) -> AttemptReason:
+    """憑證取得失敗對應成原因類別。"""
+    mapping = {
+        ImportRejection.NOT_AUTHORIZED: AttemptReason.NOT_AUTHORIZED,
+        ImportRejection.AUTH_EXPIRED: AttemptReason.AUTH_EXPIRED,
+        ImportRejection.PERMISSION_DENIED: AttemptReason.PERMISSION_DENIED,
+        ImportRejection.GOOGLE_NOT_CONFIGURED: AttemptReason.NOT_CONFIGURED,
+    }
+    if rejection is None:
+        return AttemptReason.READ_FAILED
+    return mapping.get(rejection, AttemptReason.READ_FAILED)
+
+
+def _classify_http_status(status: int) -> WriteResult:
+    """依 HTTP 狀態碼分類（research R6）。
+
+    `batchUpdate` 有整批原子性：4xx 代表請求在驗證階段被拒、沒有任何格被改（明確失敗）；
+    5xx 與無法判定的狀態無法證實請求有沒有被處理（待確認）。
+    """
+    failed = OutcomeStatus.FAILED
+    if status == 401:
+        return WriteResult(failed, AttemptReason.AUTH_EXPIRED)
+    if status in (403, 404):
+        return WriteResult(failed, AttemptReason.PERMISSION_DENIED)
+    if status == 429:
+        return WriteResult(failed, AttemptReason.RATE_LIMITED)
+    if 400 <= status < 500:
+        return WriteResult(failed, AttemptReason.REJECTED)
+    return WriteResult(OutcomeStatus.PENDING, AttemptReason.UNKNOWN)
 
 
 class GoogleSheetsWriter:
@@ -172,7 +206,10 @@ class GoogleSheetsWriter:
         """
         services = await self._services(code)
         if not services.ok or services.value is None:
-            raise RuntimeError("尚未實作的失敗分類")  # 由 US4 完成
+            # 憑證取得失敗：尚未送出任何請求，沒有任何格被改動
+            return WriteResult(
+                OutcomeStatus.FAILED, _credential_reason(services.rejection)
+            )
         _, sheets = services.value
         requests = [
             {
@@ -190,13 +227,23 @@ class GoogleSheetsWriter:
             }
             for ref, text in cells
         ]
-        await asyncio.to_thread(
-            lambda: (
-                sheets.spreadsheets()
-                .batchUpdate(
-                    spreadsheetId=source.spreadsheet_id, body={"requests": requests}
+        try:
+            await asyncio.to_thread(
+                lambda: (
+                    sheets.spreadsheets()
+                    .batchUpdate(
+                        spreadsheetId=source.spreadsheet_id,
+                        body={"requests": requests},
+                    )
+                    .execute(num_retries=0)
                 )
-                .execute(num_retries=0)
             )
-        )
+        except HttpError as exc:
+            status = exc.resp.status if exc.resp is not None else 0
+            logger.warning("Google 寫入錯誤：status=%s", status)  # 不記訊息本文
+            return _classify_http_status(status)
+        except CAUGHT:
+            # 逾時、連線中斷等：無法證實請求有沒有被處理 → 待確認
+            logger.warning("Google 寫入結果無法確認（網路錯誤或逾時）")
+            return WriteResult(OutcomeStatus.PENDING, AttemptReason.UNKNOWN)
         return WriteResult(OutcomeStatus.SUCCESS, None)

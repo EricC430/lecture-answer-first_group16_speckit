@@ -19,7 +19,22 @@ const initialAuth = new URLSearchParams(window.location.search).get("auth");
 
 const AUTH_PROBLEMS = new Set(["NOT_AUTHORIZED", "AUTH_EXPIRED", "PERMISSION_DENIED"]);
 
-const ui = { code: null, token: null, preview: null, busy: false, autoPreviewDone: false };
+const STATUS_LABELS = {
+  IN_PROGRESS: "寫入中…",
+  SUCCESS: "寫回成功",
+  FAILED: "明確失敗（確認沒有任何儲存格被改動）",
+  PENDING: "結果待確認（無法證實是否已寫入）",
+};
+
+const ui = {
+  code: null,
+  token: null,
+  preview: null,
+  attempt: null,
+  summaryKey: null,
+  busy: false,
+  autoPreviewDone: false,
+};
 
 function call(method, path, body) {
   return apiRequest(
@@ -96,6 +111,50 @@ function renderPreview(preview) {
   updateControls();
 }
 
+// 寫回狀態面板：三種結果與進行中；核對結果逐格列出預期與目前內容（純文字）。
+function renderAttempt(attempt) {
+  ui.attempt = attempt;
+  $("export-status").hidden = attempt === null;
+  if (attempt === null) return;
+  $("export-status-text").textContent =
+    `第 ${attempt.attemptId} 次${attempt.kind === "RETRY" ? "（重試）" : ""}：${STATUS_LABELS[attempt.status] ?? attempt.status}`;
+  $("export-status-counts").textContent =
+    `共 ${attempt.totalCells} 格；已確認寫入 ${attempt.confirmedCells}、確認未寫入 ${attempt.notWrittenCells}、待確認 ${attempt.pendingCells}`;
+  $("export-status-reason").textContent = attempt.reasonText ?? "";
+  const checks = attempt.cellChecks ?? [];
+  $("export-checks").hidden = checks.length === 0;
+  const body = $("export-checks-body");
+  body.replaceChildren();
+  for (const check of checks) {
+    const row = document.createElement("tr");
+    row.append(
+      cell(`第 ${check.questionNumber} 題`),
+      cell(check.subIndex === null ? "" : check.subIndex),
+      answerCell(check.expected),
+      answerCell(check.currentDisplay),
+      cell(check.matches ? "相符" : "不符"),
+    );
+    body.append(row);
+  }
+  if (attempt.differences && attempt.differences.length) {
+    renderStructure({ ok: false, differences: attempt.differences, moreDifferences: 0 });
+  }
+  updateControls();
+}
+
+// 老師快照的 export 摘要（所有老師分頁即時更新）；細節（原因說明、逐格核對）用 X5 取得。
+async function onSummary(summary) {
+  if (!summary) return;
+  const key = `${summary.attemptId}:${summary.status}:${summary.confirmedCells}:${summary.pendingCells}`;
+  if (key === ui.summaryKey) return;
+  ui.summaryKey = key;
+  if (ui.attempt && ui.attempt.attemptId === summary.attemptId && ui.attempt.status === summary.status) {
+    return; // 這個分頁剛自己操作過，內容已是最新
+  }
+  const result = await call("GET", "/writes/latest");
+  if (result.ok && result.data.attempt) renderAttempt(result.data.attempt);
+}
+
 function clearPreview() {
   ui.preview = null;
   $("export-structure").hidden = true;
@@ -105,8 +164,12 @@ function clearPreview() {
 }
 
 function updateControls() {
+  const running = ui.attempt !== null && ui.attempt.status === "IN_PROGRESS";
   $("export-preview-button").disabled = ui.busy;
-  $("export-confirm-button").disabled = ui.busy || !(ui.preview && ui.preview.canConfirm);
+  $("export-confirm-button").disabled =
+    ui.busy || running || !(ui.preview && ui.preview.canConfirm);
+  $("export-recheck-button").disabled = ui.busy || running || ui.attempt === null;
+  $("export-retry-button").disabled = ui.busy || running || ui.attempt === null;
 }
 
 async function guarded(fn) {
@@ -158,18 +221,46 @@ async function runConfirm() {
     showAuthProblem(result.error.code);
     return;
   }
-  clearPreview(); // 確認只對這份預覽有效；結果狀態在 US4 的狀態面板顯示
+  clearPreview(); // 確認只對這份預覽有效
+  renderAttempt(result.data);
 }
 
 $("export-preview-button").addEventListener("click", () => guarded(runPreview));
 $("export-confirm-button").addEventListener("click", () => guarded(runConfirm));
 $("export-reauth-button").addEventListener("click", () => guarded(runReauth));
 
+async function runAttemptAction(action) {
+  if (!ui.attempt) return;
+  showError($("export-error"), null);
+  const result = await call("POST", `/writes/${ui.attempt.attemptId}/${action}`, {});
+  if (!result.ok) {
+    showError($("export-error"), result.error);
+    showAuthProblem(result.error.code);
+    return;
+  }
+  renderAttempt(result.data);
+}
+
+$("export-recheck-button").addEventListener("click", () => guarded(() => runAttemptAction("recheck")));
+$("export-retry-button").addEventListener("click", () => guarded(() => runAttemptAction("retry")));
+
+let restored = false;
+async function restoreLatest() {
+  if (restored) return;
+  restored = true; // 頁面重新整理後恢復最近一次寫回
+  const result = await call("GET", "/writes/latest");
+  if (result.ok && result.data.attempt) renderAttempt(result.data.attempt);
+}
+
 onTeacherSnapshot((snapshot, state) => {
   ui.code = state.code;
   ui.token = state.token;
   // 已取消的活動不提供寫回與 CSV（alignment 2026-11-23）
   $("export-section").hidden = snapshot.stage === "CANCELLED";
+  if (snapshot.stage !== "CANCELLED") {
+    restoreLatest();
+    onSummary(snapshot.export);
+  }
   updateControls();
   if (initialAuth === "ok" && !ui.autoPreviewDone && snapshot.stage !== "CANCELLED") {
     ui.autoPreviewDone = true; // 授權完成後自動回到預覽，不需要重新匯入

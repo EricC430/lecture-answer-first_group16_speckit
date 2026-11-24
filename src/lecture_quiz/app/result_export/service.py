@@ -7,10 +7,15 @@
 
 import logging
 from collections.abc import Mapping
-from dataclasses import dataclass
-from datetime import datetime
+from dataclasses import dataclass, replace
 
-from lecture_quiz.app.activity.ports import Clock, Requester, SyncPublisher, Viewer
+from lecture_quiz.app.activity.ports import (
+    Clock,
+    Requester,
+    SyncPublisher,
+    TeacherViewer,
+    Viewer,
+)
 from lecture_quiz.app.activity.service import ExportView
 from lecture_quiz.app.guided_notes_import.models import ImportRecord, ImportRejection
 from lecture_quiz.app.guided_notes_import.ports import AuthGateway, SheetsReader
@@ -32,6 +37,7 @@ from lecture_quiz.app.result_export.ports import (
     SubmissionsReader,
 )
 from lecture_quiz.app.result_export.store import ExportStore
+from lecture_quiz.app.result_export.views import attempt_summary
 from lecture_quiz.core.activity.models import Activity
 from lecture_quiz.core.activity.results import RejectionReason
 from lecture_quiz.core.guided_notes_import.models import CellRef, SheetSnapshot
@@ -42,11 +48,12 @@ from lecture_quiz.core.result_export.models import (
     FinalizedEntry,
     FinalizedQuestion,
     OutcomeStatus,
-    ResultSnapshot,
     StructureCheck,
     StructureDifference,
     SubmissionFact,
+    WritePlanItem,
 )
+from lecture_quiz.core.result_export.reconcile import reconcile
 from lecture_quiz.core.result_export.snapshot import build_snapshot, snapshot_id_of
 from lecture_quiz.core.result_export.structure import (
     compare_structure,
@@ -283,12 +290,32 @@ class ExportService:
         title = source.snapshot.sheet_name if source.snapshot else record.sheet_title
         return Result.success(PreviewView(snapshot, source.check, title))
 
-    # ── 確認寫回（US1：閘門與快照；結構檢查與狀態分類在 US2、US4）──
+    # ── 確認寫回與重試（US1、US2、US4）─────────────────────────
+
+    def _prepare(
+        self, code: str, requester: Requester
+    ) -> Result[tuple[Collected, ImportRecord, SheetsWriter]]:
+        """閘門、取已定案資料、匯入記錄與寫入器（沒有成果、沒有記錄、沒有寫入器都拒絕）。"""
+        gate = self._gate(code, requester)
+        if not gate.ok or gate.value is None:
+            return Result.failure(gate.rejection or ExportRejection.NOT_TEACHER)
+        collected = self._collect(code, gate.value)
+        if not collected.has_winners:
+            return Result.failure(ExportRejection.NO_RESULTS)
+        record = self._imports.get_import_record(code)
+        if record is None:
+            return Result.failure(ExportRejection.NO_IMPORT_RECORD)
+        if self._writer is None:
+            return Result.failure(ExportRejection.GOOGLE_NOT_CONFIGURED)
+        return Result.success((collected, record, self._writer))
 
     async def confirm_write(
         self, code: str, requester: Requester, snapshot_id: str
     ) -> Result[WriteAttempt]:
         """老師手動確認寫回；確認只對預覽時的成果快照有效。
+
+        同一活動一次只有一個寫入：已有進行中的嘗試時，回覆那次嘗試（`already_in_progress`），
+        不開始第二次寫入。
 
         Args:
             code: 活動代碼。
@@ -298,19 +325,12 @@ class ExportService:
         Returns:
             這次嘗試；沒有成果、陳舊快照、非老師、已取消等情況為對應拒絕。
         """
-        gate = self._gate(code, requester)
-        if not gate.ok or gate.value is None:
-            return Result.failure(gate.rejection or ExportRejection.NOT_TEACHER)
-        collected = self._collect(code, gate.value)
-        if not collected.has_winners:
-            return Result.failure(ExportRejection.NO_RESULTS)
+        prepared = self._prepare(code, requester)
+        if not prepared.ok or prepared.value is None:
+            return Result.failure(prepared.rejection or ExportRejection.NO_RESULTS)
+        collected, record, writer = prepared.value
         if snapshot_id != snapshot_id_of(collected.round_numbers):
             return Result.failure(ExportRejection.STALE_SNAPSHOT)
-        record = self._imports.get_import_record(code)
-        if record is None:
-            return Result.failure(ExportRejection.NO_IMPORT_RECORD)
-        if self._writer is None:
-            return Result.failure(ExportRejection.GOOGLE_NOT_CONFIGURED)
         snapshot = build_snapshot(
             collected.questions,
             collected.submissions,
@@ -319,83 +339,257 @@ class ExportService:
             {},
             collected.round_numbers,
         )
-        started = self._clock.now()
-        source = await self._check_source(code, record)
-        if source.failure is not None or source.check is None:
-            return Result.success(
-                self._failed(
-                    code, snapshot, started, _attempt_reason(source.failure), ()
-                )
-            )
-        if not source.check.ok:
-            return Result.success(
-                self._failed(
-                    code,
-                    snapshot,
-                    started,
-                    AttemptReason.STRUCTURE_CHANGED,
-                    source.check.differences,
-                )
-            )
-        cells = tuple((i.target, i.answer) for i in snapshot.items)
-        written = await self._writer.write_text_cells(code, record.source, cells)
-        total = len(cells)
-        ok = written.outcome is OutcomeStatus.SUCCESS
-        attempt = WriteAttempt(
-            attempt_id=self._store.next_id(code),
-            kind=AttemptKind.WRITE,
-            snapshot_id=snapshot.snapshot_id,
-            items=snapshot.items,
-            status=AttemptStatus.SUCCESS if ok else AttemptStatus.FAILED,
-            reason=None if ok else written.reason,
-            started_at=started,
-            finished_at=self._clock.now(),
-            confirmed_cells=total if ok else 0,
-            not_written_cells=0 if ok else total,
+        attempt, busy = await self._begin(
+            code, AttemptKind.WRITE, snapshot.snapshot_id, snapshot.items
         )
-        self._store.add_attempt(code, attempt)
-        logger.info(
-            "寫回 activity=%s attempt=%s snapshot=%s cells=%d status=%s",
-            code,
-            attempt.attempt_id,
-            attempt.snapshot_id,
-            total,
-            attempt.status.value,
-        )
-        return Result.success(attempt)
+        if busy:
+            return Result.success(replace(attempt, already_in_progress=True))
+        return Result.success(await self._run(code, record, writer, attempt))
 
-    def _failed(
+    async def retry(
+        self, code: str, requester: Requester, attempt_id: int
+    ) -> Result[WriteAttempt]:
+        """重試最新一次嘗試：同一份快照與答案，重新檢查結構後寫入（冪等）。
+
+        Args:
+            code: 活動代碼。
+            requester: 已解析的身分。
+            attempt_id: 要重試的嘗試編號（必須是最新一次）。
+
+        Returns:
+            新的嘗試（`kind=RETRY`）；進行中、不是最新一次等為對應拒絕。
+        """
+        prepared = self._prepare(code, requester)
+        if not prepared.ok or prepared.value is None:
+            return Result.failure(prepared.rejection or ExportRejection.NO_RESULTS)
+        _, record, writer = prepared.value
+        target = self._latest_for(code, attempt_id)
+        if not target.ok or target.value is None:
+            return Result.failure(target.rejection or ExportRejection.ATTEMPT_NOT_FOUND)
+        attempt, busy = await self._begin(
+            code, AttemptKind.RETRY, target.value.snapshot_id, target.value.items
+        )
+        if busy:
+            return Result.failure(ExportRejection.WRITE_IN_PROGRESS)
+        return Result.success(await self._run(code, record, writer, attempt))
+
+    def _latest_for(self, code: str, attempt_id: int) -> Result[WriteAttempt]:
+        """只能對最新一次、且不在進行中的嘗試核對或重試。"""
+        found = self._store.get(code, attempt_id)
+        if found is None:
+            return Result.failure(ExportRejection.ATTEMPT_NOT_FOUND)
+        latest = self._store.latest(code)
+        if latest is None or latest.attempt_id != attempt_id:
+            return Result.failure(ExportRejection.NOT_LATEST_ATTEMPT)
+        if latest.status is AttemptStatus.IN_PROGRESS:
+            return Result.failure(ExportRejection.WRITE_IN_PROGRESS)
+        return Result.success(latest)
+
+    async def _begin(
         self,
         code: str,
-        snapshot: ResultSnapshot,
-        started: datetime,
-        reason: AttemptReason,
-        differences: tuple[StructureDifference, ...],
+        kind: AttemptKind,
+        snapshot_id: str,
+        items: tuple[WritePlanItem, ...],
+    ) -> tuple[WriteAttempt, bool]:
+        """在鎖內檢查有無進行中並建立進行中的嘗試（兩者之間沒有 `await`，research R1）。
+
+        Returns:
+            （嘗試, 是否已有進行中）。已有進行中時回傳那一次、不建立新的。
+        """
+        async with self._store.lock(code):
+            latest = self._store.latest(code)
+            if latest is not None and latest.status is AttemptStatus.IN_PROGRESS:
+                return latest, True
+            attempt = WriteAttempt(
+                attempt_id=self._store.next_id(code),
+                kind=kind,
+                snapshot_id=snapshot_id,
+                items=items,
+                status=AttemptStatus.IN_PROGRESS,
+                reason=None,
+                started_at=self._clock.now(),
+                pending_cells=len(items),
+            )
+            self._store.add_attempt(code, attempt)
+        await self._publish(code)
+        return attempt, False
+
+    async def _run(
+        self,
+        code: str,
+        record: ImportRecord,
+        writer: SheetsWriter,
+        attempt: WriteAttempt,
     ) -> WriteAttempt:
-        """記錄一次「寫入之前就停止」的明確失敗（零寫入）。"""
-        total = len(snapshot.items)
-        attempt = WriteAttempt(
-            attempt_id=self._store.next_id(code),
-            kind=AttemptKind.WRITE,
-            snapshot_id=snapshot.snapshot_id,
-            items=snapshot.items,
-            status=AttemptStatus.FAILED,
+        """鎖外做 Google I/O（重新讀取、結構比對、寫入），再在鎖內記錄最終狀態。"""
+        total = attempt.total_cells
+        try:
+            source = await self._check_source(code, record)
+            if source.failure is not None or source.check is None:
+                final = self._settle(
+                    attempt, AttemptStatus.FAILED, _attempt_reason(source.failure)
+                )
+            elif not source.check.ok:
+                final = self._settle(
+                    attempt,
+                    AttemptStatus.FAILED,
+                    AttemptReason.STRUCTURE_CHANGED,
+                    differences=source.check.differences,
+                )
+            else:
+                cells = tuple((i.target, i.answer) for i in attempt.items)
+                written = await writer.write_text_cells(code, record.source, cells)
+                if written.outcome is OutcomeStatus.SUCCESS:
+                    final = self._settle(attempt, AttemptStatus.SUCCESS, None)
+                elif written.outcome is OutcomeStatus.FAILED:
+                    final = self._settle(
+                        attempt,
+                        AttemptStatus.FAILED,
+                        written.reason or AttemptReason.REJECTED,
+                    )
+                else:
+                    final = self._settle(
+                        attempt,
+                        AttemptStatus.PENDING,
+                        written.reason or AttemptReason.UNKNOWN,
+                    )
+        except Exception:
+            # 程式錯誤照常往上拋；但嘗試不能永遠停在進行中（會擋住之後所有寫入）
+            await self._store_final(
+                code,
+                self._settle(attempt, AttemptStatus.PENDING, AttemptReason.UNKNOWN),
+            )
+            raise
+        await self._store_final(code, final)
+        logger.info(
+            "寫回 activity=%s attempt=%s snapshot=%s cells=%d status=%s reason=%s",
+            code,
+            final.attempt_id,
+            final.snapshot_id,
+            total,
+            final.status.value,
+            final.reason.value if final.reason else "-",
+        )
+        return final
+
+    def _settle(
+        self,
+        attempt: WriteAttempt,
+        status: AttemptStatus,
+        reason: AttemptReason | None,
+        differences: tuple[StructureDifference, ...] = (),
+    ) -> WriteAttempt:
+        """依結果填入三個格數（data-model「狀態與格數對照」）與結束時間。"""
+        total = attempt.total_cells
+        confirmed, not_written, pending = {
+            AttemptStatus.SUCCESS: (total, 0, 0),
+            AttemptStatus.FAILED: (0, total, 0),
+        }.get(status, (0, 0, total))
+        return replace(
+            attempt,
+            status=status,
             reason=reason,
-            started_at=started,
             differences=differences,
             finished_at=self._clock.now(),
-            not_written_cells=total,
+            confirmed_cells=confirmed,
+            not_written_cells=not_written,
+            pending_cells=pending,
         )
-        self._store.add_attempt(code, attempt)
+
+    async def _store_final(self, code: str, attempt: WriteAttempt) -> None:
+        """在鎖內存入最終狀態，鎖外推送。"""
+        async with self._store.lock(code):
+            self._store.replace(code, attempt)
+        await self._publish(code)
+
+    # ── 重新讀取核對（US4）──────────────────────────────────
+
+    async def recheck(
+        self, code: str, requester: Requester, attempt_id: int
+    ) -> Result[WriteAttempt]:
+        """重新讀取核對：只讀取記錄的位置，不寫入、不做結構檢查（clarify Q2）。
+
+        讀取失敗（授權失效、無權限、網路）時只回錯誤，不改變該嘗試的狀態與格數。
+
+        Args:
+            code: 活動代碼。
+            requester: 已解析的身分。
+            attempt_id: 要核對的嘗試編號（必須是最新一次）。
+
+        Returns:
+            更新後的嘗試（含逐格的預期與目前內容）。
+        """
+        prepared = self._prepare(code, requester)
+        if not prepared.ok or prepared.value is None:
+            return Result.failure(prepared.rejection or ExportRejection.NO_RESULTS)
+        _, record, writer = prepared.value
+        target = self._latest_for(code, attempt_id)
+        if not target.ok or target.value is None:
+            return Result.failure(target.rejection or ExportRejection.ATTEMPT_NOT_FOUND)
+        items = target.value.items
+        cells = await writer.read_cells(code, record.source, [i.target for i in items])
+        if not cells.ok or cells.value is None:
+            return Result.failure(_import_rejection(cells.rejection))
+        outcome = reconcile(
+            [(i.question_number, i.sub_index, i.target, i.answer) for i in items],
+            cells.value,
+        )
+        async with self._store.lock(code):
+            latest = self._store.latest(code)
+            if latest is None or latest.attempt_id != attempt_id:
+                return Result.failure(ExportRejection.NOT_LATEST_ATTEMPT)
+            if latest.status is AttemptStatus.IN_PROGRESS:
+                return Result.failure(ExportRejection.WRITE_IN_PROGRESS)
+            matched = sum(1 for c in outcome.checks if c.matches)
+            total = latest.total_cells
+            if outcome.status is OutcomeStatus.SUCCESS:
+                status, reason, counts = AttemptStatus.SUCCESS, None, (total, 0, 0)
+            elif outcome.status is OutcomeStatus.FAILED:
+                status = AttemptStatus.FAILED
+                reason = AttemptReason.NOT_WRITTEN
+                counts = (0, total, 0)
+            else:
+                status, reason = AttemptStatus.PENDING, AttemptReason.UNKNOWN
+                counts = (matched, 0, total - matched)
+            updated = replace(
+                latest,
+                status=status,
+                reason=reason,
+                differences=(),
+                cell_checks=outcome.checks,
+                finished_at=self._clock.now(),
+                confirmed_cells=counts[0],
+                not_written_cells=counts[1],
+                pending_cells=counts[2],
+            )
+            self._store.replace(code, updated)
+        await self._publish(code)
         logger.info(
-            "寫回 activity=%s attempt=%s snapshot=%s cells=%d status=FAILED reason=%s",
+            "核對 activity=%s attempt=%s cells=%d status=%s",
             code,
-            attempt.attempt_id,
-            attempt.snapshot_id,
-            total,
-            reason.value,
+            attempt_id,
+            updated.total_cells,
+            status.value,
         )
-        return attempt
+        return Result.success(updated)
+
+    def latest_attempt(
+        self, code: str, requester: Requester
+    ) -> Result[WriteAttempt | None]:
+        """最近一次寫回嘗試（頁面重新整理後恢復）；沒有時值為 `None`。
+
+        Args:
+            code: 活動代碼。
+            requester: 已解析的身分。
+
+        Returns:
+            最近一次嘗試或 `None`；非老師、已取消為對應拒絕。
+        """
+        gate = self._gate(code, requester)
+        if not gate.ok:
+            return Result.failure(gate.rejection or ExportRejection.NOT_TEACHER)
+        return Result(ok=True, value=self._store.latest(code))
 
     # ── 重新授權（US2）──────────────────────────────────────
 
@@ -425,8 +619,16 @@ class ExportService:
     def snapshot_extension(
         self, activity: Activity, viewer: Viewer
     ) -> Mapping[str, object]:
-        """老師快照的 `export` 欄位；學生與沒有嘗試時為空（US4 完成）。"""
-        return {}
+        """老師快照的 `export` 欄位；學生與沒有嘗試時為空。
+
+        同步、無副作用的純讀取；摘要不含逐格答案、原內容、差異清單與網址。
+        """
+        if not isinstance(viewer, TeacherViewer):
+            return {}
+        latest = self._store.latest(activity.code)
+        if latest is None:
+            return {}
+        return {"export": attempt_summary(latest)}
 
     async def _publish(self, code: str) -> None:
         """在鎖外推送最新快照。"""
