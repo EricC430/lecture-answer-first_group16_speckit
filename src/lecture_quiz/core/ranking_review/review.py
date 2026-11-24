@@ -8,8 +8,14 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
 from enum import StrEnum
 
-from lecture_quiz.core.ranking_review.models import RoundResult, freeze_mapping
+from lecture_quiz.core.ranking_review.models import (
+    RankingInput,
+    RoundResult,
+    freeze_mapping,
+)
+from lecture_quiz.core.ranking_review.order import QuestionOrder
 from lecture_quiz.core.ranking_review.outcome import FinalizedResult
+from lecture_quiz.core.ranking_review.ranking import RankingCalculator
 
 
 class ReviewRejection(StrEnum):
@@ -96,6 +102,27 @@ class RoundReview:
     def __post_init__(self) -> None:
         """把歷程轉成唯讀。"""
         object.__setattr__(self, "replaced", freeze_mapping(self.replaced))
+
+    @staticmethod
+    def initial(round_number: int, data: RankingInput) -> "RoundReview":
+        """關輪後尚無判錯時的初始審閱狀態（版本 1）。
+
+        在這裡決定一次題序並保存在 `result.order`，之後的重算都傳入這份題序。
+
+        Args:
+            round_number: 輪次編號。
+            data: 整輪重算的輸入（`wrong_marks` 應為空）。
+
+        Returns:
+            版本 1 的審閱狀態。
+        """
+        order = QuestionOrder.compute(data.question_numbers, data.candidates)
+        return RoundReview(
+            round_number=round_number,
+            version=1,
+            wrong_marks=data.wrong_marks,
+            result=RankingCalculator.recompute(data, order),
+        )
 
     def with_finalized(self, finalized: FinalizedResult) -> "RoundReview":
         """附上定案結果（歷程清空）；其餘欄位不變。

@@ -22,6 +22,7 @@
 | 階段 | 日期 | 指令 | 結果 |
 |---|---|---|---|
 | Phase 2 完成（T018） | 2026-11-24 | `pytest -q` | 563 passed, 2 deselected（基準 547 + 新增 16）；`pytest tests/architecture -q` 47 passed；`ruff check .` All checks passed；`ruff format --check .` 201 files already formatted；`mypy` Success: no issues found in 45 source files |
+| Phase 3～4 完成（T019～T036，US1／US2） | 2026-11-24 | `pytest -q`；`ruff check .`；`ruff format --check .`；`mypy`；`pytest tests/architecture -q` | 598 passed, 2 deselected（Phase 2 後 563 + 新增 35）；ruff All checks passed；format 214 files already formatted；mypy Success: no issues found in 48 source files；architecture 50 passed。測試先行：US1 核心測試先因匯入失敗（collection error）、app 4 項失敗，實作後通過；US2 3 個核心測試檔先 collection error、view／app／integration 先失敗，實作後通過。前端（T035／T036）無自動化測試，僅通過靜態文字安全檢查，畫面行為待 T094 人工驗證 |
 
 ## 效能（T082～T083）
 
