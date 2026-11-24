@@ -225,21 +225,31 @@ class ImportService:
     ) -> ImportOutcome:
         """原子匯入：整段持有該活動的匯入鎖，任何失敗都不保存。
 
+        同一個 `idempotency_key` 重送會回傳第一次的結果，但：先確認活動存在與請求者是
+        老師才查快取（持有 key 的非老師拿不到老師的結果）；只快取成功與驗證失敗，
+        身分或階段被拒、授權過期、讀取失敗等暫時性失敗不快取，
+        修正後可用同一個 key 重試。
+
         Args:
             code: 活動代碼。
             requester: 請求者。
-            idempotency_key: 去重用的 key；同一個 key 重送回傳第一次的結果。
+            idempotency_key: 去重用的 key。
 
         Returns:
             成功時含預覽與 001 的新版本號；失敗時含拒絕原因（驗證失敗時含問題清單）。
         """
         async with self._store.lock_for(code):
             if idempotency_key is not None:
+                denied = self._gate(code, requester, require_preparing=False)
+                if denied is not None:
+                    return ImportOutcome(ok=False, rejection=denied)
                 cached = self._store.idempotent.get((code, idempotency_key))
                 if cached is not None:
                     return cached
             outcome = await self._import_locked(code, requester)
-            if idempotency_key is not None:
+            if idempotency_key is not None and (
+                outcome.ok or outcome.rejection is ImportRejection.VALIDATION_FAILED
+            ):
                 self._store.remember_outcome(code, idempotency_key, outcome)
             return outcome
 

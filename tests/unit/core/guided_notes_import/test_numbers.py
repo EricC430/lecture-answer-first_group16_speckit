@@ -56,3 +56,18 @@ def test_accepts_positive_integers(cell, expected):
 def test_rejects_non_numbers(cell):
     """Edge: 題號格式"""
     assert normalize_number(cell) is None
+
+
+class _IntWithoutIsInteger(int):
+    """模擬 Python 3.11：`int` 沒有 `is_integer()`（3.12 才加入）。"""
+
+    is_integer = None  # type: ignore[assignment]
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"), [(1, 1), (12, 12), (0, None), (-3, None)]
+)
+def test_python_int_cells_work_without_int_is_integer(value, expected):
+    """`CellValue.number` 型別允許 int；3.11 的 int 沒有 `is_integer()`，不得拋例外。"""
+    cell = CellValue(number=_IntWithoutIsInteger(value), text=None, display=str(value))
+    assert normalize_number(cell) == expected

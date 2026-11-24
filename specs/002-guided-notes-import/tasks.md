@@ -425,3 +425,9 @@ Task: "<core>/headers.py（T036）"
 - [X] T080 更新 `CLAUDE.md` 的 002 段落：T028、T071 已由 EricC430 回報通過（細節未記錄）、T072 不做、T076 待 jacky0407，並移除「尚未執行」的過時描述 per tasks T078、plan: 待真實驗證的假設 (contradicts)
 - [X] T081 在 `src/lecture_quiz/adapters/google/config.py` 驗證 `GOOGLE_APP_ID` 為純數字（Cloud 專案編號），非數字時視為設定錯誤並明確失敗（匯入端點回未設定類拒絕、日誌只記變數名稱不記值），並在 `tests/unit/adapters/google/test_config.py` 與 `tests/contract/guided_notes_import/` 補測試（先確認紅燈）per FR-022、US1 (partial)
 - [X] T082 在 `.env.example` 與 `quickstart.md` 前置條件說明 `GOOGLE_APP_ID` 是 Cloud「專案編號」（純數字、與 `GOOGLE_CLIENT_ID` 開頭數字一致），填錯時 Drive 回 404 `notFound`；並確認 quickstart 已列出啟用 Drive、Sheets、Picker 三個 API 的步驟 per plan: 待真實驗證的假設 (partial)
+
+## Phase 11: PR #17 審查修正（jacky0407，2026-11-24）
+
+- [X] T084 修正 `core/guided_notes_import/numbers.py` 的 `normalize_number`：改為 `float(value.number).is_integer()`（`int.is_integer()` 要到 Python 3.12 才有，憲章規定 3.11 以上），超大整數 `OverflowError` 視為非題號；`tests/unit/core/guided_notes_import/test_numbers.py` 新增以模擬 3.11 的 int 子類測試（先確認紅燈）。**以 Python 3.11.17 全新環境重跑全部測試**（修正前 3 failed、723 passed）。
+- [X] T085 `ImportService.import_sheet` 的 `Idempotency-Key`：先確認活動存在與請求者是老師才查快取；只快取成功與驗證失敗，身分／階段被拒、授權過期、讀取失敗不快取。`tests/unit/app/guided_notes_import/test_idempotency_gate.py` 5 個測試（3 個先紅燈）。
+- [X] T086 與 003（PR #16）的合併順序與衝突處理、移除 dev seed 後 003～005 的人工驗證方式，寫入 PR #17 說明；「給 003」介面為 T083。

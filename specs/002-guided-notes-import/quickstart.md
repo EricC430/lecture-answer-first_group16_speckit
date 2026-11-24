@@ -106,6 +106,7 @@ pytest -m "not real_google and not perf"
 | 2026-11-23 | EricC430 | 真實路徑 B-1～B-13（版面 1、版面 2） | 通過（使用者回報） | 細節依使用者決定不記錄，**沒有 SC-006 秒數與題數可對照** |
 | 2026-11-23 | EricC430 的環境（Claude Code 執行） | T080～T082 後：`ruff check .`、`ruff format --check .`、`mypy`、`pytest -m "not real_google and not perf"` | 通過；188 個檔案格式正確；46 個檔案無型別問題；715 passed、2 deselected | 新增 `GOOGLE_APP_ID` 純數字驗證（紅燈 5 個測試後轉綠） |
 | 2026-11-24 | EricC430 的環境（Claude Code 執行） | 合併 #11 審查修改與最新 `main`、T083 後：`ruff check .`、`ruff format --check .`、`mypy`、`pytest -m "not real_google and not perf"` | 通過；189 個檔案格式正確；46 個檔案無型別問題；726 passed、2 deselected | 新增 `ImportService.blanks_per_question`（給 003），6 個測試先紅燈後轉綠 |
+| 2026-11-24 | EricC430 的環境（Claude Code 執行） | PR #17 審查修正後：Python 3.11.17 全新 venv（`uv pip install ".[dev]"`，以 `PYTHONUTF8` 以外方式、`PYTHONPATH=src` 指向工作樹）執行 `pytest -m "not real_google and not perf"`；Python 3.14.7 另跑 `ruff check .`、`ruff format --check .`、`mypy` 與同一組 pytest | 3.11：735 passed、2 deselected（修正前 723 passed、3 failed）；3.14：735 passed、2 deselected；ruff 通過、190 個檔案格式正確、mypy 46 個檔案無問題 | 3.11 失敗原因：`int.is_integer()` 3.12 才有（T084） |
 | | jacky0407 | T076 非實作者人工驗證 | | 尚未執行 |
 
 - **實作者**：EricC430。**非實作者人工驗證**：jacky0407（執行 B 區並簽名，記錄日期與結果）。

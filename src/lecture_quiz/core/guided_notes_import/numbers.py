@@ -45,7 +45,12 @@ def normalize_number(value: CellValue) -> int | None:
         題號；不合法時為 `None`。
     """
     if value.number is not None:
-        number = value.number
+        try:
+            # `float(...)`：`CellValue.number` 可能收到 int，而 `int.is_integer()` 要到
+            # Python 3.12 才有（憲章規定 3.11 以上）；超大整數轉不成浮點數時視為非題號。
+            number = float(value.number)
+        except OverflowError:
+            return None
         if math.isfinite(number) and number.is_integer() and number > 0:
             return int(number)
         return None
