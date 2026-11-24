@@ -279,12 +279,15 @@ def _join_group(
         return _reject(activity, exc.reason)
     groups = dict(activity.groups)
     existing = groups.get(number)
+    if existing is not None and _is_released(activity, existing):
+        # 防禦：從未提交且沒有裝置的組別視為已釋放，以新憑證重建
+        existing = None
     if existing is None:
         if not issued.group_credential:
             raise ValueError("建立新組需要服務層傳入組別加入憑證")
         groups[number] = Group(number, issued.group_credential)
-    elif any(d.group_number == number for d in activity.devices.values()):
-        # 組別還有裝置時才要憑證；沒有任何裝置的組別直接加入（兩組已同意）
+    else:
+        # 既有組別一律要憑證：還有裝置，或已有提交紀錄（alignment 2026-11-24）
         given = InputRules.normalize_credential(command.credential_raw)
         if not hmac.compare_digest(given.encode(), existing.join_credential.encode()):
             return _reject(activity, RejectionReason.BAD_CREDENTIAL)
@@ -296,14 +299,32 @@ def _join_group(
     return _changed(updated, issued)
 
 
+def _is_released(activity: Activity, group: Group) -> bool:
+    """組別已沒有裝置、從未提交、成功次數為 0 時視為可釋放（alignment 2026-11-24）。"""
+    return (
+        not group.has_submissions
+        and group.success_count == 0
+        and not any(d.group_number == group.number for d in activity.devices.values())
+    )
+
+
 def _leave_group(
     activity: Activity, command: Command, now: datetime, issued: IssuedSecrets | None
 ) -> Transition:
-    """離開本組：只移除該裝置；組別、其他裝置、提交與成功次數不變（FR-034）。"""
+    """離開本組（FR-034）：移除該裝置；提交與成功次數仍屬原組。
+
+    最後一台裝置離開、且該組從未提交時釋放組號，舊憑證隨之失效；其餘情況保留
+    組別與憑證（alignment 2026-11-24）。斷線或關閉網頁不會走到這裡。
+    """
     assert isinstance(command, LeaveGroup) and isinstance(command.actor, Device)
     devices = dict(activity.devices)
-    del devices[command.actor.token_hash]
-    return _changed(dataclasses.replace(activity, devices=freeze(devices)))
+    number = devices.pop(command.actor.token_hash).group_number
+    updated = dataclasses.replace(activity, devices=freeze(devices))
+    group = updated.groups.get(number)
+    if group is not None and _is_released(updated, group):
+        groups = {n: g for n, g in updated.groups.items() if n != number}
+        updated = dataclasses.replace(updated, groups=freeze(groups))
+    return _changed(updated)
 
 
 def _delete_group(
