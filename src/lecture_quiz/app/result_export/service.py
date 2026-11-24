@@ -42,9 +42,11 @@ from lecture_quiz.core.activity.models import Activity
 from lecture_quiz.core.activity.results import RejectionReason
 from lecture_quiz.core.guided_notes_import.models import CellRef, SheetSnapshot
 from lecture_quiz.core.guided_notes_import.parser import GuidedNotesParser
+from lecture_quiz.core.result_export.csv_export import build_rows, render_csv
 from lecture_quiz.core.result_export.models import (
     BlankTarget,
     CurrentCell,
+    ExportRow,
     FinalizedEntry,
     FinalizedQuestion,
     OutcomeStatus,
@@ -590,6 +592,36 @@ class ExportService:
         if not gate.ok:
             return Result.failure(gate.rejection or ExportRejection.NOT_TEACHER)
         return Result(ok=True, value=self._store.latest(code))
+
+    # ── CSV（US5、US6）──────────────────────────────────────
+
+    def download_csv(self, code: str, requester: Requester) -> Result[bytes]:
+        """所有已定案輪次的完整紀錄 CSV（UTF-8 加 BOM）。
+
+        不依賴 Google 授權、寫回狀態或來源結構，也不呼叫任何 Google 連接埠。沒有已定案
+        資料時只含表頭，且不需要匯入記錄（準備中的活動可能還沒有）。
+
+        Args:
+            code: 活動代碼。
+            requester: 已解析的身分。
+
+        Returns:
+            CSV 位元組；非老師、已取消為對應拒絕。
+        """
+        gate = self._gate(code, requester)
+        if not gate.ok or gate.value is None:
+            return Result.failure(gate.rejection or ExportRejection.NOT_TEACHER)
+        collected = self._collect(code, gate.value)
+        rows: tuple[ExportRow, ...] = ()
+        if collected.entries:
+            record = self._imports.get_import_record(code)
+            if record is None:
+                return Result.failure(ExportRejection.NO_IMPORT_RECORD)
+            rows = build_rows(
+                collected.entries, collected.submissions, self._blank_targets(record)
+            )
+        logger.info("下載 CSV activity=%s rows=%d", code, len(rows))
+        return Result.success(("﻿" + render_csv(rows)).encode("utf-8"))
 
     # ── 重新授權（US2）──────────────────────────────────────
 

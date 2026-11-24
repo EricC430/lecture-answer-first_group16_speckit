@@ -244,6 +244,41 @@ async function runAttemptAction(action) {
 $("export-recheck-button").addEventListener("click", () => guarded(() => runAttemptAction("recheck")));
 $("export-retry-button").addEventListener("click", () => guarded(() => runAttemptAction("retry")));
 
+// CSV 下載需要 Authorization 標頭，所以用 fetch 取得 blob 再以暫時網址觸發下載；
+// api.js 只處理 JSON，這裡不修改它。
+async function runCsv() {
+  showError($("export-error"), null);
+  let response;
+  try {
+    response = await fetch(`/api/activities/${encodeURIComponent(ui.code)}/export/csv`, {
+      headers: { Authorization: `Bearer ${ui.token}` },
+    });
+  } catch {
+    showError($("export-error"), { message: "無法連線到伺服器，請確認後端仍在執行。" });
+    return;
+  }
+  if (!response.ok) {
+    let message = "下載失敗，請稍後再試。";
+    try {
+      message = String((await response.json()).error.message);
+    } catch {
+      // 保持通用訊息
+    }
+    showError($("export-error"), { message });
+    return;
+  }
+  const blob = await response.blob();
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `quiz-results-${ui.code}.csv`;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(link.href);
+}
+
+$("export-csv-button").addEventListener("click", () => guarded(runCsv));
+
 let restored = false;
 async function restoreLatest() {
   if (restored) return;

@@ -6,7 +6,7 @@
 
 from typing import Annotated, TypeVar
 
-from fastapi import APIRouter, FastAPI, Path, Request
+from fastapi import APIRouter, FastAPI, Path, Request, Response
 from pydantic import BaseModel, ConfigDict, Field, StrictStr
 
 from lecture_quiz.app.activity.ports import Requester
@@ -135,6 +135,23 @@ def create_router(app: FastAPI) -> APIRouter:
         annotate_request_log(request, activity_code=code, result="OK")
         attempt = result.value
         return {"attempt": None if attempt is None else attempt_json(attempt)}
+
+    @router.get("/activities/{code}/export/csv")
+    async def download_csv(request: Request, code: str, token: Token) -> Response:
+        """下載完整紀錄 CSV（X7）：不依賴 Google 授權。"""
+        code = normalize_code_input(code)
+        result = service().download_csv(code, requester_for(code, token))
+        data = unwrap(request, code, token, result)
+        annotate_request_log(request, activity_code=code, result="OK")
+        disposition = f'attachment; filename="quiz-results-{code}.csv"'
+        return Response(
+            content=data,
+            media_type="text/csv; charset=utf-8",
+            headers={
+                "Content-Disposition": disposition,
+                "Cache-Control": "no-store",
+            },
+        )
 
     @router.post("/activities/{code}/export/authorization")
     async def authorization(request: Request, code: str, token: Token) -> JsonDict:

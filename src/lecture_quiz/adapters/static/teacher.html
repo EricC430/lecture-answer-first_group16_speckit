@@ -115,8 +115,10 @@
       <div class="controls">
         <button type="button" id="export-preview-button">預覽寫回</button>
         <button type="button" id="export-confirm-button" disabled>確認寫回</button>
+        <button type="button" id="export-csv-button">下載完整紀錄 CSV</button>
         <button type="button" id="export-reauth-button" hidden>重新授權</button>
       </div>
+      <p class="muted" id="export-csv-note">下載的 CSV 中，答案或組別若以 = + - @ 等符號開頭，前面會多一個保護字元（'），避免試算表軟體把它當成公式執行。文字保護前綴只為安全開啟，不代表原答案被修改，也不影響寫回試算表的答案。</p>
       <p id="export-error" class="error" role="alert" hidden></p>
       <div id="export-structure" class="error" hidden>
         <p>學習單的結構與匯入時不同，已停止寫回；請還原學習單後重新預覽：</p>
