@@ -162,7 +162,6 @@ function renderRoundControls(snapshot) {
   $("round-questions").textContent = snapshot.openQuestions.map((q) => `第 ${q} 題`).join("、");
   countdown.set(open ? snapshot.deadline : null);
   $("close-round").hidden = !open;
-  $("finalize-round").hidden = snapshot.stage !== "RESULT_PENDING";
 }
 
 onTeacherSnapshot(renderRoundControls);
@@ -260,9 +259,6 @@ function init() {
   $("create-activity").addEventListener("click", createActivity);
   $("open-round-panel").addEventListener("submit", openRound);
   $("close-round").addEventListener("click", () => teacherAction("POST", "/rounds/current/close", {}));
-  $("finalize-round").addEventListener("click", () =>
-    teacherAction("POST", "/rounds/current/finalize", {}),
-  );
   $("end-activity").addEventListener("click", () => teacherAction("POST", "/end", {}));
   $("open-joining").addEventListener("click", () => teacherAction("POST", "/open-joining", {}));
   $("cancel-activity").addEventListener("click", () => teacherAction("POST", "/cancel", {}));

@@ -1,13 +1,14 @@
 // 003 學生頁：本輪開放題的作答表單與送出（US1、US2、US3）。
 // 依快照的 openQuestions 與 questionShapes（每題格數）畫出表單；只有收到成功回應才顯示「已送出」（FR-032）。
 // 快照的 submissions.current.own 有本組已送出的題目時（例如同組另一台裝置送的），該題改為唯讀並顯示答案（US2）。
-// 已關輪的輪次（submissions.published）對所有組公開，顯示在「已公開的作答」（US5）。
+// 已關輪輪次的結果由 004 的 ranking-review.js 顯示（只顯示本組、目前搶答成功者與剛被判錯者，FR-037）；
+// 這裡不再列出各組答案。
 // 倒數依快照的後端 deadline；歸零時停用未送出的表單，沒有截止時間時顯示「由老師結束」（US6）。
 // 截止判定以後端為準：前端時鐘有誤差時，送出仍會被後端以「本輪已結束」拒絕。
 
 import { apiRequest } from "./api.js";
 import { currentIdentity, onStudentSnapshot } from "./student.js";
-import { describeSubmitError, el, renderAnswerForm, renderPublished } from "./submission.js";
+import { describeSubmitError, el, renderAnswerForm } from "./submission.js";
 
 const $ = (id) => document.getElementById(id);
 const forms = new Map(); // key：`${roundNumber}:${questionNumber}`，保留學生已輸入的內容
@@ -43,14 +44,6 @@ async function submitAnswer(roundNumber, questionNumber, answers, form) {
   form.showError(describeSubmitError(result.error));
 }
 
-function renderHistory(snapshot) {
-  // US5：已關輪的輪次對所有組公開；進行中的輪次不在 published 裡（研究 R11）
-  const published = snapshot.submissions?.published ?? [];
-  const history = $("published-section");
-  history.hidden = published.length === 0;
-  if (!history.hidden) renderPublished($("published-list"), published);
-}
-
 function lockAfterDeadline() {
   // 倒數歸零：停用所有還沒送出的作答表單（US6-AS2；FR-029）
   for (const form of forms.values()) if (!form.submitted) form.setDisabled(true);
@@ -74,7 +67,6 @@ function scheduleDeadline(deadline) {
 }
 
 function render(snapshot) {
-  renderHistory(snapshot);
   const section = $("round-submission-section");
   const list = $("answer-forms");
   const open = snapshot.stage === "ROUND_OPEN";

@@ -24,6 +24,7 @@ from lecture_quiz.adapters.countdown import AsyncioCountdownScheduler
 from lecture_quiz.adapters.web import (
     guided_notes_import,
     http_api,
+    ranking_review,
     submission_api,
     system,
     ws_sync,
@@ -37,6 +38,8 @@ from lecture_quiz.app.activity.ports import CountdownScheduler
 from lecture_quiz.app.activity.registry import ActivityRegistry
 from lecture_quiz.app.activity.service import ActivityService
 from lecture_quiz.app.guided_notes_import.ports import AuthGateway, SheetsReader
+from lecture_quiz.app.ranking_review.service import RankingService
+from lecture_quiz.app.ranking_review.store import ReviewStore
 from lecture_quiz.app.round_submission.ports import QuestionShapeSource
 from lecture_quiz.app.round_submission.service import SubmissionService
 from lecture_quiz.app.round_submission.store import SubmissionStore
@@ -85,6 +88,16 @@ def _wire_submission(app: FastAPI, shapes: QuestionShapeSource | None) -> None:
     )
 
 
+def _wire_ranking(app: FastAPI) -> None:
+    """組裝 004 的順位服務；需要 001 的活動服務、003 的提交服務與 WebSocket 推送。"""
+    app.state.ranking_service = RankingService(
+        app.state.activity_service,
+        app.state.submission_service,
+        ReviewStore(),
+        app.state.sync_hub,
+    )
+
+
 def create_app(
     clock: SupportsNow | None = None,
     scheduler: CountdownScheduler | None = None,
@@ -128,6 +141,8 @@ def create_app(
     api.include_router(guided_notes_import.create_router(app))  # 002
     _wire_submission(app, question_shape_source)  # 003 的格數來源依賴 002，須在其後
     api.include_router(submission_api.create_router(app))  # 003
+    _wire_ranking(app)  # 004 需要 001、003 的服務，須在 003 之後
+    api.include_router(ranking_review.create_router(app))  # 004
     # ── 子功能 router 結束 ──
     app.include_router(api)
     install_api_fallback(app)  # 未定義的 /api 路徑一律 404

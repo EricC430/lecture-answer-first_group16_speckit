@@ -104,7 +104,9 @@ async def _run() -> dict[str, list[float]]:
                 for name, path in steps:
                     start = time.perf_counter()
                     response = await http.post(
-                        f"/api/activities/{code}{path}", json={}, headers=headers
+                        f"/api/activities/{code}{path}",
+                        json={"resultVersion": 1} if path.endswith("/finalize") else {},
+                        headers=headers,
                     )
                     assert response.status_code in (200, 201), response.text
                     version = response.json()["version"]

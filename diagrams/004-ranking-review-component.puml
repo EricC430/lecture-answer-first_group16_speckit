@@ -1,0 +1,47 @@
+@startuml 004-ranking-review-component
+!pragma layout smetana
+skinparam defaultFontName "Microsoft JhengHei"
+skinparam componentStyle rectangle
+title 004 順位計算、判錯重算與定案 — 組件圖（相依方向：外層 → 核心）
+
+actor "老師" as Teacher
+actor "學生（各組）" as Student
+
+package "外層：畫面與 API（轉接層）" {
+  [老師結果畫面\n（完整候選情況：順位、次數、理由；\n只對目前搶答成功者判錯、對被替換者撤銷、\n受影響題目標示、確認定案）] as TeacherUI
+  [學生結果畫面\n（本組狀態與成功次數、目前搶答成功者、\n剛被判錯的前一組；無理由、無他組次數）] as StudentUI
+  [順位 API\n（身分與階段檢查、輸入驗證、\n錯誤訊息轉換、依角色裁切）] as Api
+}
+
+package "應用層" {
+  [順位服務\n（保存本輪結果與版本、判錯集合、定案紀錄；\n序列化同一活動的操作；\n每次變更呼叫核心整輪重算）] as Service
+}
+
+package "核心（純函式：不依賴網路、Web 框架、系統時鐘）" {
+  [題序計算\n（最早已接受提交決定題序；\n無提交題置後依題號）] as Order
+  [速度模式排名\n（接收時間、接收序號）] as Speed
+  [公平模式排名\n（成功次數、接收時間、接收序號；\n逐題處理、勝者次數加一）] as Fair
+  [整輪重算\n（基準＋模式＋題序＋提交＋判錯集合\n→ 本輪結果與受影響題目）] as Recompute
+}
+
+package "其他子功能與活動（相依）" {
+  [001 活動服務\n（current_round：規則與開輪基準；\nfinalize：只提交一次歷史成果；\n快照擴充：推送結果給各畫面）] as Activity
+  [003 提交服務\n（round_submissions：已接受提交，唯讀；\n組號、題號、答案原文、\n接收時間、接收序號；公開送出先後）] as Submit
+  [005 結果匯出\n（讀取定案結果）] as Export
+}
+
+Teacher --> TeacherUI
+Student --> StudentUI
+TeacherUI --> Api
+StudentUI --> Api
+Api --> Service
+Service --> Recompute : 傳入基準、模式、\n已接受提交、判錯集合
+Recompute --> Order
+Recompute --> Speed
+Recompute --> Fair
+Service --> Activity : 讀取本輪規則與基準；\n定案時交出本輪成果
+Service --> Submit : 讀取本輪已接受提交
+Service --> Activity : 註冊結果擴充（判錯標記、\n顯示狀態、結果版本；關輪後才有）
+Activity ..> Service : 關輪後推送快照時，\n擴充函式以純計算導出初始結果
+Export --> Service : 讀取定案結果
+@enduml

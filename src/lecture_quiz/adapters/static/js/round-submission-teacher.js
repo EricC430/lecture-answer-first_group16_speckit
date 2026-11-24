@@ -11,9 +11,13 @@ onTeacherSnapshot((snapshot) => {
   const submissions = snapshot.submissions;
   const history = $("published-section");
   section.hidden = !submissions;
-  history.hidden = !submissions?.published?.length;
+  // 004 已顯示結果的輪次（含答案與判錯狀態）不在這裡重複列出答案（FR-035）；
+  // 判錯標記以 004 的 ranking 為準，不使用 003 的佔位 judgedWrong。
+  const ranked = new Set((snapshot.ranking?.rounds ?? []).map((r) => r.roundNumber));
+  const unranked = (submissions?.published ?? []).filter((r) => !ranked.has(r.roundNumber));
+  history.hidden = unranked.length === 0;
   if (!submissions) return;
   renderBoard($("submission-board"), submissions.current, snapshot.groups ?? [], snapshot.questionShapes ?? {});
   // US5：已關輪的輪次（含本輪關輪後到定案前）
-  if (!history.hidden) renderPublished($("published-list"), submissions.published);
+  if (!history.hidden) renderPublished($("published-list"), unranked);
 });

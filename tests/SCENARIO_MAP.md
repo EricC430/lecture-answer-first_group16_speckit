@@ -1,4 +1,4 @@
-# Scenario 對應表（001-activity-session、003-round-submission）
+# Scenario 對應表（001-activity-session、003-round-submission、004-ranking-review）
 
 依憲章原則 VI，spec 的每個 Acceptance Scenario 至少對應一個自動化測試；測試函式的 docstring 寫 `Scenario: USn-ASm`。本表由 `tests/` 掃描產生（2026-11-24，003 T059）。001 與 003 的編號各自獨立：003 新增的測試檔歸 003，其餘歸 001。
 
@@ -130,3 +130,88 @@
 | 倒數與輸入安全顯示 | 無倒數輪次 | US6-AS3 | 是 |
 
 共 14 個 OpenSpec Scenario，未對應：無。
+
+## 004-ranking-review
+
+004 的 Scenario 編號獨立（US1-AS1～US7-AS14）；測試檔為 `tests/**/ranking_review/`、`test_us2_ranking_snapshot.py`、`test_us3_fair_snapshot.py`、`test_us4_judgement.py`、`test_us5_recalc.py`、`test_us6_two_rounds.py`、`test_us7_safe_display.py`、`test_ranking_*.py` 與 `tests/contract/test_http_ranking_review*.py`（2026-11-24，004 T079）。
+
+| Scenario | 測試 |
+|---|---|
+| US1-AS1 | `tests/integration/test_us6_two_rounds.py::test_success_counts_feed_next_round_baseline`<br>`tests/unit/app/ranking_review/test_baseline_us1.py::test_three_cell_question_counts_once_not_three_times` |
+| US1-AS2 | `tests/integration/test_us6_two_rounds.py::test_success_counts_feed_next_round_baseline`<br>`tests/unit/app/ranking_review/test_baseline_us1.py::test_speed_mode_successes_count_toward_baseline` |
+| US1-AS3 | `tests/unit/app/ranking_review/test_baseline_us1.py::test_unfinalized_result_never_changes_baseline_or_success_counts`<br>`tests/unit/core/ranking_review/test_baseline.py::test_initial_counts_copies_baseline_and_does_not_mutate_input` |
+| US1-AS4 | `tests/unit/app/ranking_review/test_baseline_us1.py::test_group_joining_after_round_opened_starts_at_zero`<br>`tests/unit/core/ranking_review/test_baseline.py::test_group_missing_from_baseline_starts_at_zero` |
+| US2-AS1 | `tests/integration/test_us2_ranking_snapshot.py::test_ranking_appears_in_both_roles_after_close_within_two_seconds`<br>`tests/unit/core/ranking_review/test_order.py::test_order_follows_earliest_accepted_submission_per_question` |
+| US2-AS2 | `tests/integration/test_us2_ranking_snapshot.py::test_ranking_appears_in_both_roles_after_close_within_two_seconds`<br>`tests/unit/core/ranking_review/test_order.py::test_questions_without_submissions_go_last_sorted_by_number` |
+| US2-AS3 | `tests/integration/test_us2_ranking_snapshot.py::test_ranking_appears_in_both_roles_after_close_within_two_seconds`<br>`tests/unit/core/ranking_review/test_recompute_speed.py::test_earliest_submission_judged_wrong_keeps_question_order` |
+| US2-AS4 | `tests/integration/test_us2_ranking_snapshot.py::test_ranking_appears_in_both_roles_after_close_within_two_seconds`<br>`tests/unit/core/ranking_review/test_rank_speed.py::test_same_group_fastest_on_two_questions_wins_both` |
+| US2-AS5 | `tests/integration/test_us2_ranking_snapshot.py::test_ranking_appears_in_both_roles_after_close_within_two_seconds`<br>`tests/unit/core/ranking_review/test_rank_speed.py::test_three_candidates_get_ranks_one_two_three_and_only_first_wins` |
+| US2-AS6 | `tests/unit/core/ranking_review/test_rank_speed.py::test_equal_receive_time_is_decided_by_sequence` |
+| US2-AS7 | `tests/unit/core/ranking_review/test_rank_speed.py::test_speed_mode_ignores_success_counts` |
+| US3-AS1 | `tests/integration/test_us3_fair_snapshot.py::test_fair_round_snapshot_has_counts_reasons_and_group_counts`<br>`tests/unit/core/ranking_review/test_rank_fair.py::test_fair_two_questions_split_between_groups` |
+| US3-AS2 | `tests/unit/core/ranking_review/test_rank_fair.py::test_equal_count_and_time_is_decided_by_sequence` |
+| US3-AS3 | `tests/unit/core/ranking_review/test_rank_fair.py::test_lower_baseline_beats_earlier_submission` |
+| US3-AS4 | `tests/integration/test_us3_fair_snapshot.py::test_fair_round_snapshot_has_counts_reasons_and_group_counts`<br>`tests/unit/core/ranking_review/test_rank_fair.py::test_count_at_processing_reflects_earlier_wins_in_the_round` |
+| US3-AS5 | `tests/unit/core/ranking_review/test_rank_fair.py::test_question_group_counts_once_not_per_blank` |
+| US3-AS6 | `tests/unit/core/ranking_review/test_rank_fair.py::test_only_first_place_count_increases` |
+| US4-AS1 | `tests/integration/test_us4_judgement.py::test_question_group_judgement_keeps_answers`<br>`tests/unit/core/ranking_review/test_review_rules_mark.py::test_mark_non_winner_keeps_original_candidate_data` |
+| US4-AS2 | `tests/integration/test_us4_judgement.py::test_question_group_judgement_keeps_answers`<br>`tests/unit/core/ranking_review/test_review_rules_mark.py::test_mark_non_winner_keeps_original_candidate_data` |
+| US4-AS3 | `tests/integration/test_us4_judgement.py::test_undo_steps_back_and_actions_follow`<br>`tests/unit/core/ranking_review/test_review_rules_mark.py::test_unmark_restores_original_rank` |
+| US4-AS4 | `tests/unit/app/ranking_review/test_mark_permissions.py::test_student_and_anonymous_cannot_mark_or_unmark` |
+| US4-AS5 | `tests/unit/app/ranking_review/test_mark_stages.py::test_round_still_open_has_clear_message` |
+| US4-AS6 | `tests/unit/core/ranking_review/test_review_rules_mark.py::test_missing_submission_is_rejected` |
+| US4-AS7 | `tests/integration/test_us4_judgement.py::test_speed_sequence_marks_and_replacement` |
+| US4-AS8 | `tests/contract/test_http_ranking_review.py::test_mark_wrong_returns_changed_version_and_affected` |
+| US4-AS9 | `tests/contract/test_http_ranking_review.py::test_non_winner_can_be_judged_through_api`<br>`tests/integration/test_us4_judgement.py::test_api_allows_judging_a_non_winner` |
+| US4-AS10 | `tests/integration/test_ranking_visibility.py::test_replacement_chain_data_for_student_screen`<br>`tests/integration/test_us4_judgement.py::test_undo_steps_back_and_actions_follow`<br>`tests/unit/core/ranking_review/test_review_rules_mark.py::test_undo_steps_back_one_at_a_time` |
+| US5-AS1 | `tests/unit/core/ranking_review/test_recompute.py::test_marking_first_winner_flips_both_questions` |
+| US5-AS2 | `tests/unit/core/ranking_review/test_recompute.py::test_undo_returns_to_identical_result` |
+| US5-AS3 | `tests/unit/core/ranking_review/test_recompute.py::test_all_candidates_wrong_means_no_success_and_no_count` |
+| US5-AS4 | `tests/unit/core/ranking_review/test_recompute.py::test_mark_and_undo_sequence_returns_to_start` |
+| US5-AS5 | `tests/integration/test_us5_recalc.py::test_affected_marks_follow_latest_change_and_versions_increase`<br>`tests/unit/core/ranking_review/test_diff.py::test_only_changed_questions_are_listed` |
+| US5-AS6 | `tests/integration/test_us5_recalc.py::test_affected_marks_follow_latest_change_and_versions_increase` |
+| US5-AS7 | `tests/unit/app/ranking_review/test_marks_concurrency.py::test_two_concurrent_marks_apply_serially_and_order_independent` |
+| US5-AS8 | `tests/integration/test_us5_recalc.py::test_winner_marked_wrong_is_replaced_by_next` |
+| US6-AS1 | `tests/integration/test_us6_two_rounds.py::test_success_counts_feed_next_round_baseline`<br>`tests/unit/app/ranking_review/test_finalize.py::test_finalize_updates_001_and_marks_correct`<br>`tests/unit/core/ranking_review/test_finalize_plan.py::test_plan_lists_solved_questions_increments_and_counts` |
+| US6-AS2 | `tests/unit/app/ranking_review/test_finalize.py::test_finalize_updates_001_and_marks_correct`<br>`tests/unit/app/ranking_review/test_finalize.py::test_repeat_same_version_is_idempotent_and_calls_001_once` |
+| US6-AS3 | `tests/unit/app/ranking_review/test_finalize.py::test_finalize_updates_001_and_marks_correct`<br>`tests/unit/app/ranking_review/test_finalize.py::test_stale_version_is_rejected_without_changes` |
+| US6-AS4 | `tests/unit/app/ranking_review/test_post_final_lock.py::test_marking_after_final_is_rejected` |
+| US6-AS5 | `tests/unit/app/ranking_review/test_post_final_lock.py::test_old_round_stays_locked_after_next_round_opens` |
+| US6-AS6 | `tests/unit/app/ranking_review/test_finalize.py::test_finalize_without_any_mark` |
+| US6-AS7 | `tests/integration/test_us6_two_rounds.py::test_round_without_submissions_finalizes_with_unchanged_counts`<br>`tests/unit/core/ranking_review/test_finalize_plan.py::test_no_submissions_means_empty_plan` |
+| US7-AS1 | `tests/integration/test_ranking_visibility.py::test_no_ranking_while_round_is_open_for_every_role`<br>`tests/integration/test_us2_ranking_snapshot.py::test_no_ranking_while_round_is_open` |
+| US7-AS2 | 無（前端畫面行為，專案沒有前端單元測試設施，由 `verification.md` 的 T094 人工驗證；資料面由 US7-AS5、AS6 對應的測試涵蓋） |
+| US7-AS3 | `tests/integration/test_ranking_visibility.py::test_replacement_chain_data_for_student_screen`<br>`tests/unit/core/ranking_review/test_review_rules_mark.py::test_undo_steps_back_one_at_a_time` |
+| US7-AS4 | `tests/integration/test_ranking_visibility.py::test_replacement_chain_data_for_student_screen` |
+| US7-AS5 | `tests/integration/test_ranking_visibility.py::test_student_json_hides_teacher_only_keys_but_teacher_has_them`<br>`tests/unit/core/ranking_review/test_view_student.py::test_student_output_does_not_depend_on_group` |
+| US7-AS6 | `tests/integration/test_ranking_visibility.py::test_student_json_hides_teacher_only_keys_but_teacher_has_them` |
+| US7-AS7 | `tests/integration/test_us7_safe_display.py::test_answers_survive_judgement_verbatim_and_004_holds_no_answers` |
+| US7-AS8 | `tests/integration/test_ranking_snapshot_monotonic.py::test_versions_never_decrease_across_marks_and_reads` |
+| US7-AS9 | `tests/integration/test_ranking_visibility.py::test_all_wrong_hides_replaced_from_students_but_not_teacher`<br>`tests/integration/test_ranking_visibility.py::test_no_success_question_and_old_rounds_stay_public` |
+| US7-AS10 | `tests/integration/test_ranking_visibility.py::test_no_success_question_and_old_rounds_stay_public` |
+| US7-AS11 | `tests/integration/test_ranking_visibility.py::test_replacement_chain_data_for_student_screen` |
+| US7-AS12 | `tests/integration/test_us7_safe_display.py::test_answers_survive_judgement_verbatim_and_004_holds_no_answers` |
+| US7-AS13 | `tests/integration/test_ranking_visibility.py::test_no_success_question_and_old_rounds_stay_public` |
+| US7-AS14 | `tests/integration/test_ranking_visibility.py::test_final_shows_correct_and_clears_replaced` |
+
+共 56 個 Scenario，未對應：US7-AS2（1 個）。
+
+## 004 對應的 OpenSpec Scenario（ranking-review）
+
+| OpenSpec Requirement | OpenSpec Scenario | 對應的 Acceptance Scenario | 有測試 |
+|---|---|---|---|
+| 歷史成功次數基準 | 題組與不同模式的累計 | US1-AS1、US1-AS2 | 是 |
+| 固定題目處理順序 | 最早提交被判錯 | US2-AS1、US2-AS2、US2-AS3 | 是 |
+| 速度模式順位 | 同組最快回答兩題 | US2-AS4、US2-AS5、US2-AS6 | 是 |
+| 公平模式順位 | 公平分配兩題 | US3-AS1、US3-AS2 | 是 |
+| 公平模式順位 | 完全同次數與同時間 | US3-AS3 | 是 |
+| 判錯及撤銷判錯 | 非勝者與題組判錯 | US4-AS1、US4-AS2、US4-AS7、US4-AS8 | 是 |
+| 判錯及撤銷判錯 | 撤銷誤判 | US4-AS3 | 是 |
+| 整輪重算與受影響題目 | 判錯造成跨題勝者改變 | US5-AS1、US5-AS2 | 是 |
+| 整輪重算與受影響題目 | 全部被判錯 | US5-AS3 | 是 |
+| 老師確認定案與歷史鎖定 | 定案及重複確認 | US6-AS1、US6-AS2 | 是 |
+| 老師確認定案與歷史鎖定 | 定案前結果被更新 | US6-AS3 | 是 |
+| 老師確認定案與歷史鎖定 | 定案後改判 | US6-AS4、US6-AS5 | 是 |
+| （跨能力：round-submission「搶答中依角色限制資料」「關輪公開結果與版本一致」） | 老師即時看板（搶答中不顯示暫估順位）、結果公布與後續輪次 | US7-AS1、US7-AS5 | 是 |
+
+共 13 列（ranking-review 的 12 個 Scenario 加 1 列跨能力的 round-submission Scenario），每列至少對應一個測試：是。

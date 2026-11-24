@@ -45,6 +45,8 @@
 | `current_round(code) -> Round \| None` | 包含 `rules` 與 `baseline`（公平模式要用的歷史成功次數基準） |
 | `finalize(code, requester, outcome: FinalizeOutcome) -> Outcome[int]` | 只允許老師在 `RESULT_PENDING` 時呼叫。`FinalizeOutcome` 有兩個欄位：`solved_questions: frozenset[int]`（本輪新成功的題號）、`success_increments: Mapping[int, int]`（各組成功次數增量，key 為組號）。004 的前提檢查（例如判錯審閱）由 004 在呼叫前自行完成 |
 
+定案一律經 004 的 HTTP 路由 `POST /activities/{code}/rounds/current/finalize`（本文 `{"resultVersion"}`，見 `specs/004-ranking-review/contracts/http-api.md` R2）；001 不再提供空本文的定案端點，004 以 `ActivityService.finalize` 把成果交給 001 一次。
+
 ## 給 005（結果匯出）
 
 | 方法 | 說明 |

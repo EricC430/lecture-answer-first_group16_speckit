@@ -27,7 +27,7 @@
 | 5 | `DELETE /activities/{code}/groups/{number}`（搶答中回 `409 GROUP_DELETE_DURING_ROUND`） | 老師 | — | `200 {"version"}` | FR-035 |
 | 6 | `POST /activities/{code}/rounds` | 老師 | `{"questionNumbers": [int], "fairMode": bool, "countdownSeconds": int \| null}` | `201 {"roundNumber", "deadline" \| null, "version"}` | FR-013～018 |
 | 7 | `POST /activities/{code}/rounds/current/close` | 老師 | `{}` | `200 {"roundNumber", "version", "alreadyClosed": bool}` | FR-019 |
-| 8 | `POST /activities/{code}/rounds/current/finalize` | 老師 | `{}`（004 會擴充） | `200 {"version"}` | FR-020、FR-021 |
+| 8 | `POST /activities/{code}/rounds/current/finalize` | 老師 | 由 004 提供，見 `specs/004-ranking-review/contracts/http-api.md` R2（本文 `{"resultVersion"}`） | `200 {"version", "resultVersion", "alreadyFinalized"}` | FR-020、FR-021 |
 | 9 | `POST /activities/{code}/end` | 老師 | `{}` | `200 {"version", "unsolvedQuestions": [int]}` | FR-022～024 |
 | 10 | `POST /activities/{code}/cancel` | 老師 | `{}` | `200 {"version"}` | FR-025 |
 | 12 | `POST /activities/{code}/open-joining` | 老師 | `{}` | `200 {"version"}`；沒有題目時 `409 NO_QUESTIONS` | FR-038 |
