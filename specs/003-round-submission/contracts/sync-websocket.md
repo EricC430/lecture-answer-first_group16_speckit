@@ -62,6 +62,7 @@
 - `questionShapes` 只有本輪開放題。
 - `ownGroup.successCount` 照 001，搶答中也可見（Q-22，研究 R9）；學生快照沒有任何排名或他組成功次數。
 - 關輪後本輪移到 `published`，所有組可見；`judgedWrong` 由 004 提供（Q-26：學生可見）。**004 接上之前它是佔位值，一律為 `false`**；前端只在值為 `true` 時顯示「答錯」，因此佔位值不會造成錯誤標示。
+- 學生頁關輪後的結果呈現由 004 的 `ranking-review.js` 負責（004 FR-037）：只顯示本組、目前搶答成功者與剛被判錯的前一組，不再列出各組答案；`submissions.published` 的資料不變。
 
 ## 前端排序
 

@@ -29,10 +29,28 @@
 | Phase 8 完成（T060～T070，US6） | 2026-11-24 | `pytest -q`；`ruff check .`；`ruff format --check .`；`mypy` | 733 passed, 2 deselected（+30）；ruff All checks passed；format 235 files already formatted；mypy Success: no issues found in 48 source files。測試先行：`test_finalize_plan.py` 先 `AttributeError`（無 `finalize_plan`），其餘 US6 測試在實作前因 `finalize` 為 `NotImplementedError` 失敗。實作後 001 的空定案路由已移除，既有 2 個測試因行為變化調整（見 P-09、P-10）。老師頁「確認定案」按鈕（T070）無自動化測試，待 T094 |
 | PR #20 審查回應（T096） | 2026-11-24 | `pytest -q`；`ruff check .`；`ruff format --check .`；`mypy` | 735 passed, 2 deselected（+2，新增 `test_single_finalize_button.py`）；ruff All checks passed；format 236 files already formatted；mypy Success: no issues found in 48 source files。已移除 001 老師頁的舊「確認定案」按鈕；Q-23／24／25 於 alignment.md 標為定案 |
 | Phase 9 完成（T071～T078，US7） | 2026-11-24 | `pytest -q`；`ruff check .`；`ruff format --check .`；`mypy`；`node --check`（6 個前端模組） | 746 passed, 2 deselected（+11）；ruff All checks passed；format 240 files already formatted；mypy Success: no issues found in 48 source files；node --check 6 個模組皆語法正確。**未做到先紅後綠**：US7 的資料面（學生版省略理由與次數、替換歷程、版本單調）在 US2～US6 已實作，所以 T071、T072、T074、T075 一寫完就通過；T073 擴充 `FORBIDDEN` 加入 `eval(`、`new Function`，既有與新增前端檔案都不含，直接通過。**學生畫面實際只顯示哪些組（T076）、003 學生頁移除已公開作答（T077）、老師頁不重複顯示答案（T078）沒有自動化測試，只有語法檢查，必須由 T094 人工驗證** |
+| Phase 10 自動化收尾（T079～T091、T093、T095） | 2026-11-24 | 見下方各列 | 見下方各列 |
+| T085 ruff／mypy | 2026-11-24 | `ruff check .`；`ruff format --check .`；`mypy` | All checks passed；309 files already formatted；Success: no issues found in 68 source files |
+| T087 全部自動化測試（已合併 main 的 002 之後） | 2026-11-24 | `pytest -m "not real_google and not perf"` | 1089 passed, 5 deselected。與 T002 基準（547 passed）比較：增加包含 main 合併進來的 002 測試與 004 新增測試，沒有失敗 |
+| T093 quickstart 一、自動化驗證 | 2026-11-24 | `pytest tests/architecture/test_core_is_pure.py`；`pytest tests/unit/core/ranking_review tests/unit/app/ranking_review tests/contract/test_http_ranking_review.py -k "ranking"`；`pytest -m perf tests/perf/test_ranking_latency.py` | 29 passed；161 passed；2 passed（數字見效能一節）。`tests/SCENARIO_MAP.md` 004 區塊：56 個 Acceptance Scenario 中 55 個有對應測試，未對應 US7-AS2（學生畫面實際顯示，前端行為，待 T094）；OpenSpec 13 列（12 個 ranking-review Scenario＋1 列跨能力）皆有測試 |
+| T086 日誌與核心純度 | 2026-11-24 | `grep -rn "print(" src/`；`grep -rnE "datetime\.now\|import time\|import asyncio\|fastapi" src/lecture_quiz/core/ranking_review/` | 兩者都沒有任何輸出；`test_core_is_pure.py` 29 passed；`snapshot_extension` 只做純計算與 `ReviewStore.cache` 的不可變快取，沒有 I/O 或狀態寫入（程式審視） |
+| T084 程式碼與圖表一致性 | 2026-11-24 | 人工逐項比對 `diagrams/004-ranking-review-{component,class,sequence}.puml` 與程式；改圖後 `java -jar plantuml.jar` 重新轉出並開啟 PNG 檢視 | 發現類別圖 4 處與程式不一致並已修正：題序在獨立的 `QuestionOrder`（由 `RoundReview.initial` 呼叫）、`as_final` 是函式不是 `ResultView` 方法、新增 `RoundView`、回傳型別為 `ReviewOutcome`；`RankingCalculator` 補 `initialCounts`、`rankSpeed`／`rankFair` 的實際參數。組件圖與時序圖與程式一致，不需修改。類別圖 PNG 已重新產生並開啟檢視，文字可讀、無重疊 |
+| T089 OpenSpec 核對 | 2026-11-24 | `sha256sum docs/openspec-reference/ranking-review/spec.md` | `7a243602279aa7f22f33436903cb171df7749d2efe951783ec5c56c4615bd23f`，與 `README.md` 一致；實作沒有新增或偏離 OpenSpec 的功能行為（學生畫面範圍屬顯示時機，使用者 2026-11-24 確認不衝突） |
+| T095 機敏資料 | 2026-11-24 | `git ls-files \| grep -E "\.env$\|credentials\|client_secret\|期末專題說明\|project_proposal"`；`grep -rln "client_secret\|access_token\|refresh_token"` 於 004 檔案 | 沒有任何輸出；全專案 grep 的命中只在 002 的 Google 轉接器（設定欄位名稱），不是 004 的檔案，也不是密鑰值 |
 
 ## 效能（T082～T083）
 
-（尚未執行）
+日期：2026-11-24。指令：`pytest -m perf tests/perf/test_ranking_latency.py`（本機真實 uvicorn、`websockets` 客戶端，50 題；第 1～9 輪各 1 題、第 10 輪 41 題且每組都提交；判錯、撤銷判錯各 10 次、定案 10 次）。量測「送出請求 → 所有連線都收到含新結果的快照」的最大值。結果：`2 passed in 44.91s`。
+
+| 操作 | 6 組（13 條連線，**必過 < 2000 ms**）最大／平均 | 20 組（41 條連線，**只記錄**）最大／平均 |
+|---|---|---|
+| 判錯 | 68.0 ms／61.9 ms | 702.2 ms／553.7 ms |
+| 撤銷判錯 | 112.9 ms／65.4 ms | 638.3 ms／556.8 ms |
+| 定案 | 56.1 ms／11.6 ms | 623.9 ms／82.8 ms |
+
+- 6 組：三種操作最大值都小於 2000 ms，達標（SC-004）。
+- 20 組：這次量到的最大值都小於 2000 ms，但沒有當成通過條件，也**不宣稱** 20 組達標；它比 6 組慢約 6～10 倍（判錯平均 553.7 ms 對 61.9 ms），主要是 41 條連線各收到一份含 41 題 × 20 組候選的快照。研究 R14 的「只送目前輪並提供 GET 查詢舊輪」暫不實作，僅記錄為建議。
+- 單次、本機、同一台機器同時跑客戶端與伺服器，未取多次分布；只能說明本機這次的量測，不代表他組電腦。
 
 ## 人工驗證（T094）
 
@@ -40,7 +58,9 @@
 
 ## N/A 說明（T090）
 
-（Polish 階段填寫）
+- **憲章原則 III（動態定位、兩份版面學習單驗證）與 Google 真實路徑驗證不適用於 004**：004 不讀寫試算表、不呼叫任何 Google 服務（spec Assumptions）。題數與版面對 004 只是 001 提供的題號清單與 003 的提交資料，所以 004 以 `LAYOUT_A`（4 題）、`LAYOUT_B`（5 題，含無提交題與題組）兩組不同題數配置的純資料測試取代（T024、T039：`tests/unit/core/ranking_review/test_fair_layouts.py` 等），並以真實後端多分頁人工驗證（T094，尚未執行）取代。
+- **自動化測試完全不呼叫外部服務**：沒有 Google、LLM 或付費服務；全部測試離線執行。
+- **沒有 LLM 評分**：004 的測試是規則與資料比對，不使用 LLM judge；本檔不報告任何模型分數。
 
 ## 問題紀錄
 

@@ -124,3 +124,88 @@ def test_overlong_group_number_is_rejected_on_join_and_delete(client):
         )
         assert delete.status_code == 404, delete.text
         assert delete.json()["error"]["code"] == "GROUP_NOT_FOUND"
+
+
+def test_004_routes_error_responses_are_safe(client):
+    """T081：004 路由的錯誤回應不含堆疊、路徑、token、憑證、他組資料（FR-027）。"""
+    from tests.integration.ranking_world import answer, close_round, open_ranking_round
+
+    teacher, devices = open_ranking_round(client, groups=(1, 2), questions=1)
+    answer(client, teacher, devices, 1, 1, "他組的秘密答案")
+    base = f"/api/activities/{teacher.code}"
+    secrets = (teacher.token, *devices.values(), "他組的秘密答案")
+    student = {"Authorization": f"Bearer {devices[2]}"}
+    judge = f"{base}/rounds/1/questions/1/groups/1/judgement"
+    fin = f"{base}/rounds/current/finalize"
+
+    # 搶答中
+    _check(
+        client.put(judge, json={"wrong": True}, headers=teacher.headers),
+        secrets,
+        "ROUND_STILL_OPEN",
+    )
+    _check(
+        client.post(fin, json={"resultVersion": 1}, headers=teacher.headers),
+        secrets,
+        "ROUND_STILL_OPEN",
+    )
+    close_round(client, teacher)
+    # 身分與格式
+    _check(
+        client.put(judge, json={"wrong": True}, headers=student), secrets, "NOT_TEACHER"
+    )
+    _check(
+        client.post(fin, json={"resultVersion": 1}, headers=student),
+        secrets,
+        "NOT_TEACHER",
+    )
+    _check(
+        client.put(judge, json={"wrong": "x"}, headers=teacher.headers),
+        secrets,
+        "INVALID_REQUEST",
+    )
+    _check(
+        client.post(fin, json={}, headers=teacher.headers), secrets, "INVALID_REQUEST"
+    )
+    # 目標不存在、版本過期、已定案
+    missing = f"{base}/rounds/1/questions/1/groups/2/judgement"
+    _check(
+        client.put(missing, json={"wrong": True}, headers=teacher.headers),
+        secrets,
+        "SUBMISSION_NOT_FOUND",
+    )
+    _check(
+        client.post(fin, json={"resultVersion": 9}, headers=teacher.headers),
+        secrets,
+        "STALE_RESULT_VERSION",
+    )
+    assert (
+        client.post(fin, json={"resultVersion": 1}, headers=teacher.headers).status_code
+        == 200
+    )
+    _check(
+        client.put(judge, json={"wrong": True}, headers=teacher.headers),
+        secrets,
+        "RESULT_ALREADY_FINAL",
+    )
+    _check(
+        client.post(fin, json={"resultVersion": 9}, headers=teacher.headers),
+        secrets,
+        "RESULT_ALREADY_FINAL",
+    )
+    # 活動不存在
+    _check(
+        client.put(
+            "/api/activities/ZZZZZZ/rounds/1/questions/1/groups/1/judgement",
+            json={"wrong": True},
+        ),
+        secrets,
+        "ACTIVITY_NOT_FOUND",
+    )
+    _check(
+        client.post(
+            "/api/activities/ZZZZZZ/rounds/current/finalize", json={"resultVersion": 1}
+        ),
+        secrets,
+        "ACTIVITY_NOT_FOUND",
+    )

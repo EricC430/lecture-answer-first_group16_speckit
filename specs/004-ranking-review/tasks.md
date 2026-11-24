@@ -245,24 +245,24 @@ description: "004-ranking-review 任務清單"
 
 **Purpose**: 影響多個 Story 的收尾與憲章要求的驗證
 
-- [ ] T079 更新 `tests/SCENARIO_MAP.md`：標題改為涵蓋 001、003、004；以 docstring `Scenario:` 掃描產生 004 的 US1-AS1～US7-AS13 對照列；確認每個 Acceptance Scenario 與 OpenSpec ranking-review 的 12 個 Scenario 至少一個測試，未對應者標「無」並在 `verification.md` 說明（憲章原則 VI）
-- [ ] T080 [P] 在 `tests/integration/test_ranking_logging.py` 測試日誌（憲章技術限制 3、FR-032）：判錯、撤銷、定案各產生一行 INFO，只含活動代碼、輪次、題號、組號、`wrong`／`changed`、版本；整份日誌找不到答案文字、token、憑證；無 `print`
-- [ ] T081 [P] 在 `tests/contract/test_error_safety.py` 擴充 004 的兩個路由：所有錯誤回應不含堆疊追蹤、檔案路徑、token、憑證、他組資料（憲章原則 V、FR-027）
-- [ ] T082 [P] 在 `tests/perf/test_ranking_latency.py` 實作效能測試（`@pytest.mark.perf`，預設排除，仿 `tests/perf/test_submission_latency.py`：本機真實 uvicorn、`websockets` 客戶端）：**必過門檻**＝老師 + 6 組、每組 2 條連線（共 13 條 WebSocket）、50 題的輪次，判錯、撤銷、定案各重複 10 次，量「送出請求 → 每條連線收到含新 `resultVersion` 的快照」，**最大值 < 2 秒**（SC-004）；**只記錄**＝同樣流程老師 + 20 組（41 條連線），把最大值與是否小於 2 秒寫進 `verification.md`，沒達標要說明，不得宣稱更大規模達標；全部由自動化測試執行，不靠人工量測
-- [ ] T083 執行 `pytest -m perf tests/perf/test_ranking_latency.py`，把 6 組與 20 組的實測最大值、指令寫入 `verification.md`「效能」（若 20 組明顯變慢，依研究 R14 評估「只送目前輪並提供 GET 查詢舊輪」，只記錄建議，不在本 PR 實作）
-- [ ] T084 程式碼與圖表一致性驗證：逐一比對 `diagrams/004-ranking-review-{component,class,sequence}.puml` 與實作（類別名、方法名、流程、`ReviewStore`／`RoundReviewRules`／`ResultView`／`SyncPublisher` 相依方向、初始結果由純計算導出）；有差異時**先更新圖表並重新轉出 PNG**（`java -jar plantuml.jar "./diagrams/004-*.puml"`，並實際開啟檢視），再改程式，結果記在 `verification.md`（憲章原則 II）
-- [ ] T085 執行 `ruff check .`、`ruff format --check .`、`mypy`，全部通過並把結果寫入 `verification.md`（憲章技術限制 2）
-- [ ] T086 檢查日誌與核心純度：`grep -rn "print(" src/` 無結果；`<core>` 無 `datetime.now`、`time`、`asyncio`、`fastapi` 匯入（架構測試已涵蓋，記錄結果）；`snapshot_extension` 無 I/O 與狀態寫入（只有 `ReviewStore.cache` 的不可變快取，研究 R2、R14）
-- [ ] T087 執行全部自動化測試（`pytest -m "not real_google and not perf"`），記錄指令與通過／失敗／略過數，並與 T002 基準比較：既有測試不退步、新增測試數合理（憲章原則 VI）
-- [ ] T088 [P] 同步文件：`CLAUDE.md` 新增「004-ranking-review 已實作」段落（程式位置、與 001 的定案路由變更、與 003 學生頁的調整、`verification.md` 位置）；`docs/DEVELOPMENT.md` 若有「子功能組裝」說明補上 `_wire_ranking`；`specs/003-round-submission/contracts/sync-websocket.md` 的前端行為補一行「學生頁關輪後的結果呈現由 004 的 `ranking-review.js` 負責（004 FR-037）」；`specs/001-activity-session/contracts/service-interfaces.md`「給 004」補上「定案一律經 004 的 HTTP 路由」
-- [ ] T089 [P] OpenSpec 核對：確認 `docs/openspec-reference/ranking-review/spec.md` 的 SHA-256 仍與 `docs/openspec-reference/README.md` 一致（`7a243602279aa7f22f33436903cb171df7749d2efe951783ec5c56c4615bd23f`）；確認實作沒有新增或偏離 OpenSpec 的功能行為，若有（例如學生畫面範圍），依憲章原則 I 記入 `docs/alignment.md` 並經兩組確認後才能合併
-- [ ] T090 在 `verification.md`「N/A 說明」寫明：憲章原則 III 的兩份版面學習單與 Google 真實路徑驗證不適用於 004（不讀寫試算表，理由見 spec Assumptions）；004 以 `LAYOUT_A`／`LAYOUT_B` 兩組不同題數配置的純資料測試（T024、T039）與真實後端多分頁人工驗證（T094）取代；自動化測試完全不呼叫外部服務
-- [ ] T091 [P] 準備 PR 說明（草稿，不自動發布）：列出對既有程式的影響範圍——001 的 HTTP 定案路由改由 004 提供（`resultVersion`）、既有定案測試改用 helper（斷言未改）、003 學生頁「已公開的作答」呈現調整（資料不變）；列出新增檔案、驗證指令與結果數字、與 OpenSpec 無新偏離的說明；結尾加 `🤖 Generated with [Claude Code](https://claude.com/claude-code)`
+- [X] T079 更新 `tests/SCENARIO_MAP.md`：標題改為涵蓋 001、003、004；以 docstring `Scenario:` 掃描產生 004 的 US1-AS1～US7-AS13 對照列；確認每個 Acceptance Scenario 與 OpenSpec ranking-review 的 12 個 Scenario 至少一個測試，未對應者標「無」並在 `verification.md` 說明（憲章原則 VI）
+- [X] T080 [P] 在 `tests/integration/test_ranking_logging.py` 測試日誌（憲章技術限制 3、FR-032）：判錯、撤銷、定案各產生一行 INFO，只含活動代碼、輪次、題號、組號、`wrong`／`changed`、版本；整份日誌找不到答案文字、token、憑證；無 `print`
+- [X] T081 [P] 在 `tests/contract/test_error_safety.py` 擴充 004 的兩個路由：所有錯誤回應不含堆疊追蹤、檔案路徑、token、憑證、他組資料（憲章原則 V、FR-027）
+- [X] T082 [P] 在 `tests/perf/test_ranking_latency.py` 實作效能測試（`@pytest.mark.perf`，預設排除，仿 `tests/perf/test_submission_latency.py`：本機真實 uvicorn、`websockets` 客戶端）：**必過門檻**＝老師 + 6 組、每組 2 條連線（共 13 條 WebSocket）、50 題的輪次，判錯、撤銷、定案各重複 10 次，量「送出請求 → 每條連線收到含新 `resultVersion` 的快照」，**最大值 < 2 秒**（SC-004）；**只記錄**＝同樣流程老師 + 20 組（41 條連線），把最大值與是否小於 2 秒寫進 `verification.md`，沒達標要說明，不得宣稱更大規模達標；全部由自動化測試執行，不靠人工量測
+- [X] T083 執行 `pytest -m perf tests/perf/test_ranking_latency.py`，把 6 組與 20 組的實測最大值、指令寫入 `verification.md`「效能」（若 20 組明顯變慢，依研究 R14 評估「只送目前輪並提供 GET 查詢舊輪」，只記錄建議，不在本 PR 實作）
+- [X] T084 程式碼與圖表一致性驗證：逐一比對 `diagrams/004-ranking-review-{component,class,sequence}.puml` 與實作（類別名、方法名、流程、`ReviewStore`／`RoundReviewRules`／`ResultView`／`SyncPublisher` 相依方向、初始結果由純計算導出）；有差異時**先更新圖表並重新轉出 PNG**（`java -jar plantuml.jar "./diagrams/004-*.puml"`，並實際開啟檢視），再改程式，結果記在 `verification.md`（憲章原則 II）
+- [X] T085 執行 `ruff check .`、`ruff format --check .`、`mypy`，全部通過並把結果寫入 `verification.md`（憲章技術限制 2）
+- [X] T086 檢查日誌與核心純度：`grep -rn "print(" src/` 無結果；`<core>` 無 `datetime.now`、`time`、`asyncio`、`fastapi` 匯入（架構測試已涵蓋，記錄結果）；`snapshot_extension` 無 I/O 與狀態寫入（只有 `ReviewStore.cache` 的不可變快取，研究 R2、R14）
+- [X] T087 執行全部自動化測試（`pytest -m "not real_google and not perf"`），記錄指令與通過／失敗／略過數，並與 T002 基準比較：既有測試不退步、新增測試數合理（憲章原則 VI）
+- [X] T088 [P] 同步文件：`CLAUDE.md` 新增「004-ranking-review 已實作」段落（程式位置、與 001 的定案路由變更、與 003 學生頁的調整、`verification.md` 位置）；`docs/DEVELOPMENT.md` 若有「子功能組裝」說明補上 `_wire_ranking`；`specs/003-round-submission/contracts/sync-websocket.md` 的前端行為補一行「學生頁關輪後的結果呈現由 004 的 `ranking-review.js` 負責（004 FR-037）」；`specs/001-activity-session/contracts/service-interfaces.md`「給 004」補上「定案一律經 004 的 HTTP 路由」
+- [X] T089 [P] OpenSpec 核對：確認 `docs/openspec-reference/ranking-review/spec.md` 的 SHA-256 仍與 `docs/openspec-reference/README.md` 一致（`7a243602279aa7f22f33436903cb171df7749d2efe951783ec5c56c4615bd23f`）；確認實作沒有新增或偏離 OpenSpec 的功能行為，若有（例如學生畫面範圍），依憲章原則 I 記入 `docs/alignment.md` 並經兩組確認後才能合併
+- [X] T090 在 `verification.md`「N/A 說明」寫明：憲章原則 III 的兩份版面學習單與 Google 真實路徑驗證不適用於 004（不讀寫試算表，理由見 spec Assumptions）；004 以 `LAYOUT_A`／`LAYOUT_B` 兩組不同題數配置的純資料測試（T024、T039）與真實後端多分頁人工驗證（T094）取代；自動化測試完全不呼叫外部服務
+- [X] T091 [P] 準備 PR 說明（草稿，不自動發布）：列出對既有程式的影響範圍——001 的 HTTP 定案路由改由 004 提供（`resultVersion`）、既有定案測試改用 helper（斷言未改）、003 學生頁「已公開的作答」呈現調整（資料不變）；列出新增檔案、驗證指令與結果數字、與 OpenSpec 無新偏離的說明；結尾加 `🤖 Generated with [Claude Code](https://claude.com/claude-code)`
 - [ ] T092 [P] 與 003 負責人確認 T077 對學生頁的調整（`round-submission.js` 與其測試），把確認日期與結果記在 `verification.md`「問題紀錄」
-- [ ] T093 執行 `quickstart.md` 的「一、自動化驗證」全部指令，確認每條指令與預期相符（含 `tests/SCENARIO_MAP.md` 對照）；結果寫入 `verification.md`
+- [X] T093 執行 `quickstart.md` 的「一、自動化驗證」全部指令，確認每條指令與預期相符（含 `tests/SCENARIO_MAP.md` 對照）；結果寫入 `verification.md`
 - [ ] T094 **非實作者**（jacky0407）依 `quickstart.md`「二、手動驗證」13 個步驟在多個瀏覽器分頁（老師＋三組學生）以真實後端完整走一遍，另加四項前端專屬檢查：① 開兩個老師分頁，在較舊的分頁確認畫面不會被較舊的 `resultVersion` 覆蓋（`Scenario: US7-AS8`）；② 學生頁關輪後只顯示本組狀態、目前的搶答成功者與（判錯當下）剛被判錯的前一組，沒有列出全部組作答（FR-037）；③ 老師介面每題只有目前的搶答成功者有「判錯」按鈕、只有被替換的那一組有「撤銷判錯」（FR-034）；④ 定案後學生與老師畫面的「搶答成功」同時變成「搶答正確」、「剛被判錯的前一組」消失（`Scenario: US7-AS14`）。記錄日期、操作步驟、實際看到的畫面文字、各組成功次數與 `resultVersion`、畫面右下角延遲；沒有實際執行不得宣稱完成（憲章原則 VI；SC-009）。題目需經 002 真實匯入，002 尚未合併時在此註明阻塞原因，不得以假資料取代
 
-- [ ] T095 確認沒有夾帶機敏資料或不追蹤的檔案（憲章合併前品質關卡第 7 項、原則 V）：`git diff --staged` 與 `git status` 檢查沒有 `.env`、憑證 JSON、`.venv`、`期末專題說明.md`／`.pdf`、`project_proposal_draft.md`；`grep -rn "client_secret\|access_token\|refresh_token" src/ tests/ specs/004-ranking-review/` 無結果；PR、Issue 說明不貼機敏內容；結果記入 `verification.md`
+- [X] T095 確認沒有夾帶機敏資料或不追蹤的檔案（憲章合併前品質關卡第 7 項、原則 V）：`git diff --staged` 與 `git status` 檢查沒有 `.env`、憑證 JSON、`.venv`、`期末專題說明.md`／`.pdf`、`project_proposal_draft.md`；`grep -rn "client_secret\|access_token\|refresh_token" src/ tests/ specs/004-ranking-review/` 無結果；PR、Issue 說明不貼機敏內容；結果記入 `verification.md`
 
 ---
 

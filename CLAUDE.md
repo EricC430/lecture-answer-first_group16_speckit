@@ -25,6 +25,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **003-round-submission 已實作**（`feature/7-003-round-submission`，PR #16；US1～US6 完成，待非實作者人工驗證 T064 與 002 接上後的真實路徑驗證 T065）：spec、plan、research、data-model、contracts、quickstart、verification（含實作問題紀錄）在 `specs/003-round-submission/`；程式在 `core/round_submission/`、`app/round_submission/`、`adapters/web/submission_api.py`、前端 `js/{submission,round-submission,round-submission-teacher}.js`。提交資料存在 003 自己的記憶體 store；判定、標記、保存經 001 新增的 `ActivityService.record_submission` 在同一把活動鎖內完成，提交資料以 001 的快照擴充機制推送；每題子空格數由 002 實作 `QuestionShapeSource`。Q-20／21／22／26 與「答錯／搶答失敗」顯示方式已獲 OpenSpec 組同意（alignment 2026-11-23）。
 
+**004-ranking-review 已實作**（`feature/8-004-ranking-review`，PR #20；US1～US7 與 Polish 自動化部分完成，待非實作者人工驗證 T094 與 003 負責人確認 T077）：spec、plan、research、data-model、contracts、quickstart、verification（含實作問題紀錄 P-01～）在 `specs/004-ranking-review/`；程式在 `core/ranking_review/`（題序、速度／公平排名、整輪重算、判錯規則、結果檢視，純函式）、`app/ranking_review/`（`RankingService`、`ReviewStore`，自己的每活動鎖，推送在鎖外）、`adapters/web/ranking_review.py`、前端 `js/{ranking-common,ranking-review,ranking-review-teacher}.js`；`main.py` 的 `_wire_ranking` 在 003 之後組裝。**對既有功能的影響**：`POST /activities/{code}/rounds/current/finalize` 改由 004 提供（本文必須帶 `resultVersion`），001 的空定案路由與老師頁舊「確認定案」按鈕已移除；003 學生頁不再列出各組已公開答案（改由 004 學生區塊只顯示本組、目前搶答成功者與剛被判錯的前一組，FR-037），003 的資料與後端未改。結果版本 `resultVersion` 與 001 的 `version` 獨立。Q-23／24／25 已於 alignment 定案。
+
 子功能依序為 `001-activity-session` → `002-guided-notes-import` → `003-round-submission` → `004-ranking-review` → `005-result-export`（各自另開 Issue）。
 
 回覆與文件一律使用台灣繁體中文。

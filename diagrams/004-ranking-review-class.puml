@@ -20,17 +20,21 @@ package "核心（純資料與純函式）" {
     sequence : 後端接收序號（全活動唯一）
   }
 
+  class QuestionOrder <<純函式>> {
+    +compute(questionNos, candidates) : 題序（最早提交決定；無提交題置後依題號）
+  }
+
   class RankingCalculator <<純函式>> {
-    +computeOrder(candidates, questionNos) : 題序
-    +rankSpeed(candidates) : QuestionRanking
-    +rankFair(candidates, counts) : QuestionRanking
+    +initialCounts(baseline, groupNos) : 本輪處理前的成功次數
+    +rankSpeed(questionNo, candidates, wrongGroups) : QuestionRanking
+    +rankFair(questionNo, candidates, wrongGroups, counts) : QuestionRanking
     +recompute(input, order) : RoundResult
     +diff(old, new) : 受影響題號集合
   }
 
   class RoundReviewRules <<純函式>> {
     +mark(review, input, groupNo, questionNo, wrong) : MarkDecision
-    +finalizePlan(review, baseline) : 新成功題號、各組增量、最終累計
+    +finalizePlan(review, baseline) : FinalizedResult（新成功題號、各組增量、最終累計）
   }
 
   class RoundResult <<資料>> {
@@ -56,9 +60,19 @@ package "核心（純資料與純函式）" {
   }
 
   class ResultView <<純函式>> {
-    +forTeacher(reviews) : JSON（含次數、理由、replacedGroup、actions：judgeGroup／undoGroup）
-    +forStudent(reviews) : JSON（不含理由與他組次數，含 replacedGroup）
-    +asFinal(rankings) : 定案後 SUCCESS 改為 CORRECT
+    +forTeacher(roundViews) : JSON（含次數、理由、replacedGroup、actions：judgeGroup／undoGroup）
+    +forStudent(roundViews) : JSON（不含理由與他組次數，含 replacedGroup）
+  }
+
+  class RoundView <<資料>> {
+    roundNumber
+    fairMode
+    review : RoundReview
+    final : 是否定案
+  }
+
+  class "as_final(rankings)" as AsFinal <<純函式>> {
+    定案後 SUCCESS 改為 CORRECT
   }
 
   class RoundReview <<資料>> {
@@ -98,9 +112,9 @@ package "應用層" {
     +reviewFor(code, round) : 取存放區的 RoundReview，沒有判錯時以純計算導出初始結果
     +snapshotExtension(activity, viewer) : 併入快照的 ranking
     +finalizedRounds(code) : 給 005 的唯讀定案結果
-    +markWrong(code, requester, round, questionNo, groupNo) : Outcome
-    +unmarkWrong(code, requester, round, questionNo, groupNo) : Outcome
-    +finalize(code, requester, resultVersion) : Outcome（重複確認回覆既有定案）
+    +markWrong(code, requester, round, questionNo, groupNo) : ReviewOutcome
+    +unmarkWrong(code, requester, round, questionNo, groupNo) : ReviewOutcome
+    +finalize(code, requester, resultVersion) : ReviewOutcome（重複確認回覆既有定案）
   }
 
   class ReviewStore <<記憶體>> {
@@ -127,12 +141,16 @@ package "應用層" {
 RankingCalculator ..> RankingInput : 讀取
 RankingCalculator ..> RoundResult : 產生
 RoundReviewRules ..> RankingCalculator : 呼叫
+RoundReview ..> QuestionOrder : 初始結果時決定一次並保存；重算只傳入
+RoundReviewRules ..> AsFinal : 呼叫（定案結果）
 RankingInput "1" *-- "*" Candidate
 RoundResult "1" *-- "*" QuestionRanking
 QuestionRanking "1" *-- "*" RankEntry
 RankEntry --> WinReason
 RankEntry --> DisplayStatus
-ResultView ..> RoundResult : 讀取
+ResultView ..> RoundView : 讀取
+ResultView ..> AsFinal : 呼叫（final=true）
+RoundView "1" o-- "1" RoundReview
 RankingService --> RoundReviewRules : 呼叫（純函式）
 RankingService --> ResultView : 呼叫（純函式）
 RankingService --> ReviewStore
