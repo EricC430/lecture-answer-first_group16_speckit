@@ -79,10 +79,10 @@
 
 | 假設 | 來源 | 若不成立的修改範圍 |
 |---|---|---|
-| `drive.file` 足以讓 `spreadsheets.get` 讀取 Picker 選到的試算表（也足以讓 005 寫入） | Drive 範圍說明與 `spreadsheets.get` 範圍清單各自支持，沒有單頁明說 | 授權範圍常數與 `.env.example`；改用敏感範圍時 OAuth 同意畫面要加測試使用者；不影響核心與應用層 |
-| `GridRange` 結束索引為「不含」 | 官方 Sheet 頁面只連到 GridRange，未明寫 | 轉接層的座標轉換函式與其測試 |
+| `drive.file` 足以讓 `spreadsheets.get` 讀取 Picker 選到的試算表（也足以讓 005 寫入） | Drive 範圍說明與 `spreadsheets.get` 範圍清單各自支持，沒有單頁明說。**2026-11-23 讀取已由 EricC430 以真實帳號驗證成立（T028，細節未記錄）；寫入（005）尚未驗證** | 授權範圍常數與 `.env.example`；改用敏感範圍時 OAuth 同意畫面要加測試使用者；不影響核心與應用層 |
+| `GridRange` 結束索引為「不含」 | **2026-11-23 已由官方 API 參考文件確認**：索引從 0 起算、半開區間，起點含、終點不含，例如 A3:B4 為 start_row_index 2、end_row_index 4（見 [.NET 版 GridRange 參考](https://googleapis.dev/dotnet/Google.Apis.Sheets.v4/latest/api/Google.Apis.Sheets.v4.Data.GridRange.html)、[Ruby 版](https://googleapis.dev/ruby/google-apis-sheets_v4/v0.38.0/Google/Apis/SheetsV4/GridRange.html)）。T071 回報通過也與此一致；不做真實回應 fixture 測試（T072，2026-11-23 EricC430 決定）；轉接層測試用手寫 JSON | 轉接層的座標轉換函式與其測試 |
 | 將非 Google 試算表交給 `spreadsheets.get` 時的錯誤型態 | 未查證；已用 Drive `mimeType` 先擋，這只是保險 | 轉接層錯誤對應表 |
-| Picker 在本機 `http://localhost` 來源下，可以正常運作；API 金鑰先只限制 API 種類，不設網站來源限制 | Picker 官方指南提到金鑰需允許來源 | 金鑰限制設定與 quickstart 的設定步驟 |
+| Picker 在本機 `http://localhost` 來源下，可以正常運作；API 金鑰先只限制 API 種類，不設網站來源限制 | Picker 官方指南提到金鑰需允許來源。**2026-11-23 EricC430 在真實環境走過 Picker（T028、T071），回報可運作，細節未記錄** | 金鑰限制設定與 quickstart 的設定步驟 |
 
 ## 相依與時程
 
@@ -90,7 +90,7 @@
 - **2026-11-23 現況**：骨架 PR #14 與 001 的 PR #15 都已合併到 `main`，001 已含 `ActivityGateway`（`src/lecture_quiz/app/activity/ports.py`：`stage`、`is_teacher` 為同步，`replace_questions` 為 async）與新增的「開放加入」階段（`PREPARING`、`JOINING` 都可匯入）。002 已合併 `origin/main`。下一段是 2026-11-22 當時的歷史紀錄。
 - **（歷史，2026-11-22）骨架 PR 凍結**（jacky0407 於 Issue #5 約定，2026-11-21 留言）：骨架 PR 計畫命名為 `chore/5-project-skeleton`，但**截至 2026-11-22 遠端沒有這個分支，也沒有對應 PR**（001 分支也還沒有 `pyproject.toml`、`src/`），實際分支名稱與時間以 jacky0407 為準。骨架 PR 合併前，002 **不得**建立 `pyproject.toml`、`main.py`、`src/`；合併後從 main 接續。因此本 plan 只產出文件，不產生程式碼。**2026-11-22 更新**：骨架 PR 已開為 #14（尚未合併），001 的 PR 為草稿 #15。決定**等相依完成再開始實作**：`/speckit-implement` 前要確認骨架 PR 已合併，且 001 的活動建立、老師 token、`replace_questions`、開輪與取消已完成（在 main 或 001 分支皆可）；骨架 PR 只涵蓋 001 的 T001～T022，不含這些功能（tasks T001）。
 - **共用檔案約定**：`main.py` 只加一行 router；`teacher.html` 只加一個區塊；`pyproject.toml` 相依追加在最後；`docs/alignment.md` 只追加在最後。
-- **001 的開發用 seed API**（`LECTURE_QUIZ_DEV_SEED=1`）：001 的 plan 規定「002 合併後的第一個 PR 移除」。tasks 要包含確認或移除這個 API 的任務（與 jacky0407 協調，因為檔案屬 001）。
+- **001 的開發用 seed API**（`LECTURE_QUIZ_DEV_SEED=1`）：**已於 2026-11-23 在 002 的實作分支移除**（tasks T077；jacky0407 尚未確認）。
 - **給 003 的介面**：003 需要每題子空格數（`QuestionShapeSource.blanks_per_question(code)`）。由 002 的 `ImportService` 以 `ImportRecord.blanks` 計數實作，契約見 [contracts/service-interfaces.md](contracts/service-interfaces.md)「給 003」，任務為 T083（PR #11 審查，jacky0407 要求寫成文件）。
 - **後續**：005 依 `ImportRecord` 與同一個 `AuthGateway`／`SheetsReader` 寫回。
 
@@ -122,6 +122,8 @@ src/lecture_quiz/
 ├── core/guided_notes_import/        # 純函式層：只依賴標準函式庫
 │   ├── models.py                    # CellRef、CellValue、MergeRange、SheetSnapshot、Question、Blank、StructureSnapshot、ValidationIssue、ParseResult
 │   ├── numbers.py                   # 題號正規化（research R5）
+│   ├── grid.py                      # 合併範圍查詢、儲存格文字
+│   ├── hints.py                     # 每個 IssueKind 的修正建議、欄字母、引用截斷
 │   ├── headers.py                   # 找表頭、判定歧義
 │   ├── rows.py                      # 逐列分類：題號繼承、子編號、答案格、忽略空白列
 │   ├── validator.py                 # 分組、連續性、重疊、孤立子空格

@@ -16,10 +16,11 @@
 
 | 連接埠 | 方法 | 說明 |
 |---|---|---|
-| `AuthGateway` | `start_authorization(code, requester) -> str` | 產生 `state` 並回傳 Google 授權網址 |
-| | `complete_authorization(state, auth_code) -> CallbackResult` | 驗證 `state`、交換 token 並存入記憶體；回傳活動代碼與結果（`ok`／`denied`／`error`） |
+| `AuthGateway` | `is_configured() -> bool` | Google 連線設定是否齊備（空字串視為未設定）；否則各入口回 `GOOGLE_NOT_CONFIGURED` |
+| | `start_authorization(code, requester) -> Result[str]` | 產生一次性且有期限的 `state` 並回傳 Google 授權網址（`async`） |
+| | `complete_authorization(state, auth_code, error) -> CallbackResult` | 驗證 `state`、交換 token 並存入記憶體；回傳活動代碼與結果（`ok`／`denied`／`error`） |
 | | `is_authorized(code) -> bool` | 該活動老師是否有有效授權 |
-| | `picker_credentials(code) -> PickerConfig \| None` | 回傳 Picker 用的短效 access token、API 金鑰與 App ID |
+| | `picker_credentials(code) -> Result[PickerConfig]`（`async`） | 回傳 Picker 用的短效 access token、API 金鑰與 App ID |
 | `SheetsReader` | `inspect(code, spreadsheet_id) -> Result[SpreadsheetInfo]` | 先以 Drive 確認 `mimeType`，再取得工作表清單 |
 | | `read(code, source: SourceRef) -> Result[SheetSnapshot]` | 以欄位遮罩讀取一張工作表並轉成核心的 `SheetSnapshot`（唯讀） |
 | `Clock` | `now() -> datetime` | 沿用 001 的 `Clock`；只用於 `state` 有效期限，核心不使用 |
@@ -35,7 +36,9 @@
 | `select_source(code, requester, source: SourceRef) -> Result[SourceSelection]` | 驗證 `sheet_id` 屬於該試算表後才保存；失敗不改舊選擇 |
 | `import_sheet(code, requester) -> ImportOutcome` | 持有該活動的匯入鎖；順序見 [research.md](../research.md) R6 |
 | `get_import_record(code) -> ImportRecord \| None` | **給 005 使用**：唯讀；回傳最後一次成功匯入的來源、來源映射與匯入時結構 |
-| `get_import_summary(code, requester) -> ImportPreview \| None` | 老師頁面重新整理後恢復預覽 |
+| `get_import_summary(code, requester) -> Result[ImportPreview \| None]` | 老師頁面重新整理後恢復預覽（第一輪開始後仍可查看，只檢查存在與老師身分） |
+| `get_import_result(code, requester) -> Result[ImportOutcome \| None]` | 恢復完整結果（含工作表標題與 001 版本），給端點 #8 |
+| `auth_status(code, requester) -> Result[bool]`、`picker_config(code, requester) -> Result[PickerConfig]` | 端點 #3、#4 |
 
 ## 給 003（回合提交）
 

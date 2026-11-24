@@ -135,17 +135,16 @@ package "app.round_submission" {
   NullQuestionShapeSource ..|> QuestionShapeSource
 }
 
-package "adapters.web" {
-  class DevQuestionShapeSource {
-    set(code, blanks): None
+package "002 app.guided_notes_import" {
+  class ImportService {
     blanks_per_question(code): Mapping[int, int] | None
   }
-  note bottom of DevQuestionShapeSource
-    開發用（LECTURE_QUIZ_DEV_SEED=1）；002 合併後
-    由 ImportService 取代（T065）
+  note bottom of ImportService
+    格數來自最後一次成功匯入（ImportRecord.blanks 計數）；
+    結構上符合 QuestionShapeSource。開發用 seed 已移除（T077）
   end note
 }
-DevQuestionShapeSource ..|> QuestionShapeSource
+ImportService ..|> QuestionShapeSource
 
 package "001 app.activity（擴充）" {
   class ActivityService {
@@ -186,10 +185,6 @@ package "001 core.activity（擴充）" {
   }
 }
 
-package "002（合併後實作 003 的連接埠，T065）" {
-  class ImportService
-}
-
 Handler ..|> SubmissionHandler
 Handler ..> SubmissionWindow : 轉成 RoundContext
 SubmissionService ..|> SnapshotExtension : snapshot_extension
@@ -197,7 +192,6 @@ SubmissionService --> ActivityService : record_submission、註冊擴充
 ActivityService --> Clock
 ActivityService --> SyncPublisher
 ActivityService ..> RecordSubmission : 鎖內套用（revision + 1）
-ImportService ..|> QuestionShapeSource
 
 note right of SubmissionRules
   判定順序：輪次識別 → 是否接受（now < deadline）

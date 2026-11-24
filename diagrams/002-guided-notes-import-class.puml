@@ -9,6 +9,8 @@ package "核心（純資料與純函式）" {
     spreadsheetId
     sheetId
     sheetName
+    rowCount
+    colCount
     cells : 儲存格值（列, 欄）
     merges : 合併範圍清單
   }
@@ -50,9 +52,12 @@ package "核心（純資料與純函式）" {
   }
 
   class StructureSnapshot <<資料>> {
-    headerPosition
+    headerNumber
+    headerAnswer
+    answerCols
+    dataStartRow
     merges
-    questionNumbers
+    rowNumbers
     answerCells
   }
 
@@ -60,6 +65,7 @@ package "核心（純資料與純函式）" {
     kind : 缺表頭／表頭歧義／跳號／非相鄰重複／
     非數字題號／子編號缺漏／孤立子空格／缺答案格／重疊
     at : CellRef
+    quoted : 被引用的儲存格文字（截斷）
     hint : 修正建議
   }
 }
@@ -67,11 +73,15 @@ package "核心（純資料與純函式）" {
 package "應用層" {
   class ImportService {
     +startAuth(code, requester) : 授權網址
+    +authStatus(code, requester) : bool
+    +pickerConfig(code, requester) : PickerConfig
     +inspectSpreadsheet(code, requester, spreadsheetId) : SpreadsheetInfo
     +selectSource(code, requester, source : SourceRef) : SourceSelection
     +importSheet(code, requester) : ImportOutcome（使用已選定的來源）
     +getImportSummary(code, requester) : ImportPreview（重新整理後恢復預覽）
+    +getImportResult(code, requester) : ImportOutcome（含標題與 001 版本）
     +getImportRecord(code) : ImportRecord（供 005 寫回）
+    +blanksPerQuestion(code) : 題號→子空格數 | None（供 003）
   }
 
   class SourceRef <<資料>> {
@@ -81,7 +91,7 @@ package "應用層" {
 
   class SpreadsheetInfo <<資料>> {
     title
-    sheets : 工作表識別與標題清單
+    sheets : SheetInfo 清單（只含可見工作表）
     autoSelectSheetId : 只有一張工作表時為其識別，否則為空（由後端決定）
   }
 
@@ -96,12 +106,16 @@ package "應用層" {
     blanks : Blank 清單（來源映射）
     structure : StructureSnapshot
     questionNumbers
+    version : 001 回傳的版本
   }
 
   class ImportOutcome <<資料>> {
-    status : 成功／被拒絕
+    ok : 成功／被拒絕
     preview : ImportPreview
     issues : ValidationIssue 清單
+    rejection : ImportRejection
+    version
+    sheetTitle
   }
 
   class ImportPreview <<資料>> {
@@ -118,6 +132,7 @@ package "外層轉接層" {
     +read(code, source) : SheetSnapshot（唯讀）
   }
   interface AuthGateway {
+    +isConfigured() : bool
     +startAuthorization(code, requester) : 授權網址
     +completeAuthorization(state, authCode)
     +isAuthorized(code) : bool

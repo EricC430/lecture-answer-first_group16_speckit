@@ -150,20 +150,6 @@ async function openRound(event) {
   await teacherAction("POST", "/rounds", body);
 }
 
-async function seedQuestions() {
-  const result = await apiRequest(
-    "POST",
-    `/api/dev/activities/${encodeURIComponent(state.code)}/seed-questions`,
-    { token: state.token, body: { count: 4 } },
-  );
-  showError($("activity-error"), result.ok ? null : result.error);
-}
-
-async function detectDevSeed() {
-  const result = await apiRequest("GET", "/api/dev/status");
-  $("dev-seed").hidden = !(result.ok && result.data?.enabled);
-}
-
 onTeacherSnapshot(renderOpenRoundPanel);
 
 // ── US4：關輪、定案與倒數 ──
@@ -273,7 +259,6 @@ onGroupRow((td, group, snapshot) => {
 function init() {
   $("create-activity").addEventListener("click", createActivity);
   $("open-round-panel").addEventListener("submit", openRound);
-  $("dev-seed").addEventListener("click", seedQuestions);
   $("close-round").addEventListener("click", () => teacherAction("POST", "/rounds/current/close", {}));
   $("finalize-round").addEventListener("click", () =>
     teacherAction("POST", "/rounds/current/finalize", {}),
@@ -282,7 +267,6 @@ function init() {
   $("open-joining").addEventListener("click", () => teacherAction("POST", "/open-joining", {}));
   $("cancel-activity").addEventListener("click", () => teacherAction("POST", "/cancel", {}));
   $("new-activity").addEventListener("click", showCreateForm);
-  detectDevSeed();
   const code = normalizeCode(new URLSearchParams(location.search).get("code"));
   if (!code) return;
   const token = getTeacherToken(code);

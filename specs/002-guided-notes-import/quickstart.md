@@ -2,7 +2,7 @@
 
 **用途**：實作完成後，證明 002 端到端可用的執行與人工驗證腳本。本檔只記錄「怎麼驗證、預期結果」；**實際執行的日期、指令與結果數字要在執行當下填入下方的紀錄表，沒有跑過就保持空白，不得預填**（憲章原則 VI）。
 
-**目前狀態（2026-11-22）**：尚未實作，下列所有驗證都還沒有執行過。
+**目前狀態（2026-11-23）**：已實作；A 區自動化驗證已執行並記錄在紀錄表。**B 區真實路徑（含 SC-009）已由 EricC430 回報全數通過，細節依其決定不記錄**（紀錄表只留一列回報）；非實作者 jacky0407 的 T076 驗證尚未執行。
 
 ## 前置條件
 
@@ -34,7 +34,7 @@
       - 建立後會顯示**用戶端 ID**與**用戶端密鑰**：分別是 `GOOGLE_CLIENT_ID`、`GOOGLE_CLIENT_SECRET`。密鑰只貼到本機 `.env`，**不要貼到聊天、Issue、PR 或任何追蹤的檔案**。
    5. **建立 API 金鑰**（Picker 用）：憑證 → 建立憑證 → API 金鑰，這就是 `GOOGLE_API_KEY`。建議先只把「API 限制」設為 **Google Picker API**，**先不要設網站（HTTP 參照網址）限制**：Picker 會在 Google 網域的畫面裡載入，網站限制設錯會出現「API developer key is invalid」。真實驗證通過後若要再收緊，再加限制並重新驗證（此項列入 [plan.md](plan.md)「待真實驗證的假設」）。
    6. 若授權時看到「這個應用程式未經 Google 驗證」：測試中的應用程式正常會出現，按「進階」→「前往（不安全）」即可；`drive.file` 是非敏感範圍，不需要送審。
-4. 複製 `.env.example` 為 `.env`（`.env` 已被 `.gitignore` 排除），填入 `GOOGLE_CLIENT_ID`、`GOOGLE_CLIENT_SECRET`、`GOOGLE_API_KEY`、`GOOGLE_APP_ID`、`OAUTH_REDIRECT_URI`；用 `python -m lecture_quiz` 啟動時會自動載入（見上表）。**任何一項是空字串都視為未設定**，匯入端點會明確回 `GOOGLE_NOT_CONFIGURED`。
+4. 複製 `.env.example` 為 `.env`（`.env` 已被 `.gitignore` 排除），填入 `GOOGLE_CLIENT_ID`、`GOOGLE_CLIENT_SECRET`、`GOOGLE_API_KEY`、`GOOGLE_APP_ID`、`OAUTH_REDIRECT_URI`；用 `python -m lecture_quiz` 啟動時會自動載入（見上表）。**任何一項是空字串都視為未設定**，匯入端點會明確回 `GOOGLE_NOT_CONFIGURED`。**`GOOGLE_APP_ID` 必須是 Cloud「專案編號」**（純數字，約 12 位，在專案首頁或設定頁；不是專案 ID，也不是 Client ID），並與 `GOOGLE_CLIENT_ID` 開頭的數字一致；不是純數字時同樣視為未設定。填錯的話 Picker 仍能選檔，但 Drive 會回 404 `notFound`（後端日誌會有 `Google API 錯誤：status=404 reason=notFound`）。
 
 ## A. 自動化驗證（預設不呼叫真實 Google）
 
@@ -60,6 +60,10 @@ pytest -m "not real_google and not perf"
 | 版面 1（課程範本，題組＋單題混合） | 前兩題各兩個子空格、後兩題各一格；前兩題題號縱向合併；表頭在第 4 列 | 4 題、6 格；題 1：2、題 2：2、題 3：1、題 4：1；第二個子空格有位置、沒有位置落在編號格 |
 | 版面 2（整體移位＋工作表更名＋多張工作表） | 同樣內容移到別的起始列欄；工作表改名；試算表另有一張無關工作表 | 與版面 1 相同的題數與格數；每格位置對應新位置 |
 
+**建立試算表的注意事項**（版面 1 的具體儲存格，列欄以試算表顯示的 1 起算）：第 4 列 `B4`＝「題號」、`C4`＝「題目」、`G4:H4` 合併＝「作答」；`B5:B6` 合併＝1、`G5`＝(1)、`G6`＝(2)；`B7:B8` 合併＝2、`G7`＝(1)、`G8`＝(2)；`B9`＝3、`G9:H9` 合併；`B10`＝4、`G10:H10` 合併。題號輸入數字即可（1 與文字「1」都接受）。版面 2 是同樣內容整體往下往右移、工作表改名，並另加一張無關的工作表。
+
+> ⚠ **「(1)」會被 Google 試算表自動轉成數字 -1**（括號在試算表代表負數）。輸入子編號前，先把儲存格格式設為「純文字」（格式 → 數字 → 純文字），或輸入時在前面加半形單引號 `'(1)`。沒有處理的話，子編號會變成數字而不是文字，匯入會得到「缺少子編號」之類的錯誤。
+
 另備一份**單題範本**（六題、作答格橫向合併）與一份**有缺陷**的試算表（例如題號跳號）。
 
 **操作步驟**（老師頁面，後端以 `python -m lecture_quiz` 本機啟動；活動先用 001 建好，停在準備中；匯入在準備中與開放加入都可進行）：
@@ -68,9 +72,10 @@ pytest -m "not real_google and not perf"
 |---|---|---|---|
 | 1 | 按「匯入學習單」，在 Google 授權畫面按**取消** | 回到頁面，說明「尚未授權、未匯入任何題目」並提供重新授權；活動題目不變 | US1-AS3 |
 | 2 | 再按一次，同意授權 | 回到頁面，顯示已授權 | US1-AS1 |
-| 3 | 在選檔畫面按取消 | 維持原狀，沒有留下半途來源 | US1-AS5 |
+| 3 | 在選檔畫面按取消 | 維持原狀，沒有留下半途來源（前端行為，只有人工驗證，已知限制） | US1-AS5 |
 | 4 | 選一份 Google 文件或 PDF（若 Picker 允許）| 被拒並說明「請選擇 Google 試算表」 | US1-AS6、FR-005 |
 | 5 | 選版面 2 的試算表 | 列出工作表，要求明確選一張（`inspect` 的 `autoSelectSheetId` 為 `null`） | US1-AS1 |
+| 5a | 另選一份**只有一張工作表**的試算表 | 不再要求選工作表，畫面自動選用並顯示試算表與工作表名稱（`inspect` 的 `autoSelectSheetId` 有值） | US1-AS2、FR-002 |
 | 6 | 選正確的那張工作表，按匯入 | 預覽「4 題、6 格」與每題格數；記錄從按下確認到看見預覽的秒數 | US3-AS1、US5-AS1、SC-006 |
 | 7 | 重新整理頁面 | 預覽恢復 | US5 |
 | 8 | 改選版面 1 再匯入 | 整份取代，結果相同、無舊題目殘留 | US5-AS2、SC-003 |
@@ -93,10 +98,15 @@ pytest -m "not real_google and not perf"
 
 | 日期 | 執行者 | 指令或操作 | 結果數字 | 備註 |
 |---|---|---|---|---|
-| | | `ruff check .` | | |
-| | | `ruff format --check .` | | |
-| | | `mypy src` | | |
-| | | `pytest -m "not real_google and not perf"` | passed／failed／總數： | |
-| | | 真實路徑 B-1～B-13（版面 1、版面 2） | | |
+| 2026-11-23 | EricC430 的環境（Claude Code 執行） | `ruff check .` | All checks passed | 分支 feature/6-guided-notes-import-impl |
+| 2026-11-23 | 同上 | `ruff format --check .` | 190 files already formatted | |
+| 2026-11-23 | 同上 | `mypy`（設定檔已指定 src） | Success: no issues found in 47 source files | |
+| 2026-11-23 | 同上 | `pytest -m "not real_google and not perf"` | 708 passed、0 failed、2 deselected（perf 與 real_google 各 1 組） | 含 001 的既有測試；002 部分：核心 96、應用層 94、Google 轉接層 67、HTTP 契約 29（參數化展開後更多）、架構 29 |
+| 2026-11-23 | EricC430 | T028 授權 → Picker → inspect | 通過（使用者回報） | 細節依使用者決定不記錄；先前因 `GOOGLE_APP_ID` 填成非專案編號而 404 `notFound`，更正後通過 |
+| 2026-11-23 | EricC430 | 真實路徑 B-1～B-13（版面 1、版面 2） | 通過（使用者回報） | 細節依使用者決定不記錄，**沒有 SC-006 秒數與題數可對照** |
+| 2026-11-23 | EricC430 的環境（Claude Code 執行） | T080～T082 後：`ruff check .`、`ruff format --check .`、`mypy`、`pytest -m "not real_google and not perf"` | 通過；188 個檔案格式正確；46 個檔案無型別問題；715 passed、2 deselected | 新增 `GOOGLE_APP_ID` 純數字驗證（紅燈 5 個測試後轉綠） |
+| 2026-11-24 | EricC430 的環境（Claude Code 執行） | 合併 #11 審查修改與最新 `main`、T083 後：`ruff check .`、`ruff format --check .`、`mypy`、`pytest -m "not real_google and not perf"` | 通過；189 個檔案格式正確；46 個檔案無型別問題；726 passed、2 deselected | 新增 `ImportService.blanks_per_question`（給 003），6 個測試先紅燈後轉綠 |
+| 2026-11-24 | EricC430 的環境（Claude Code 執行） | PR #17 審查修正後：Python 3.11.17 全新 venv（`uv pip install ".[dev]"`，以 `PYTHONPATH=src` 指向工作樹）執行 `pytest -m "not real_google and not perf"`；Python 3.14.7 另跑 `ruff check .`、`ruff format --check .`、`mypy` 與同一組 pytest | 3.11：735 passed、2 deselected（修正前 723 passed、3 failed）；3.14：735 passed、2 deselected；ruff 通過、190 個檔案格式正確、mypy 46 個檔案無問題 | 3.11 失敗原因：`int.is_integer()` 3.12 才有（T084） |
+| | jacky0407 | T076 非實作者人工驗證 | | 尚未執行 |
 
 - **實作者**：EricC430。**非實作者人工驗證**：jacky0407（執行 B 區並簽名，記錄日期與結果）。
