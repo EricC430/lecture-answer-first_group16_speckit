@@ -37,8 +37,8 @@
 
 | 指令 | 結果 |
 |---|---|
-| `.venv\Scriptsuff check .` | All checks passed |
-| `.venv\Scriptsuff format --check .` | 386 files already formatted |
+| `.venv\Scripts\ruff check .` | All checks passed |
+| `.venv\Scripts\ruff format --check .` | 386 files already formatted |
 | `.venv\Scripts\mypy` | Success: no issues found in 83 source files |
 | `.venv\Scripts\python -m pytest -m "not real_google and not perf" -q` | 1328 passed、8 deselected、0 failed（基準 1089 passed；新增 239 項） |
 | `.venv\Scripts\python -m pytest tests/architecture/test_core_is_pure.py -q` | 29 passed（`core/result_export/` 的 6 個模組被掃描，無違規） |
