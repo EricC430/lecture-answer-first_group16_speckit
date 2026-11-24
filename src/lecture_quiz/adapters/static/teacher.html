@@ -109,6 +109,30 @@
       <h2>順位與判錯</h2>
       <div id="ranking-review-list"></div>
     </section>
+    <section id="export-section" data-feature="005-result-export" hidden>
+      <h2>寫回學習單與下載紀錄</h2>
+      <p class="muted">只會寫入已定案、有搶答成功者的題目；寫回前會先預覽，確認後才送出。</p>
+      <div class="controls">
+        <button type="button" id="export-preview-button">預覽寫回</button>
+        <button type="button" id="export-confirm-button" disabled>確認寫回</button>
+        <button type="button" id="export-reauth-button" hidden>重新授權</button>
+      </div>
+      <p id="export-error" class="error" role="alert" hidden></p>
+      <div id="export-structure" class="error" hidden>
+        <p>學習單的結構與匯入時不同，已停止寫回；請還原學習單後重新預覽：</p>
+        <ul id="export-structure-list"></ul>
+      </div>
+      <div id="export-preview" hidden>
+        <p id="export-preview-summary"></p>
+        <table class="export-table">
+          <thead>
+            <tr><th>題號</th><th>子空格</th><th>搶答成功者</th><th>答案</th><th>寫入位置</th><th>覆寫影響</th></tr>
+          </thead>
+          <tbody id="export-preview-body"></tbody>
+        </table>
+        <p id="export-unwritten" class="muted"></p>
+      </div>
+    </section>
     <!-- ── 子功能區塊結束 ── -->
   </main>
   <div id="sync-status" aria-live="polite"></div>
@@ -116,6 +140,7 @@
   <script type="module" src="js/teacher.js"></script>
   <script type="module" src="js/import.js"></script>
   <script type="module" src="js/round-submission-teacher.js"></script>
+  <script type="module" src="js/result-export.js"></script>
   <!-- ── 子功能 script 結束 ── -->
 </body>
 </html>

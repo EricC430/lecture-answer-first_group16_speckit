@@ -21,10 +21,13 @@ from fastapi.staticfiles import StaticFiles
 
 from lecture_quiz.adapters.clock import SupportsNow, SystemClock
 from lecture_quiz.adapters.countdown import AsyncioCountdownScheduler
+from lecture_quiz.adapters.google.auth import GoogleAuthGateway
+from lecture_quiz.adapters.google.sheets_writer import GoogleSheetsWriter
 from lecture_quiz.adapters.web import (
     guided_notes_import,
     http_api,
     ranking_review,
+    result_export,
     submission_api,
     system,
     ws_sync,
@@ -40,6 +43,9 @@ from lecture_quiz.app.activity.service import ActivityService
 from lecture_quiz.app.guided_notes_import.ports import AuthGateway, SheetsReader
 from lecture_quiz.app.ranking_review.service import RankingService
 from lecture_quiz.app.ranking_review.store import ReviewStore
+from lecture_quiz.app.result_export.ports import SheetsWriter
+from lecture_quiz.app.result_export.service import ExportService
+from lecture_quiz.app.result_export.store import ExportStore
 from lecture_quiz.app.round_submission.ports import QuestionShapeSource
 from lecture_quiz.app.round_submission.service import SubmissionService
 from lecture_quiz.app.round_submission.store import SubmissionStore
@@ -98,6 +104,30 @@ def _wire_ranking(app: FastAPI) -> None:
     )
 
 
+def _wire_export(app: FastAPI, sheets_writer: SheetsWriter | None) -> None:
+    """組裝 005 的匯出服務；需要 001～004 的服務與 002 的 Google 連接埠。
+
+    沒有注入寫入器時：002 用的是真實的 `GoogleAuthGateway`，就共用它建立真實寫入器
+    （建構只保存參照，不連線、不建立任何 Google 用戶端）；測試注入了假的授權閘道時，
+    沒有寫入器，服務在第一次需要它時回明確錯誤。
+    """
+    imports = app.state.import_service
+    if sheets_writer is None and isinstance(imports.auth_gateway, GoogleAuthGateway):
+        sheets_writer = GoogleSheetsWriter(imports.auth_gateway)
+    app.state.export_service = ExportService(
+        activity=app.state.activity_service,
+        imports=imports,
+        auth=imports.auth_gateway,
+        reader=imports.sheets_reader,
+        writer=sheets_writer,
+        submissions=app.state.submission_service,
+        ranking=app.state.ranking_service,
+        store=ExportStore(),
+        publisher=app.state.sync_hub,
+        clock=app.state.clock,
+    )
+
+
 def create_app(
     clock: SupportsNow | None = None,
     scheduler: CountdownScheduler | None = None,
@@ -106,6 +136,7 @@ def create_app(
     ws_auth_timeout: float = 5.0,
     ws_ping_interval: float = 10.0,
     question_shape_source: QuestionShapeSource | None = None,
+    export_sheets_writer: SheetsWriter | None = None,
 ) -> FastAPI:
     """建立 FastAPI app。
 
@@ -121,6 +152,7 @@ def create_app(
         ws_ping_interval: WebSocket ping 間隔秒數。
         question_shape_source: 每題子空格數來源（003）；測試傳入假來源，省略時
             使用 002 的 `ImportService`（最後一次成功匯入的結果）。
+        export_sheets_writer: 005 的 Sheets 寫入連接埠；測試傳入假的。
 
     Returns:
         已掛上共用錯誤處理、請求日誌、所有 API router、WebSocket 與靜態檔的 app。
@@ -143,6 +175,8 @@ def create_app(
     api.include_router(submission_api.create_router(app))  # 003
     _wire_ranking(app)  # 004 需要 001、003 的服務，須在 003 之後
     api.include_router(ranking_review.create_router(app))  # 004
+    _wire_export(app, export_sheets_writer)  # 005 需要 001～004 的服務，須在 004 之後
+    api.include_router(result_export.create_router(app))  # 005
     # ── 子功能 router 結束 ──
     app.include_router(api)
     install_api_fallback(app)  # 未定義的 /api 路徑一律 404

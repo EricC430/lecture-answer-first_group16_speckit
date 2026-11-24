@@ -1,0 +1,178 @@
+// 005 老師頁：寫回預覽、確認寫回。
+// 所有後端與試算表來的文字（答案、原儲存格內容、組號、工作表標題）一律以 textContent 輸出
+// （憲章原則 V、FR-032）；token 只在記憶體，不輸出到畫面或 console。
+
+import { apiRequest, showError } from "./api.js";
+import { onTeacherSnapshot } from "./teacher.js";
+
+const $ = (id) => document.getElementById(id);
+
+const IMPACT_LABELS = {
+  EMPTY: "目標是空的",
+  REPLACE: "將取代原有內容",
+  SAME: "內容相同",
+};
+
+// 002 的 import.js 會在收到第一份快照後刪除網址上的 auth 參數；這裡在模組載入時就同步讀取
+// 並記住（早於任何快照事件），授權完成（auth=ok）後自動重新預覽（FR-010）。
+const initialAuth = new URLSearchParams(window.location.search).get("auth");
+
+const AUTH_PROBLEMS = new Set(["NOT_AUTHORIZED", "AUTH_EXPIRED", "PERMISSION_DENIED"]);
+
+const ui = { code: null, token: null, preview: null, busy: false, autoPreviewDone: false };
+
+function call(method, path, body) {
+  return apiRequest(
+    method,
+    `/api/activities/${encodeURIComponent(ui.code)}/export${path}`,
+    { token: ui.token, body },
+  );
+}
+
+function cell(text, className = "") {
+  const td = document.createElement("td");
+  if (className) td.className = className;
+  td.textContent = text === null || text === undefined ? "" : String(text);
+  return td;
+}
+
+function answerCell(text) {
+  const td = document.createElement("td");
+  const pre = document.createElement("pre");
+  pre.className = "export-answer";
+  pre.textContent = text;
+  td.append(pre);
+  return td;
+}
+
+function impactCell(item) {
+  const label = IMPACT_LABELS[item.impact] ?? item.impact;
+  const td = cell(item.impact === "REPLACE" ? `${label}：${item.currentDisplay ?? ""}` : label);
+  if (item.impact === "REPLACE") td.className = "export-impact-replace";
+  return td;
+}
+
+function renderStructure(structure) {
+  const list = $("export-structure-list");
+  list.replaceChildren();
+  $("export-structure").hidden = structure.ok;
+  if (structure.ok) return;
+  for (const diff of structure.differences) {
+    const item = document.createElement("li");
+    const where = diff.row === null ? "" : `（第 ${diff.row} 列、${diff.col} 欄）`;
+    item.textContent = `${diff.detail}${where}`;
+    list.append(item);
+  }
+  if (structure.moreDifferences > 0) {
+    const more = document.createElement("li");
+    more.textContent = `另有 ${structure.moreDifferences} 項差異未列出`;
+    list.append(more);
+  }
+}
+
+function renderPreview(preview) {
+  ui.preview = preview;
+  renderStructure(preview.structure);
+  $("export-preview").hidden = false;
+  $("export-preview-summary").textContent =
+    `工作表：${preview.sheetTitle}；共 ${preview.items.length} 個子空格會寫入。`;
+  const body = $("export-preview-body");
+  body.replaceChildren();
+  for (const item of preview.items) {
+    const row = document.createElement("tr");
+    row.append(
+      cell(`第 ${item.questionNumber} 題`),
+      cell(item.subIndex === null ? "" : item.subIndex),
+      cell(`第 ${item.groupNumber} 組`),
+      answerCell(item.answer),
+      cell(item.target),
+      impactCell(item),
+    );
+    body.append(row);
+  }
+  $("export-unwritten").textContent = preview.unwrittenQuestions.length
+    ? `不會寫入的題目：${preview.unwrittenQuestions.map((n) => `第 ${n} 題`).join("、")}`
+    : "";
+  updateControls();
+}
+
+function clearPreview() {
+  ui.preview = null;
+  $("export-structure").hidden = true;
+  $("export-preview").hidden = true;
+  $("export-preview-body").replaceChildren();
+  updateControls();
+}
+
+function updateControls() {
+  $("export-preview-button").disabled = ui.busy;
+  $("export-confirm-button").disabled = ui.busy || !(ui.preview && ui.preview.canConfirm);
+}
+
+async function guarded(fn) {
+  if (ui.busy) return;
+  ui.busy = true;
+  updateControls();
+  try {
+    await fn();
+  } finally {
+    ui.busy = false;
+    updateControls();
+  }
+}
+
+// 授權或權限問題時顯示「重新授權」；任何階段（除已取消）都可使用（FR-010）。
+function showAuthProblem(code) {
+  $("export-reauth-button").hidden = !AUTH_PROBLEMS.has(code);
+}
+
+async function runReauth() {
+  const result = await call("POST", "/authorization", {});
+  if (!result.ok) {
+    showError($("export-error"), result.error);
+    return;
+  }
+  window.location.assign(result.data.authUrl); // 授權完成後導回 ?auth=ok|denied|error
+}
+
+async function runPreview() {
+  showError($("export-error"), null);
+  $("export-reauth-button").hidden = true;
+  const result = await call("POST", "/preview", {});
+  if (!result.ok) {
+    clearPreview();
+    showError($("export-error"), result.error);
+    showAuthProblem(result.error.code);
+    return;
+  }
+  renderPreview(result.data);
+}
+
+async function runConfirm() {
+  if (!ui.preview) return;
+  showError($("export-error"), null);
+  const result = await call("POST", "/writes", { snapshotId: ui.preview.snapshotId });
+  if (!result.ok) {
+    if (result.error.code === "STALE_SNAPSHOT") clearPreview(); // 成果已更新，須重新預覽
+    showError($("export-error"), result.error);
+    showAuthProblem(result.error.code);
+    return;
+  }
+  clearPreview(); // 確認只對這份預覽有效；結果狀態在 US4 的狀態面板顯示
+}
+
+$("export-preview-button").addEventListener("click", () => guarded(runPreview));
+$("export-confirm-button").addEventListener("click", () => guarded(runConfirm));
+$("export-reauth-button").addEventListener("click", () => guarded(runReauth));
+
+onTeacherSnapshot((snapshot, state) => {
+  ui.code = state.code;
+  ui.token = state.token;
+  // 已取消的活動不提供寫回與 CSV（alignment 2026-11-23）
+  $("export-section").hidden = snapshot.stage === "CANCELLED";
+  updateControls();
+  if (initialAuth === "ok" && !ui.autoPreviewDone && snapshot.stage !== "CANCELLED") {
+    ui.autoPreviewDone = true; // 授權完成後自動回到預覽，不需要重新匯入
+    guarded(runPreview);
+  }
+});
