@@ -27,6 +27,8 @@
 
 `DisplayStatus` 的推導（`display_status(rank, wrong)`）：被判錯 → `WRONG`；有名次且名次為 1 → `SUCCESS`；有名次且名次大於 1 → `FAILED`。**定案後**（`final=true`）：`ResultView` 與 `FinalizedResult.rankings` 把名次 1 的 `SUCCESS` 改為 `CORRECT`（`as_final(rankings)`，純函式）；`WRONG`、`FAILED` 不變（FR-033、spec US6-AS1、US7-AS14）。
 
+**`RoundReview` 不變式**：`replaced[question]` 歷程中的每一組都必須在該題的 `wrong_marks` 內（以（組號, 題號）對應），且歷程中沒有重複的組；`RoundReviewRules.mark` 維持這項不變式（歷程只在「判錯且該組是判錯前的搶答成功者」時附加、撤銷時移除）。
+
 `ResultView` 的 `replacedGroup`：`final=true` 時兩種角色都輸出 `null`；未定案時，老師版輸出 `RoundReview.replaced[question]` 歷程的**最後一位**（歷程為空則 `null`），學生版只有在該題 `success_group` 不是 `None`（有遞補者）時才輸出，否則 `null`（spec FR-036、US7-AS3、AS9）。
 
 `ResultView` 老師版每題另有 `actions`（純函式輸出，前端只照它顯示按鈕，不自行判斷；學生版沒有）：`judgeGroup` ＝ 未定案時的 `success_group`（沒有則 `null`），`undoGroup` ＝ 未定案時 `replaced[question]` 歷程的最後一位（歷程為空則 `null`）；`final=true` 時兩者皆為 `null`（spec FR-034、US4-AS9、AS10）。
@@ -120,7 +122,7 @@ finalize_plan(review, baseline) -> (solved_questions, success_increments, final_
 
 | 型別 | 說明 |
 |---|---|
-| `ReviewStore` | 記憶體：`reviews: dict[(code, round_number), RoundReview]`、`locks: dict[code, asyncio.Lock]`、`cache: dict[(code, round, version, kind), JsonDict]`；活動被移除時一起清空（後端重啟即清空） |
+| `ReviewStore` | 記憶體：`reviews: dict[(code, round_number), RoundReview]`、`locks: dict[code, asyncio.Lock]`、`cache: dict[(code, round, version, final, kind), JsonDict]`（`final` 必須在鍵裡：定案不增加結果版本卻會改變輸出）；活動被移除時一起清空（後端重啟即清空） |
 | `RankingService` | `mark_wrong`／`unmark_wrong`（呼叫 `_set_wrong`）、`finalize`、`snapshot_extension`、`finalized_rounds`（`RankingReader`）；建構時向 001 註冊快照擴充 |
 | `RankingReader`（Protocol） | 給 005：`finalized_rounds(code) -> tuple[FinalizedRound, ...]` |
 | `FinalizedRound` | `round_number: int`、`result: FinalizedResult`；已定案輪次的唯讀視圖 |
