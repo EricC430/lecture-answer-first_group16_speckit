@@ -209,3 +209,82 @@ def test_delete_and_mark_submitted_never_orphan_an_answer(client):
         assert not deleted.ok and marked.ok
     group = service.get(teacher.code).groups[1]
     assert group.has_submissions
+
+
+def test_last_leave_releases_unsubmitted_group_number(client):
+    """Scenario: US2-AS10（alignment 2026-11-24）
+
+    唯一一台裝置主動離開、該組從未提交：組別從看板消失；下一位不需憑證，
+    以同組號建立新組並取得新憑證，舊憑證不能再用。
+    """
+    teacher = create_joinable(client)
+    x = _join(client, teacher.code, 1)
+    response = client.post(
+        f"/api/activities/{teacher.code}/groups/leave",
+        json={},
+        headers=_auth(x["deviceToken"]),
+    )
+    assert response.status_code == 200
+    assert 1 not in _groups(client, teacher)
+    fresh = _join(client, teacher.code, 1)
+    assert fresh["credential"] != x["credential"]
+    late = client.post(
+        f"/api/activities/{teacher.code}/groups/join",
+        json={"groupNumber": 1, "credential": x["credential"]},
+    )
+    assert late.status_code == 403
+    assert late.json()["error"]["code"] == "BAD_CREDENTIAL"
+
+
+def test_group_with_submissions_requires_credential_after_everyone_leaves(client):
+    """Scenario: US2-AS10（alignment 2026-11-24）
+
+    已有提交紀錄的組，所有裝置離開後保留組別與憑證；重新加入要附原憑證。
+    """
+    teacher = create_joinable(client)
+    x = _join(client, teacher.code, 1)
+    _open_round(client, teacher)
+    assert call(client, service_of(client).mark_group_submitted, teacher.code, 1).ok
+    client.post(
+        f"/api/activities/{teacher.code}/rounds/current/close",
+        json={},
+        headers=teacher.headers,
+    )
+    client.post(
+        f"/api/activities/{teacher.code}/groups/leave",
+        json={},
+        headers=_auth(x["deviceToken"]),
+    )
+    group = _groups(client, teacher)[1]
+    assert group["deviceCount"] == 0 and group["hasSubmissions"] is True
+    assert group["credential"] == x["credential"]
+    denied = client.post(
+        f"/api/activities/{teacher.code}/groups/join", json={"groupNumber": 1}
+    )
+    assert denied.status_code == 403
+    assert "老師" in denied.json()["error"]["message"]
+    back = _join(client, teacher.code, 1, x["credential"])
+    assert back["credential"] == x["credential"]
+
+
+def test_closing_the_page_is_not_leaving(client):
+    """Scenario: US2-AS10（alignment 2026-11-24）
+
+    只是關閉網頁或斷線不算離開：裝置身分與組別保留，其他人仍須憑證。
+    """
+    teacher = create_joinable(client)
+    x = _join(client, teacher.code, 1)
+    with client.websocket_connect(f"/ws/activities/{teacher.code}") as ws:
+        ws.send_json({"type": "auth", "token": x["deviceToken"]})
+        ws.receive_json()
+    group = _groups(client, teacher)[1]
+    assert group["deviceCount"] == 1
+    assert group["credential"] == x["credential"]
+    denied = client.post(
+        f"/api/activities/{teacher.code}/groups/join", json={"groupNumber": 1}
+    )
+    assert denied.status_code == 403
+    snapshot = client.get(
+        f"/api/activities/{teacher.code}/snapshot", headers=_auth(x["deviceToken"])
+    ).json()
+    assert snapshot["ownGroup"]["number"] == 1
