@@ -139,7 +139,21 @@ package "應用層 app/result_export" {
     status : AttemptStatus
     reason : 原因類別（只有代碼）
     differences, cellChecks
+    confirmedCells, notWrittenCells, pendingCells : 三個格數
     startedAt, finishedAt : 時間（由 Clock 取得）
+    alreadyInProgress : 回覆的是進行中的那一次（不存入存放區）
+  }
+
+  class PreviewView <<資料>> {
+    snapshot : ResultSnapshot
+    structure : StructureCheck
+    sheetTitle : 目前的工作表標題
+    canConfirm : 結構相符且至少一個目標格
+  }
+
+  class WriteResult <<資料>> {
+    outcome : OutcomeStatus（成功／明確失敗／待確認）
+    reason : 原因類別
   }
 
   class ExportStore <<記憶體>> {
@@ -178,6 +192,8 @@ ExportCore ..> StructureSnapshot : 比對
 WriteAttempt --> AttemptStatus
 WriteAttempt "1" o-- "*" WritePlanItem
 ExportService ..> ExportCore : 呼叫純函式
+ExportService ..> PreviewView
+SheetsWriter ..> WriteResult
 ExportService "1" o-- "1" ExportStore
 ExportStore "1" o-- "0..*" WriteAttempt
 ExportService --> SheetsReader : 重新讀取來源

@@ -241,22 +241,22 @@ description: "005-result-export 任務清單"
 
 **Purpose**: 跨 Story 的整體驗證、文件、效能與人工驗證
 
-- [ ] T078 [P] 更新 `tests/SCENARIO_MAP.md`：追加 `## 005-result-export` 段落，把 US1～US6 全部 Acceptance Scenario 對應到測試（以掃描 `Scenario:` docstring 產生，沿用 003／004 的產生方式）；OpenSpec result-export 的 12 個 Scenario 逐一確認至少一個測試（SC-001）
-- [ ] T079 [P] 在 `tests/integration/test_export_logging.py` 測試日誌：預覽、寫入、核對、重試、CSV 下載、重新授權各情境的日誌**不含**答案內容、原儲存格內容、試算表網址與標題、token、授權碼、`state`、client secret；只含活動代碼、嘗試編號、快照識別、格數、結果與原因類別；使用 `logging`、無 `print`（FR-033、憲章技術限制 3）
-- [ ] T080 [P] 在 `tests/contract/test_error_safety.py` 追加（不改既有斷言）005 的端點：各種錯誤回應不含堆疊、檔案路徑、憑證、授權碼；Google 例外訊息本文不出現在任何回應與日誌（FR-031）
-- [ ] T081 [P] 在 `tests/integration/test_export_snapshot_visibility.py` 測試資料可見性：學生 WebSocket 與 `GET snapshot` 在任何階段都沒有 `export`；學生呼叫 X1～X7 全部 403；老師快照的 `export` 不含答案、原內容與網址（憲章原則 V）
-- [ ] T082 [P] 在 `tests/perf/test_export_latency.py`（`@pytest.mark.perf`，真實 uvicorn）測量：50 題規模、每活動 99 組的預覽計算（Google 以假替身，不含往返）與 CSV 產生各不超過 3 秒（SC-008）；老師＋6 組學生連線、每組 2 條時，寫回狀態變更到各老師分頁收到推送不超過 2 秒；記錄量測數字到 `verification.md`
-- [ ] T083 [P] 在 `tests/real_google/test_real_export.py`（`@pytest.mark.real_google`，手動執行）實作真實路徑：缺任一必要環境變數（沿用 `REAL_GOOGLE_BASE_URL`、`REAL_GOOGLE_ACTIVITY_CODE`、`REAL_GOOGLE_TEACHER_TOKEN`、`REAL_GOOGLE_SPREADSHEET_ID`、`REAL_GOOGLE_SHEET_ID`，另加第二份試算表的 `*_B` 與寫入開關）時**明確失敗並說明缺什麼**，不得 `skip`、不得退回 mock；預覽 → 確認寫回 → 讀回驗證 R17 第 3 項（公式字樣、前導零、類日期、換行、單引號開頭）→ 再預覽結構仍相符 → CSV
-- [ ] T084 在 `CLAUDE.md` 的「專案現況」追加「005-result-export 已實作」段落（程式路徑、對 001～004 沒有修改、重新授權入口與核對不做結構檢查的決定、待驗證事項）；`docs/DEVELOPMENT.md` 若有子功能列表同步更新（只追加，依擴充約定）
-- [ ] T085 在 `specs/005-result-export/verification.md` 補齊「先寫測試的失敗紀錄」（各 Story 實作前的失敗數）與「自動化結果」的日期、指令、通過／失敗／略過數（憲章原則 VI、全域規則：只寫真的執行過的指令與輸出）
-- [ ] T086 程式碼與圖表一致性驗證：逐一比對 `diagrams/005-result-export-component.puml`、`-class.puml`、`-sequence.puml` 與實作（模組、類別名稱、方法、流程、相依方向）；有差異時**先更新圖表並重新轉出 PNG**（只轉 005 的三個檔），並把比對結果寫入 `verification.md`（憲章原則 II）
-- [ ] T087 執行 `ruff check .`、`ruff format --check .`、`mypy`，全部通過並記錄結果（憲章技術限制 2）
-- [ ] T088 執行 `pytest -m "not real_google and not perf"`，確認全數通過、既有 001～004 測試不退步（與 T002 基準比較），記錄指令與通過／失敗／略過數（憲章原則 VI）
-- [ ] T089 [P] 執行 `pytest -m perf tests/perf/test_export_latency.py`，記錄數字（SC-008）
-- [ ] T090 執行 `tests/architecture/test_core_is_pure.py` 並確認 `core/result_export/` 被掃描且無違規：只匯入標準函式庫與 `lecture_quiz.core`，不匯入 `fastapi`、`starlette`、`asyncio`、`time`、`googleapiclient`、`google`、`httpx`，不呼叫 `datetime.now`（憲章技術限制 4）
-- [ ] T091 依 [quickstart.md](quickstart.md) A 節逐步執行並核對預期結果，把差異記入 `verification.md`「問題紀錄」
+- [X] T078 [P] 更新 `tests/SCENARIO_MAP.md`：追加 `## 005-result-export` 段落，把 US1～US6 全部 Acceptance Scenario 對應到測試（以掃描 `Scenario:` docstring 產生，沿用 003／004 的產生方式）；OpenSpec result-export 的 12 個 Scenario 逐一確認至少一個測試（SC-001）
+- [X] T079 [P] 在 `tests/integration/test_export_logging.py` 測試日誌：預覽、寫入、核對、重試、CSV 下載、重新授權各情境的日誌**不含**答案內容、原儲存格內容、試算表網址與標題、token、授權碼、`state`、client secret；只含活動代碼、嘗試編號、快照識別、格數、結果與原因類別；使用 `logging`、無 `print`（FR-033、憲章技術限制 3）
+- [X] T080 [P] 在 `tests/contract/test_error_safety.py` 追加（不改既有斷言）005 的端點：各種錯誤回應不含堆疊、檔案路徑、憑證、授權碼；Google 例外訊息本文不出現在任何回應與日誌（FR-031）
+- [X] T081 [P] 在 `tests/integration/test_export_snapshot_visibility.py` 測試資料可見性：學生 WebSocket 與 `GET snapshot` 在任何階段都沒有 `export`；學生呼叫 X1～X7 全部 403；老師快照的 `export` 不含答案、原內容與網址（憲章原則 V）
+- [X] T082 [P] 在 `tests/perf/test_export_latency.py`（`@pytest.mark.perf`，真實 uvicorn）測量：50 題規模、每活動 99 組的預覽計算（Google 以假替身，不含往返）與 CSV 產生各不超過 3 秒（SC-008）；老師＋6 組學生連線、每組 2 條時，寫回狀態變更到各老師分頁收到推送不超過 2 秒；記錄量測數字到 `verification.md`
+- [X] T083 [P] 在 `tests/real_google/test_real_export.py`（`@pytest.mark.real_google`，手動執行）實作真實路徑：缺任一必要環境變數（沿用 `REAL_GOOGLE_BASE_URL`、`REAL_GOOGLE_ACTIVITY_CODE`、`REAL_GOOGLE_TEACHER_TOKEN`、`REAL_GOOGLE_SPREADSHEET_ID`、`REAL_GOOGLE_SHEET_ID`，另加第二份試算表的 `*_B` 與寫入開關）時**明確失敗並說明缺什麼**，不得 `skip`、不得退回 mock；預覽 → 確認寫回 → 讀回驗證 R17 第 3 項（公式字樣、前導零、類日期、換行、單引號開頭）→ 再預覽結構仍相符 → CSV
+- [X] T084 在 `CLAUDE.md` 的「專案現況」追加「005-result-export 已實作」段落（程式路徑、對 001～004 沒有修改、重新授權入口與核對不做結構檢查的決定、待驗證事項）；`docs/DEVELOPMENT.md` 若有子功能列表同步更新（只追加，依擴充約定）
+- [X] T085 在 `specs/005-result-export/verification.md` 補齊「先寫測試的失敗紀錄」（各 Story 實作前的失敗數）與「自動化結果」的日期、指令、通過／失敗／略過數（憲章原則 VI、全域規則：只寫真的執行過的指令與輸出）
+- [X] T086 程式碼與圖表一致性驗證：逐一比對 `diagrams/005-result-export-component.puml`、`-class.puml`、`-sequence.puml` 與實作（模組、類別名稱、方法、流程、相依方向）；有差異時**先更新圖表並重新轉出 PNG**（只轉 005 的三個檔），並把比對結果寫入 `verification.md`（憲章原則 II）
+- [X] T087 執行 `ruff check .`、`ruff format --check .`、`mypy`，全部通過並記錄結果（憲章技術限制 2）
+- [X] T088 執行 `pytest -m "not real_google and not perf"`，確認全數通過、既有 001～004 測試不退步（與 T002 基準比較），記錄指令與通過／失敗／略過數（憲章原則 VI）
+- [X] T089 [P] 執行 `pytest -m perf tests/perf/test_export_latency.py`，記錄數字（SC-008）
+- [X] T090 執行 `tests/architecture/test_core_is_pure.py` 並確認 `core/result_export/` 被掃描且無違規：只匯入標準函式庫與 `lecture_quiz.core`，不匯入 `fastapi`、`starlette`、`asyncio`、`time`、`googleapiclient`、`google`、`httpx`，不呼叫 `datetime.now`（憲章技術限制 4）
+- [X] T091 依 [quickstart.md](quickstart.md) A 節逐步執行並核對預期結果，把差異記入 `verification.md`「問題紀錄」
 - [ ] T092 檢查日誌實際輸出（啟動 `python -m lecture_quiz`，走一次預覽、寫回、CSV）：只有 `logging`（INFO、stdout），無 `print`，未記錄答案、原內容、token、授權碼、client secret（憲章技術限制 3）
-- [ ] T093 檢查 repo：沒有機敏資料、`.env`、憑證 JSON 或本機檔案被追蹤（`git status`、`git ls-files`），`pyproject.toml` 沒有新增套件（憲章原則 V、VII）
+- [X] T093 檢查 repo：沒有機敏資料、`.env`、憑證 JSON 或本機檔案被追蹤（`git status`、`git ls-files`），`pyproject.toml` 沒有新增套件（憲章原則 V、VII）
 - [ ] T094 真實路徑驗證（涉及 Google 的子功能，憲章原則 VI）：用**兩份版面不同**的真實 Google 試算表各完成一次「匯入 → 搶答 → 定案 → 預覽 → 確認寫回 → 重新核對／重試 → 下載 CSV」，並執行 T083；**逐項確認並記錄 research R17 的五項假設**（`drive.file` 是否足以寫入、重新授權後是否仍能存取原檔、單引號開頭／公式字樣／前導零／類日期／換行的讀回、合併格只寫左上角、受保護範圍的狀態碼）；任何一項不成立就回報並調整 plan 的設計，不得以 mock 結果宣稱完成；憑證只放本機（SC-009）
 - [ ] T095 非實作者依 [quickstart.md](quickstart.md) C 節 13 步在多個瀏覽器分頁（老師＋至少兩組學生）以真實後端完整驗證一次，記錄日期、操作、結果數字與試算表版面差異於 `verification.md`「人工驗證」（SC-009、憲章原則 VI）；沒有實際執行不得勾選
 

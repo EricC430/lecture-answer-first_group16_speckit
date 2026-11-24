@@ -31,7 +31,7 @@ def run_world(s, layout):
 
 @pytest.mark.parametrize("layout", ["a", "b"])
 def test_exact_write_and_everything_else_preserved(export_stack, layout):
-    """Scenario: US3-AS1（混合題型）、US3-AS2（兩份版面）：目標格正確、其餘不變。"""
+    """Scenario: US3-AS1、AS2：混合題型與兩份版面，目標格正確、其餘不變。"""
     s = export_stack(layout)
     expected, answers = run_world(s, layout)
     key = ("sheet-1", SHEET_FOR[layout])

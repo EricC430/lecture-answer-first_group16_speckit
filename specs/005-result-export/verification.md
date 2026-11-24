@@ -33,6 +33,16 @@
 
 （Polish 階段填寫：日期、指令、通過／失敗／略過數）
 
+最終（T087、T088、T090，2026-11-25，US1～US6 與 Polish 自動化部分完成後）：
+
+| 指令 | 結果 |
+|---|---|
+| `.venv\Scriptsuff check .` | All checks passed |
+| `.venv\Scriptsuff format --check .` | 386 files already formatted |
+| `.venv\Scripts\mypy` | Success: no issues found in 83 source files |
+| `.venv\Scripts\python -m pytest -m "not real_google and not perf" -q` | 1328 passed、8 deselected、0 failed（基準 1089 passed；新增 239 項） |
+| `.venv\Scripts\python -m pytest tests/architecture/test_core_is_pure.py -q` | 29 passed（`core/result_export/` 的 6 個模組被掃描，無違規） |
+
 | 日期 | 指令 | 結果 |
 |---|---|---|
 | 2026-11-25（US6 完成時，中途紀錄） | `pytest -m "not real_google and not perf" -q` | 1324 passed、5 deselected、0 failed |
@@ -40,11 +50,19 @@
 
 ## 效能
 
-（T082、T089）
+2026-11-25，`pytest -m perf tests/perf/test_export_latency.py -q -o log_cli=true -o log_cli_level=INFO`：2 passed。
+
+| 項目 | 結果 |
+|---|---|
+| 預覽計算（50 題、99 組；不含 Google 往返） | 0.001 s（50 項），門檻 < 3 s |
+| CSV 產生（50 題 × 99 組 = 4950 列） | 0.019 s，門檻 < 3 s |
+| 寫回狀態推送（真實 uvicorn、老師 1＋6 組各 2 條共 13 條 WebSocket、10 次，Google 用假替身） | 最大 4.5 ms、平均 3.9 ms，門檻 < 2000 ms；12 條學生連線收到 `export` 欄位的次數為 0 |
+
+數字只代表 005 自己的處理與推送，不含真實 Google 往返。
 
 ## 真實路徑
 
-（T083、T094：兩份真實 Google 試算表。**尚未執行**）
+（T083、T094：兩份真實 Google 試算表。**尚未執行**；`tests/real_google/test_real_export.py` 已寫好，缺環境變數會明確失敗，但沒有用真實試算表跑過，所以 R17 的五項假設全部仍是「未驗證」）
 
 ## 人工驗證
 
@@ -68,4 +86,8 @@
 - **P-02**：tasks T029 把 `Attempt` JSON 序列化放在 web 層，但快照擴充（app 層）也要用；相依方向只能由外層指向核心，所以序列化放在 `src/lecture_quiz/app/result_export/views.py`，web 層與擴充共用。
 - **P-03**：`AttemptReason` 新增 `READ_FAILED`（寫入前讀取來源失敗、網路問題，沒有任何格被改）；data-model.md 與 http-api.md 已同步。
 - **P-04**：ruff 的 E501 以顯示寬度計算（中文字算 2），測試與 docstring 的長中文句子需縮短；不改行寬設定。
+- **P-06（T086，2026-11-25）圖表與程式碼一致性**：逐一比對三張圖與實作——組件圖（外層／應用層／核心與 001～004 唯讀相依、寫入轉接、重新授權直接用 002 授權連接埠）一致；類別圖補上 `WriteAttempt` 的三個格數與 `alreadyInProgress`、`PreviewView`、`WriteResult` 後與程式一致；時序圖修正兩處：預覽時「沒有成果」在讀取 Google 之前就拒絕（程式先檢查再讀取），以及核對的核心函式名稱為 `reconcile`。三張圖已重新轉出 PNG 並開啟檢視。
+- **P-07（T091）quickstart A 節**：ruff、format、mypy、pytest（預設）、perf 的指令都已執行並記錄在本檔；B 節（真實路徑自動化）與 C 節（人工）尚未執行。
+- **P-08（T092 未完成）**：實際啟動 `python -m lecture_quiz` 走一次預覽、寫回、CSV 需要真實 Google，尚未執行；日誌內容由 `tests/integration/test_export_logging.py` 以 caplog 驗證（不含答案、原儲存格內容、token、授權網址、`state`，且 stdout 沒有任何輸出），`grep` 確認 005 程式沒有 `print(`。
+- **P-09（T093）**：`git ls-files` 沒有 `.env`、憑證或金鑰檔（只有既有的 `secrets_gen.py` 與其測試）；`pyproject.toml` 沒有變更（不新增套件）。
 - **P-05**：整合測試 `tests/integration/conftest.py` 以真實 001～004 與 002 的 HTTP 入口建立世界，只把 Google 換成假的（`FakeSheetsWriter` 與 `FakeSheetsReader` 共用試算表狀態，analyze C1）。
