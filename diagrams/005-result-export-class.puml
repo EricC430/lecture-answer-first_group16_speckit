@@ -4,20 +4,34 @@ skinparam defaultFontName "Microsoft JhengHei"
 skinparam classAttributeIconSize 0
 title 005 定案成果寫回 Google Sheets 與 CSV 匯出 — 類別圖
 
-package "核心（純資料與純函式）" {
-  class ResultSnapshot <<資料>> {
-    snapshotId : 成果快照識別（由定案輪次集合決定）
-    items : WritePlanItem 清單
-    unwrittenQuestions : 未寫入題號（未成功、全被判錯、無人提交）
+package "核心 core/result_export（純資料與純函式）" {
+  class FinalizedEntry <<輸入，來自 004>> {
+    roundNumber, questionNumber, groupNumber
+    rank : 名次（被判錯為空）
+    judgedWrong : 是否被判錯
   }
 
-  class WritePlanItem <<資料>> {
-    questionNo : 題號
+  class FinalizedQuestion <<輸入，來自 004>> {
+    roundNumber, questionNumber
+    successGroup : 搶答成功者組號（沒有為空）
+  }
+
+  class SubmissionFact <<輸入，來自 003>> {
+    roundNumber, questionNumber, groupNumber
+    answers : 各子空格答案原文
+    receivedAt : 後端接收時間（含時區）
+  }
+
+  class BlankTarget <<輸入，來自 002>> {
+    questionNumber
     subIndex : 子編號（單題為空）
-    winnerGroupNo : 搶答成功者組號
-    answer : 答案（逐字文字值）
-    target : 目標位置（取自 002 映射，不寫死）
-    impact : OverwriteImpact
+    target : CellRef（取自 002 映射，不寫死）
+  }
+
+  class CurrentCell <<輸入，來自 005 轉接層>> {
+    kind : EMPTY / TEXT / OTHER
+    text : 只在 TEXT 有值
+    display : 純文字顯示
   }
 
   enum OverwriteImpact <<列舉>> {
@@ -26,84 +40,147 @@ package "核心（純資料與純函式）" {
     SAME : 內容相同
   }
 
-  class StructureSnapshot <<資料，來自 002>> {
-    sourceId : 試算表與工作表識別
-    headerPositions
-    questionNumbers
-    subBlanks
-    mergeRanges : 與表頭列及資料區相交者
-    answerCellMap
+  class WritePlanItem <<資料>> {
+    roundNumber, questionNumber, subIndex, groupNumber
+    answer : 答案（逐字文字值）
+    target : CellRef
+    impact : OverwriteImpact
+    currentDisplay : 原內容（REPLACE 時，已截斷）
   }
 
-  class StructureCheckResult <<資料>> {
-    status : 相符 / 不符（含無法辨識）
-    differences : 差異類別與位置清單
+  class ResultSnapshot <<資料>> {
+    snapshotId : 已定案輪次編號集合（例如 1.2）
+    items : WritePlanItem 清單
+    unwrittenQuestions : 未寫入題號
   }
 
-  class WriteOutcome <<資料>> {
-    status : 成功 / 明確失敗 / 待確認
-    confirmedCells : 已確認寫入格數
-    notWrittenCells : 確認未寫入格數
-    pendingCells : 尚未符合的格
-    reason : 失敗原因類別
+  enum DiffKind <<列舉>> {
+    IDENTITY
+    UNRECOGNIZED
+    HEADER_POSITION
+    QUESTION_NUMBER
+    SUB_BLANK
+    ANSWER_CELL
+    MERGE_RANGE
+  }
+
+  class StructureDifference <<資料>> {
+    kind : DiffKind
+    at : CellRef（可為空）
+    detail : 固定類別說明
+  }
+
+  class StructureCheck <<資料>> {
+    ok : 相符 / 不符
+    differences : StructureDifference 清單
+  }
+
+  class CellCheck <<資料>> {
+    questionNumber, subIndex
+    expected, currentDisplay
+    matches
+  }
+
+  enum OutcomeStatus <<列舉>> {
+    SUCCESS
+    FAILED
+    PENDING
+  }
+
+  class Reconciliation <<資料>> {
+    status : OutcomeStatus
+    checks : CellCheck 清單
   }
 
   class ExportRow <<資料>> {
-    round : 輪次
-    questionNo : 題號
-    subIndex : 子空格（單題為空）
-    groupNo : 組別（組號）
-    answer : 答案（來自 003）
-    receivedAt : 後端接收時間（來自 003，含時區）
-    rank : 順位（答錯為空；來自 004）
-    succeeded : 是否成功（名次 1 且未被判錯）
-    markedWrong : 是否被判錯（搶答失敗不算）
+    round, questionNo, subIndex, groupNo
+    answer（來自 003）, receivedAt（來自 003）
+    rank（答錯為空，來自 004）
+    succeeded : 名次 1 且未被判錯
+    judgedWrong : 搶答失敗不算
   }
 
   class ExportCore <<純函式>> {
-    +buildSnapshot(finalizedRounds, submissions, importRecord, currentCells) : ResultSnapshot
-    +checkStructure(importedStructure, rereadStructure) : StructureCheckResult
-    +judgeOutcome(expected, readBack, structureOk) : WriteOutcome
-    +buildRows(finalizedRounds, submissions) : ExportRow 清單（只含已定案輪次，以輪次、題號、組號對應）
-    +renderCsv(rows, formatTime) : 文字（UTF-8；逗號、引號、換行、公式字元保護）
+    +snapshotIdOf(roundNumbers) : str
+    +buildSnapshot(finalizedQuestions, submissions, blanks, questionNumbers, currentCells, roundNumbers) : ResultSnapshot
+    +compareStructure(imported: StructureSnapshot, reparsed: ParseResult) : StructureCheck
+    +reconcile(expected, currentCells) : Reconciliation（只比對記錄位置，不做結構檢查）
+    +buildRows(entries, submissions, blanks) : ExportRow 清單（只含已定案輪次）
+    +renderCsv(rows) : 文字（逗號、引號、換行）
+    +protectText(value) : 公式字元開頭加保護前綴
   }
 }
 
-package "應用層" {
-  class ExportService {
-    +preview(activityCode, teacher) : ResultSnapshot
-    +confirmWrite(activityCode, teacher, snapshotId) : WriteAttempt
-    +recheck(activityCode, teacher, attemptId) : WriteAttempt
-    +retry(activityCode, teacher, attemptId) : WriteAttempt
-    +downloadCsv(activityCode, teacher) : 檔案內容
+package "002 既有（唯讀）" {
+  class StructureSnapshot <<資料>> {
+    headerNumber, headerAnswer, answerCols, dataStartRow
+    mergeRanges : 與表頭列及資料區相交者
+    rowNumbers, answerCells
+  }
+  interface SheetsReader {
+    +read(code, source) : SheetSnapshot
+  }
+  interface AuthGateway {
+    +startAuthorization(code, requester) : 授權網址
+  }
+}
+
+package "應用層 app/result_export" {
+  enum AttemptStatus <<列舉>> {
+    IN_PROGRESS
+    SUCCESS
+    FAILED
+    PENDING
   }
 
   class WriteAttempt <<資料>> {
-    attemptId
-    snapshotId
-    outcome : WriteOutcome
-    startedAt : 時間（由外層傳入）
-    inProgress : 是否進行中（每活動最多一個）
+    attemptId, kind（WRITE / RETRY）
+    snapshotId, items : WritePlanItem 清單
+    status : AttemptStatus
+    reason : 原因類別（只有代碼）
+    differences, cellChecks
+    startedAt, finishedAt : 時間（由 Clock 取得）
+  }
+
+  class ExportStore <<記憶體>> {
+    attempts : 活動代碼 → WriteAttempt 清單
+    locks : 每活動一把鎖（同時最多一個進行中）
+  }
+
+  class ExportService {
+    +preview(code, requester) : PreviewView
+    +confirmWrite(code, requester, snapshotId) : WriteAttempt
+    +recheck(code, requester, attemptId) : WriteAttempt
+    +retry(code, requester, attemptId) : WriteAttempt
+    +latestAttempt(code, requester) : WriteAttempt
+    +startAuthorization(code, requester) : 授權網址
+    +downloadCsv(code, requester) : bytes（UTF-8 加 BOM）
+    +snapshotExtension(activity, viewer) : 老師版 export 摘要
+  }
+
+  interface SheetsWriter <<005 新增，外層實作>> {
+    +readCells(code, source, targets) : 目標格目前內容（userEnteredValue）
+    +writeTextCells(code, source, cells) : WriteResult（單一 batchUpdate 原子寫入）
   }
 }
 
-package "外層轉接" {
-  interface SheetsGateway {
-    +readStructure(sourceId) : StructureSnapshot（以匯入時相同規則重新辨識）
-    +readCells(targets) : 目標格內容
-    +writeTextValues(plan) : 外部結果（成功／明確失敗／無法證實）
-  }
-}
-
-ExportCore ..> ResultSnapshot
-ExportCore ..> StructureCheckResult
-ExportCore ..> WriteOutcome
-ExportCore ..> ExportRow
 ResultSnapshot "1" *-- "*" WritePlanItem
 WritePlanItem --> OverwriteImpact
-StructureCheckResult ..> StructureSnapshot : 比對
+StructureCheck "1" *-- "*" StructureDifference
+StructureDifference --> DiffKind
+Reconciliation "1" *-- "*" CellCheck
+Reconciliation --> OutcomeStatus
+ExportCore ..> ResultSnapshot
+ExportCore ..> StructureCheck
+ExportCore ..> Reconciliation
+ExportCore ..> ExportRow
+ExportCore ..> StructureSnapshot : 比對
+WriteAttempt --> AttemptStatus
+WriteAttempt "1" o-- "*" WritePlanItem
 ExportService ..> ExportCore : 呼叫純函式
-ExportService --> SheetsGateway : 讀取來源、寫入、讀回
-ExportService "1" o-- "0..*" WriteAttempt
-WriteAttempt --> WriteOutcome
+ExportService "1" o-- "1" ExportStore
+ExportStore "1" o-- "0..*" WriteAttempt
+ExportService --> SheetsReader : 重新讀取來源
+ExportService --> SheetsWriter : 讀取目標格、寫入、讀回
+ExportService --> AuthGateway : 重新授權
 @enduml
