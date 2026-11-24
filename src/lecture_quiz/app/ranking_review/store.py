@@ -94,13 +94,3 @@ class ReviewStore:
             value: 序列化後的 JSON。
         """
         self._cache[(code, round_number, version, final, kind)] = value
-
-    def drop(self, code: str) -> None:
-        """清掉該活動的審閱狀態、鎖與快取。
-
-        Args:
-            code: 活動代碼。
-        """
-        self._reviews = {k: v for k, v in self._reviews.items() if k[0] != code}
-        self._cache = {k: v for k, v in self._cache.items() if k[0] != code}
-        self._locks.pop(code, None)

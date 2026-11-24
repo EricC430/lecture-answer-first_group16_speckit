@@ -374,3 +374,8 @@ Task: "T008 tests/contract/test_http_ranking_review_wiring.py"
 - 學生可取得的資料不得含 `reason`、`countAtProcessing`、`groupCounts`（FR-036，SC-007、SC-010）；答案只由 003 提供，004 的 JSON 不含答案內容
 - 日誌只記活動代碼、輪次、題號、組號、`wrong`／`changed`、版本；不記答案、token、憑證（FR-032）
 - 驗證結果一律寫在 `specs/004-ranking-review/verification.md`，要有日期、指令與結果數字，沒有實際執行不得勾選
+
+## Phase 11: Convergence
+
+- [X] T097 補自動化測試：活動結束（階段 `ENDED`）後，對已定案輪次判錯、撤銷判錯回 `RESULT_ALREADY_FINAL` 且存放區與結果版本不變；同一版本的重複確認仍回 `already_finalized=True`、不再呼叫 001；老師與學生 JSON 的 `final` 為 `true`（探測已確認行為正確，缺的是測試），測試放在 `tests/unit/app/ranking_review/test_post_final_lock.py` per FR-023 / Edge Case「各階段的判錯請求」(partial)
+- [X] T098 檢視 `src/lecture_quiz/app/ranking_review/store.py` 的 `ReviewStore.drop`：`src/` 沒有任何呼叫者（001 沒有移除活動的路徑，只有後端重啟會清空）；決定移除它與 `tests/unit/app/ranking_review/test_store.py` 中對應的測試，或在 docstring 與 `data-model.md` 註明保留原因，並把決定記入 `verification.md`「問題紀錄」per data-model「活動被移除時一起清空」(unrequested)

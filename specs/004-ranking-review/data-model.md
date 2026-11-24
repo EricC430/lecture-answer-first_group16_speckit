@@ -122,7 +122,7 @@ finalize_plan(review, baseline) -> (solved_questions, success_increments, final_
 
 | 型別 | 說明 |
 |---|---|
-| `ReviewStore` | 記憶體：`reviews: dict[(code, round_number), RoundReview]`、`locks: dict[code, asyncio.Lock]`、`cache: dict[(code, round, version, final, kind), JsonDict]`（`final` 必須在鍵裡：定案不增加結果版本卻會改變輸出）；活動被移除時一起清空（後端重啟即清空） |
+| `ReviewStore` | 記憶體：`reviews: dict[(code, round_number), RoundReview]`、`locks: dict[code, asyncio.Lock]`、`cache: dict[(code, round, version, final, kind), JsonDict]`（`final` 必須在鍵裡：定案不增加結果版本卻會改變輸出）；沒有單獨的清除方法：001 只允許在第一輪開始前取消活動（那時 004 沒有任何資料），也沒有移除活動的路徑，資料只隨後端重啟一起清空 |
 | `RankingService` | `mark_wrong`／`unmark_wrong`（呼叫 `_set_wrong`）、`finalize`、`snapshot_extension`、`finalized_rounds`（`RankingReader`）；建構時向 001 註冊快照擴充 |
 | `RankingReader`（Protocol） | 給 005：`finalized_rounds(code) -> tuple[FinalizedRound, ...]` |
 | `FinalizedRound` | `round_number: int`、`result: FinalizedResult`；已定案輪次的唯讀視圖 |

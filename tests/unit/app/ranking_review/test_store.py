@@ -1,7 +1,5 @@
 """`ReviewStore`：審閱狀態、每活動一把鎖、快取（共用基礎，data-model「應用層」）。"""
 
-import asyncio
-
 from lecture_quiz.app.ranking_review.store import ReviewStore
 from lecture_quiz.core.ranking_review.models import RoundResult
 from lecture_quiz.core.ranking_review.review import RoundReview
@@ -47,19 +45,3 @@ def test_cache_key_includes_final_flag():
     assert store.cache_get("ABC123", 1, 3, True, "teacher") is None
     assert store.cache_get("ABC123", 1, 4, False, "teacher") is None
     assert store.cache_get("ABC123", 1, 3, False, "student") is None
-
-
-def test_drop_clears_reviews_lock_and_cache_of_that_activity_only():
-    store = ReviewStore()
-    store.put("ABC123", _review(1))
-    store.put("ZZZ999", _review(1))
-    old_lock = store.lock("ABC123")
-    store.cache_put("ABC123", 1, 1, False, "teacher", {"x": 1})
-    store.cache_put("ZZZ999", 1, 1, False, "teacher", {"x": 2})
-    store.drop("ABC123")
-    assert store.get("ABC123", 1) is None
-    assert store.cache_get("ABC123", 1, 1, False, "teacher") is None
-    assert store.get("ZZZ999", 1) is not None
-    assert store.cache_get("ZZZ999", 1, 1, False, "teacher") == {"x": 2}
-    assert store.lock("ABC123") is not old_lock
-    assert isinstance(old_lock, asyncio.Lock)

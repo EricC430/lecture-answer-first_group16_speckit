@@ -55,3 +55,35 @@ def test_no_route_changes_round_mode_and_pending_stage_blocks_new_round():
         )
 
     assert asyncio.run(scenario()).ok is False
+
+
+def test_after_activity_ended_everything_stays_locked():
+    """FR-023／Edge Case「各階段的判錯請求」：活動結束（ENDED）後仍鎖定。"""
+    from lecture_quiz.app.activity.ports import GroupViewer, TeacherViewer
+    from lecture_quiz.core.activity.models import Stage
+
+    async def scenario():
+        world = await closed_world()
+        await world.ranking.finalize(world.code, world.teacher, 1)
+        assert (await world.activities.end(world.code, world.teacher)).ok
+        version = world.store.get(world.code, 1).version
+        mark = await world.ranking.mark_wrong(world.code, world.teacher, 1, 1, 1)
+        undo = await world.ranking.unmark_wrong(world.code, world.teacher, 1, 1, 1)
+        again = await world.ranking.finalize(world.code, world.teacher, 1)
+        other = await world.ranking.finalize(world.code, world.teacher, 7)
+        activity = world.activities.get(world.code)
+        views = [
+            world.ranking.snapshot_extension(activity, viewer)["ranking"]["rounds"][0]
+            for viewer in (TeacherViewer(), GroupViewer(1))
+        ]
+        return world, version, mark, undo, again, other, views
+
+    world, version, mark, undo, again, other, views = asyncio.run(scenario())
+    assert world.activities.get(world.code).stage is Stage.ENDED
+    assert mark.rejection is ReviewRejection.RESULT_ALREADY_FINAL
+    assert undo.rejection is ReviewRejection.RESULT_ALREADY_FINAL
+    assert again.ok and again.value.already_finalized
+    assert other.rejection is ReviewRejection.RESULT_ALREADY_FINAL
+    assert world.store.get(world.code, 1).version == version
+    assert len(world.spy.finalize_calls) == 1  # 結束後的重複確認不再呼叫 001
+    assert all(view["final"] is True for view in views)

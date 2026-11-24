@@ -37,6 +37,8 @@
 | T084 程式碼與圖表一致性 | 2026-11-24 | 人工逐項比對 `diagrams/004-ranking-review-{component,class,sequence}.puml` 與程式；改圖後 `java -jar plantuml.jar` 重新轉出並開啟 PNG 檢視 | 發現類別圖 4 處與程式不一致並已修正：題序在獨立的 `QuestionOrder`（由 `RoundReview.initial` 呼叫）、`as_final` 是函式不是 `ResultView` 方法、新增 `RoundView`、回傳型別為 `ReviewOutcome`；`RankingCalculator` 補 `initialCounts`、`rankSpeed`／`rankFair` 的實際參數。組件圖與時序圖與程式一致，不需修改。類別圖 PNG 已重新產生並開啟檢視，文字可讀、無重疊 |
 | T089 OpenSpec 核對 | 2026-11-24 | `sha256sum docs/openspec-reference/ranking-review/spec.md` | `7a243602279aa7f22f33436903cb171df7749d2efe951783ec5c56c4615bd23f`，與 `README.md` 一致；實作沒有新增或偏離 OpenSpec 的功能行為（學生畫面範圍屬顯示時機，使用者 2026-11-24 確認不衝突） |
 | T095 機敏資料 | 2026-11-24 | `git ls-files \| grep -E "\.env$\|credentials\|client_secret\|期末專題說明\|project_proposal"`；`grep -rln "client_secret\|access_token\|refresh_token"` 於 004 檔案 | 沒有任何輸出；全專案 grep 的命中只在 002 的 Google 轉接器（設定欄位名稱），不是 004 的檔案，也不是密鑰值 |
+| Convergence T097（ENDED 階段鎖定測試） | 2026-11-24 | `pytest -m "not real_google and not perf"`；`ruff check .`；`ruff format --check .`；`mypy` | 1090 passed, 5 deselected（+1）；ruff All checks passed；format 309 files already formatted；mypy Success: no issues found in 68 source files。新測試 `test_after_activity_ended_everything_stays_locked` 一寫完就通過（行為已正確，converge 探測先確認過）；突變檢查：暫時讓 `_is_final` 不含 `Stage.ENDED`，該測試 1 failed、同檔其餘 3 passed，還原後 4 passed |
+| Convergence T098（移除 `ReviewStore.drop`） | 2026-11-24 | `pytest -m "not real_google and not perf"`；`ruff check .`；`ruff format --check .`；`mypy`；`grep -rn "\.drop(" src tests` | 1089 passed, 5 deselected（移除 1 個只測 `drop` 的測試，-1）；ruff All checks passed；format 309 files already formatted；mypy Success: no issues found in 68 source files；grep 沒有任何輸出 |
 
 ## 效能（T082～T083）
 
