@@ -1,13 +1,43 @@
-// 004 學生頁：本組每題的結果狀態（US7 再依 FR-036 補上目前的搶答成功者與剛被判錯的前一組）。
-// 所有文字一律 textContent（FR-028）。
+// 004 學生頁（FR-036、FR-037）：每題只顯示 ① 本組的狀態 ② 目前的搶答成功者
+// ③ 剛被判錯的前一組（有遞補者時一起顯示）。不逐組列出其他候選，不顯示理由與他組次數。
+// 答案由 003 的 submissions.published 以（輪次、題號、組號）合併；所有文字用 textContent。
 
 import { onStudentSnapshot } from "./student.js";
 import { el } from "./submission.js";
-import { STATUS_LABELS, acceptRankingRounds, acceptRankingVersion } from "./ranking-common.js";
+import { STATUS_LABELS, acceptRankingRounds, acceptRankingVersion, answerOf } from "./ranking-common.js";
 
 export { acceptRankingVersion };
 
 const $ = (id) => document.getElementById(id);
+
+function line(snapshot, round, question, entry, prefix) {
+  const item = el("li", "", `ranking-line status-${entry.displayStatus.toLowerCase()}`);
+  item.append(el("strong", `${prefix}第 ${entry.groupNumber} 組：${STATUS_LABELS[entry.displayStatus]}`));
+  const answer = answerOf(snapshot, round.roundNumber, question.questionNumber, entry.groupNumber);
+  if (answer) item.append(el("pre", answer, "ranking-answer"));
+  return item;
+}
+
+function questionBlock(snapshot, round, question, own) {
+  const block = el("div", "", "ranking-question");
+  const updated = round.affectedQuestions.includes(question.questionNumber) ? "（結果已更新）" : "";
+  block.append(el("h4", `第 ${question.questionNumber} 題${updated}`));
+  const byGroup = new Map(question.entries.map((e) => [e.groupNumber, e]));
+  const list = el("ul", "", "ranking-own");
+  const shown = new Set();
+  const show = (group, prefix) => {
+    const entry = byGroup.get(group);
+    if (!entry || shown.has(group)) return;
+    shown.add(group);
+    list.append(line(snapshot, round, question, entry, prefix));
+  };
+  if (question.replacedGroup !== null) show(question.replacedGroup, "");
+  if (question.successGroup !== null) show(question.successGroup, "目前搶答成功者：");
+  else list.append(el("li", "未成功", "ranking-line"));
+  show(own, "本組：");
+  block.append(list);
+  return block;
+}
 
 function render(snapshot) {
   const section = $("ranking-review-student-section");
@@ -20,15 +50,13 @@ function render(snapshot) {
   container.replaceChildren();
   for (const round of [...rounds].reverse()) {
     const wrapper = el("div", "", "ranking-round");
-    wrapper.append(el("h3", `第 ${round.roundNumber} 輪`));
-    const list = el("ul", "", "ranking-own");
+    wrapper.append(el("h3", `第 ${round.roundNumber} 輪${round.final ? "（結果已定案）" : "（結果未定案）"}`));
     for (const question of round.questions) {
-      const mine = question.entries.find((e) => e.groupNumber === own);
-      const updated = round.affectedQuestions.includes(question.questionNumber) ? "（結果已更新）" : "";
-      if (mine) list.append(el("li", `第 ${question.questionNumber} 題：${STATUS_LABELS[mine.displayStatus]}${updated}`));
-      else if (question.successGroup === null) list.append(el("li", `第 ${question.questionNumber} 題：未成功${updated}`));
+      const hasOwn = question.entries.some((e) => e.groupNumber === own);
+      if (hasOwn || question.successGroup !== null) {
+        wrapper.append(questionBlock(snapshot, round, question, own));
+      }
     }
-    wrapper.append(list);
     container.append(wrapper);
   }
 }

@@ -28,6 +28,7 @@
 | Phase 7 完成（T053～T054、T056～T059，US5） | 2026-11-24 | `pytest -q`；`ruff check .`；`ruff format --check .`；`mypy` | 703 passed, 2 deselected（+10）；ruff All checks passed；format 227 files already formatted；mypy Success: no issues found in 48 source files。依 T058 說明，重算在 US2～US4 已實作，所以這組測試一寫完就通過（不要求先失敗）；鑑別力由 T054 負對照證明：累加式錯誤實作 `accumulating_recompute` 跑完判錯、撤銷後與初始結果不同（`!=` 斷言通過），正確實作相同。前端「結果已更新」與版本守衛（T059）無自動化測試，待 T094 |
 | Phase 8 完成（T060～T070，US6） | 2026-11-24 | `pytest -q`；`ruff check .`；`ruff format --check .`；`mypy` | 733 passed, 2 deselected（+30）；ruff All checks passed；format 235 files already formatted；mypy Success: no issues found in 48 source files。測試先行：`test_finalize_plan.py` 先 `AttributeError`（無 `finalize_plan`），其餘 US6 測試在實作前因 `finalize` 為 `NotImplementedError` 失敗。實作後 001 的空定案路由已移除，既有 2 個測試因行為變化調整（見 P-09、P-10）。老師頁「確認定案」按鈕（T070）無自動化測試，待 T094 |
 | PR #20 審查回應（T096） | 2026-11-24 | `pytest -q`；`ruff check .`；`ruff format --check .`；`mypy` | 735 passed, 2 deselected（+2，新增 `test_single_finalize_button.py`）；ruff All checks passed；format 236 files already formatted；mypy Success: no issues found in 48 source files。已移除 001 老師頁的舊「確認定案」按鈕；Q-23／24／25 於 alignment.md 標為定案 |
+| Phase 9 完成（T071～T078，US7） | 2026-11-24 | `pytest -q`；`ruff check .`；`ruff format --check .`；`mypy`；`node --check`（6 個前端模組） | 746 passed, 2 deselected（+11）；ruff All checks passed；format 240 files already formatted；mypy Success: no issues found in 48 source files；node --check 6 個模組皆語法正確。**未做到先紅後綠**：US7 的資料面（學生版省略理由與次數、替換歷程、版本單調）在 US2～US6 已實作，所以 T071、T072、T074、T075 一寫完就通過；T073 擴充 `FORBIDDEN` 加入 `eval(`、`new Function`，既有與新增前端檔案都不含，直接通過。**學生畫面實際只顯示哪些組（T076）、003 學生頁移除已公開作答（T077）、老師頁不重複顯示答案（T078）沒有自動化測試，只有語法檢查，必須由 T094 人工驗證** |
 
 ## 效能（T082～T083）
 
@@ -56,3 +57,5 @@
 | P-09 | Phase 8 | `test_finalize_during_round_is_409` 斷言搶答中定案的訊息為「請先關輪，再確認定案。」；004 接手後預設訊息變成「本輪尚未關閉，無法判錯。」 | 定案時的 `ROUND_STILL_OPEN` 沿用原訊息，測試斷言未改 |
 | P-10 | Phase 8 | `test_second_round_keeps_history_and_hides_new_answers` 在第 2 輪提交題一，但 001 空定案換成 004 真定案後題一已成功、提交被拒（400） | 該測試改提交題二；這是定案行為從「不記成果」變成「記成功題」的預期後果，未放寬任何斷言 |
 | P-11 | Phase 8 | 我寫的 US6 測試有三處預期算錯（沒判錯時乙只成功題二，次數應為 1 而不是 2）；第 2 輪「全題成功後開輪」001 回 400 而非 409 | 修正測試預期，實作未改 |
+| P-12 | Phase 9 | T077 要求調整 003 學生頁；`grep -rn "renderPublished\|published-section\|published-list" tests` 沒有任何測試斷言學生頁文字，所以沒有測試需要調整；`submissions.published` 的資料層斷言完全未動 | 刪除學生頁「已公開的作答」區塊（`student.html`）與 `round-submission.js` 的 `renderHistory`；003 負責人需知會 |
+| P-13 | Phase 9 | T078：老師頁同一輪的答案會在 003 已公開列表與 004 區塊各出現一次 | `round-submission-teacher.js` 只列出 004 尚未涵蓋的輪次；判錯標記以 004 為準 |

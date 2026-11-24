@@ -24,7 +24,14 @@ CHECKED = (
     "student.js",
     "teacher.js",
 )
-FORBIDDEN = ("innerHTML", "outerHTML", "insertAdjacentHTML", "document.write")
+FORBIDDEN = (
+    "innerHTML",
+    "outerHTML",
+    "insertAdjacentHTML",
+    "document.write",
+    "eval(",
+    "new Function",
+)
 
 
 def _source(name: str) -> str:
