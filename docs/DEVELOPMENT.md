@@ -154,6 +154,25 @@ def create_router(app: FastAPI) -> APIRouter:
 - 不可信的文字（組名、學習單內容、學生答案）一律用 `textContent` 輸出，不得用 `innerHTML`（原則 V）。
 - 「成功」類提示加上 `class="success-hint"`；同步中斷時會自動隱藏（FR-028）。
 
+### 3.5 快照擴充（003 起）
+
+子功能要把自己的資料放進 001 的快照時，不改 001 的快照程式，改為註冊擴充函式：
+
+```python
+def snapshot_extension(activity: Activity, viewer: Viewer) -> Mapping[str, object]:
+    if isinstance(viewer, TeacherViewer):
+        return {"myFeature": ...}  # 老師版
+    return {"myFeature": ...}  # 學生版：只放 viewer.group_number 那一組看得到的資料
+
+
+activity_service.add_snapshot_extension(snapshot_extension)
+```
+
+- 擴充函式是同步、無副作用的純讀取；每次產生快照（HTTP 與 WebSocket 推送）都會呼叫，不要在裡面做 I/O。
+- 學生版只能放該組可見的資料；hub 會比較每條連線的快照內容，內容沒變就不推送，所以他組的變動不會讓學生收到訊息（001 FR-030）。
+- 沒有資料時回傳 `{}`，快照就與原本完全相同（避免影響既有測試）。
+- 需要在活動鎖內判定並改變狀態時，用 `ActivityService.record_submission(code, device_token, handler)`，寫法見 003 的 `app/round_submission/service.py` 與 001 `contracts/service-interfaces.md`「給 003」。
+
 ### 4. 測試
 
 - 需要時間的測試用 `fake_clock` fixture，以 `advance(seconds)` 控制時間。

@@ -119,7 +119,12 @@ class WebSocketHub:
         await asyncio.gather(*(self._push(activity, conn) for conn in conns))
 
     async def _push(self, activity: Activity, conn: _Connection) -> None:
-        view = ActivityService.snapshot_for(activity, conn.requester)
+        if self._service is None:
+            logger.warning(
+                "WebSocketHub 尚未綁定服務，略過推送 activity=%s", activity.code
+            )
+            return
+        view = self._service.snapshot_for(activity, conn.requester)
         if view is None:
             return
         try:

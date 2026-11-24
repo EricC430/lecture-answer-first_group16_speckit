@@ -1,0 +1,74 @@
+@startuml 003-round-submission-sequence
+skinparam defaultFontName "Microsoft JhengHei"
+title 003 多題搶答與送出 — 時序圖（提交、同組競爭、截止後、舊輪次；plan 2026-11-23）
+
+actor "甲組裝置 A" as A
+actor "甲組裝置 B" as B
+actor "乙組裝置" as C
+participant "提交 API" as Api
+participant "SubmissionService" as Svc
+participant "001 ActivityService" as Act
+participant "Clock" as Clock
+participant "SubmissionRules（純函式）" as Rules
+participant "SubmissionStore" as Store
+participant "WebSocketHub" as Hub
+actor "老師看板" as T
+
+== 正常提交（題組兩格） ==
+A -> Api : POST /submissions（roundNumber、questionNumber、answers；Bearer 裝置 token）
+Api -> Svc : submit(code, token, attempt)
+Svc -> Act : record_submission(code, token, handler)
+activate Act
+note over Act : 進入該活動的鎖
+Act -> Act : 依 token 找裝置 → 組號
+Act -> Clock : now()
+Clock --> Act : t
+Act -> Act : 組 SubmissionWindow（accepting = 搶答中且 t < 截止時間）
+Act -> Svc : handler.decide(window, t)
+Svc -> Store : get(code)
+Svc -> Rules : decide(ledger, context, code, attempt, t)
+Rules --> Svc : ACCEPTED（Submission，sequence = next_sequence）
+Svc --> Act : accept
+Act -> Act : 套用 RecordSubmission（標記組別、revision + 1）
+Act -> Svc : handler.commit()
+Svc -> Store : put(code, ledger + submission)
+note over Act : 離開鎖
+Act -> Hub : publish(activity)
+deactivate Act
+Hub -> Hub : 各連線 snapshot_for（含 003 擴充）；內容相同不送
+Hub --> T : 甲組題 1 已送出與答案（2 秒內）
+Hub --> B : 本組題 1 已送出與答案
+note right of C : 乙組快照內容不變 → 不推送
+Api --> A : 201 accepted（submission）
+
+== 同組另一台裝置再送（或回應遺失後重送） ==
+B -> Api : POST /submissions（題 1、不同答案）
+Api -> Svc : submit(...)
+Svc -> Act : record_submission(...)
+Act -> Svc : handler.decide(window, t2)
+Svc -> Rules : decide(...)
+Rules --> Svc : ALREADY_SUBMITTED（既有 Submission）
+Svc --> Act : no_change
+note over Act : 不標記、不保存、不推送
+Api --> B : 200 alreadySubmitted（附既有答案與接收時間）
+
+== 截止後或關輪後提交 ==
+A -> Api : POST /submissions（題 2）
+Api -> Svc : submit(...)
+Svc -> Act : record_submission(...)
+Act -> Svc : handler.decide(window[accepting = false], t3)
+Svc -> Rules : decide(...)
+Rules --> Svc : REJECTED（ROUND_CLOSED）
+Svc --> Act : no_change（拒絕原因放在回傳值）
+Api --> A : 409 本輪已結束（不保存）
+
+== 舊輪次頁面提交 ==
+A -> Api : POST /submissions（roundNumber = 舊輪）
+Api -> Svc : submit(...)
+Svc -> Act : record_submission(...)
+Act -> Svc : handler.decide(...)
+Svc -> Rules : decide(...)
+Rules --> Svc : REJECTED（STALE_ROUND）
+Svc --> Act : no_change（拒絕原因放在回傳值）
+Api --> A : 409 輪次已更新，請重新整理後再作答
+@enduml

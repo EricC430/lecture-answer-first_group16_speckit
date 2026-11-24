@@ -1,0 +1,55 @@
+@startuml 003-round-submission-component
+!pragma layout smetana
+skinparam defaultFontName "Microsoft JhengHei"
+skinparam componentStyle rectangle
+title 003 多題搶答與送出 — 組件圖（相依方向：外層 → 核心；實作後校正 2026-11-24）
+
+actor "老師" as Teacher
+actor "學生（各組多裝置）" as Student
+
+package "外層：畫面與 API（轉接層）" {
+  [學生作答畫面\n（本輪開放題、題組多格輸入、本組已送狀態、\n依後端截止時間倒數、同步中斷提示；答案以純文字顯示）] as StudentUI
+  [老師看板\n（各組各題已送／尚未送出、答案、接收時間與先後；\n關輪後公開結果）] as TeacherUI
+  [提交 API（HTTP）\n（解析裝置 token、輪次識別與各格答案；\n錯誤訊息轉換，不記錄 token 與答案內容）] as SubmitApi
+  [同步推送（沿用 001 WebSocketHub）\n（快照含 003 擴充；學生只含本組提交，內容不變不推送）] as Sync
+  [系統時鐘（沿用 001 SystemClock）] as ClockImpl
+  [開發用格數來源 DevQuestionShapeSource\n（dev seed；002 合併前使用）] as DevShapes
+}
+
+package "應用層" {
+  [提交服務 SubmissionService\n（經 001 record_submission 在同一把活動鎖內\n判定 → 標記 → 保存；鎖外推送）] as Service
+  [提交登錄表 SubmissionStore\n（只存在記憶體；依活動 → 輪次 → 題號 → 組號）] as Store
+  [ports：QuestionShapeSource、SubmissionReader\n（Protocol；格數由 002／dev seed 提供，\n讀取介面給 004／005）] as Ports
+}
+
+package "核心（純函式：不依賴網路、Web 框架、系統時鐘）" {
+  [提交判定 SubmissionRules\n（紀錄 + 本輪資訊 + 嘗試 + 傳入時間 + 下一序號\n→ 接受／本組已送出／拒絕原因）] as Rules
+  [答案正規化與檢查\n（判空去首尾空白但保存原文、每格 500 字、格數檢查）] as AnswerRules
+  [提交檢視裁切 SubmissionView\n（老師版／學生版／關輪公開版；依接收時間與序號排序）] as View
+}
+
+package "其他子功能" {
+  [001 活動服務\n（record_submission：鎖內 SubmissionWindow → 判定 → 標記 → 保存；\n快照擴充、版本與推送）] as Activity
+  [002 匯入服務\n（每題子空格數；合併後接上，T065）] as Import
+  [004 順位與定案\n（讀取有效提交）] as Ranking
+  [005 匯出\n（讀取有效提交）] as Export
+}
+
+Teacher --> TeacherUI
+Student --> StudentUI
+StudentUI --> SubmitApi : 送出答案
+TeacherUI <.. Sync : 推送
+StudentUI <.. Sync : 推送（只含本組）
+SubmitApi --> Service
+Service --> Store
+Service --> Rules
+Rules --> AnswerRules
+Service --> View
+Service --> Ports
+Activity --> ClockImpl : 鎖內取得接收時間
+Import ..|> Ports
+DevShapes ..|> Ports
+Service --> Activity : record_submission（鎖內判定、標記、保存）、\n註冊快照擴充
+Ranking --> Service : 唯讀取得本輪提交
+Export --> Service : 唯讀取得全部提交
+@enduml

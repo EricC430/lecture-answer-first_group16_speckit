@@ -67,11 +67,20 @@
         <button type="submit">開輪</button>
       </form>
     </section>
+    <section id="round-submission-section" data-feature="003-round-submission" hidden>
+      <h2>作答看板</h2>
+      <div id="submission-board"></div>
+    </section>
+    <section id="published-section" data-feature="003-round-submission" hidden>
+      <h2>已公開的作答</h2>
+      <div id="published-list"></div>
+    </section>
     <!-- ── 子功能區塊結束 ── -->
   </main>
   <div id="sync-status" aria-live="polite"></div>
   <!-- ── 子功能 script 開始（每個子功能一行）── -->
   <script type="module" src="js/teacher.js"></script>
+  <script type="module" src="js/round-submission-teacher.js"></script>
   <!-- ── 子功能 script 結束 ── -->
 </body>
 </html>
