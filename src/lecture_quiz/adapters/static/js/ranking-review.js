@@ -51,11 +51,10 @@ function render(snapshot) {
   for (const round of [...rounds].reverse()) {
     const wrapper = el("div", "", "ranking-round");
     wrapper.append(el("h3", `第 ${round.roundNumber} 輪${round.final ? "（結果已定案）" : "（結果未定案）"}`));
+    // 每一題都要畫出來：沒有搶答成功者的題（沒人提交、或唯一的提交被判錯）顯示「未成功」，
+    // 沒有提交的組也要看到（spec US7-AS9）。他組的資料由後端的學生版 JSON 限縮，這裡不過濾。
     for (const question of round.questions) {
-      const hasOwn = question.entries.some((e) => e.groupNumber === own);
-      if (hasOwn || question.successGroup !== null) {
-        wrapper.append(questionBlock(snapshot, round, question, own));
-      }
+      wrapper.append(questionBlock(snapshot, round, question, own));
     }
     container.append(wrapper);
   }
