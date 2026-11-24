@@ -4,6 +4,9 @@
 - `ManualScheduler`：手動觸發的倒數排程（001）。
 - `make_app`：以指定時鐘、排程建立 app 的工廠。
 - fixture：`fake_clock`、`manual_scheduler`、`client`、`teacher`（001）。
+- `FakeQuestionShapeSource`：每題子空格數的假來源（003；`make_app` 預設使用）。
+- `seed_questions(..., blanks=...)`：放入題目時一併設定每題格數（003）。
+- `submit(...)`：以 HTTP 送出答案（003）。
 
 子功能專屬的工具請追加在本檔最後，或放在各自測試目錄的 conftest.py。
 """
@@ -68,12 +71,32 @@ class ManualScheduler:
         await self._callback(code, self.last_deadline[code])
 
 
+class FakeQuestionShapeSource:
+    """測試用的每題子空格數來源（003 的 `QuestionShapeSource`）。"""
+
+    def __init__(self) -> None:
+        self.shapes: dict[str, dict[int, int]] = {}
+
+    def set(self, code: str, blanks: dict[int, int]) -> None:
+        self.shapes[code] = dict(blanks)
+
+    def blanks_per_question(self, code: str):
+        return self.shapes.get(code)
+
+
 def make_app(
     clock: FakeClock | None = None,
     scheduler: ManualScheduler | None = None,
     **kwargs: Any,
 ) -> FastAPI:
-    """以 FakeClock 與 ManualScheduler 建立 app。"""
+    """以 FakeClock、ManualScheduler 建立 app。
+
+    沒有指定 `question_shape_source`、也沒有注入 002 的 `import_sheets_reader` 時，
+    預設用 `FakeQuestionShapeSource`（003 測試自己設定格數）；注入了 002 的讀取器，
+    就走真實的 `ImportService`，格數來自真正的匯入結果。
+    """
+    if "import_sheets_reader" not in kwargs:
+        kwargs.setdefault("question_shape_source", FakeQuestionShapeSource())
     return create_app(
         clock=clock if clock is not None else FakeClock(),
         scheduler=scheduler if scheduler is not None else ManualScheduler(),
@@ -144,8 +167,22 @@ def call(client: TestClient, fn, *args, **kwargs):
     return client.portal.call(runner)
 
 
-def seed_questions(client: TestClient, teacher: TeacherSession, count: int = 4) -> None:
-    """以 replace_questions 放入題號 1..count（研究 R8：自動化測試直接呼叫服務）."""
+def seed_questions(
+    client: TestClient,
+    teacher: TeacherSession,
+    count: int = 4,
+    blanks: list[int] | None = None,
+) -> None:
+    """以 replace_questions 放入題號 1..count（研究 R8：自動化測試直接呼叫服務）.
+
+    `blanks` 為各題子空格數（003）；省略時不設定格數（001 的測試不受 003 快照欄位
+    影響）。只有 app 使用 `FakeQuestionShapeSource` 時才會設定。
+    """
+    if blanks is not None:
+        assert len(blanks) == count
+    shapes = client.app.state.question_shape_source
+    if blanks is not None and isinstance(shapes, FakeQuestionShapeSource):
+        shapes.set(teacher.code, {n: blanks[n - 1] for n in range(1, count + 1)})
     service = service_of(client)
     requester = service.resolve_requester(teacher.code, teacher.token)
     outcome = call(
@@ -226,3 +263,26 @@ def import_client(
     )
     with TestClient(app) as test_client:
         yield test_client
+
+
+def submit(
+    client: TestClient,
+    code: str,
+    device_token: str,
+    round_number: object,
+    question_number: object,
+    answers: object,
+    **extra: Any,
+):
+    """以 HTTP 送出答案（003）；回傳 response。"""
+    body = {
+        "roundNumber": round_number,
+        "questionNumber": question_number,
+        "answers": answers,
+        **extra,
+    }
+    return client.post(
+        f"/api/activities/{code}/submissions",
+        json=body,
+        headers={"Authorization": f"Bearer {device_token}"},
+    )

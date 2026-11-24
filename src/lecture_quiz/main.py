@@ -21,7 +21,13 @@ from fastapi.staticfiles import StaticFiles
 
 from lecture_quiz.adapters.clock import SupportsNow, SystemClock
 from lecture_quiz.adapters.countdown import AsyncioCountdownScheduler
-from lecture_quiz.adapters.web import guided_notes_import, http_api, system, ws_sync
+from lecture_quiz.adapters.web import (
+    guided_notes_import,
+    http_api,
+    submission_api,
+    system,
+    ws_sync,
+)
 from lecture_quiz.adapters.web.common import (
     RequestLogMiddleware,
     install_api_fallback,
@@ -31,6 +37,9 @@ from lecture_quiz.app.activity.ports import CountdownScheduler
 from lecture_quiz.app.activity.registry import ActivityRegistry
 from lecture_quiz.app.activity.service import ActivityService
 from lecture_quiz.app.guided_notes_import.ports import AuthGateway, SheetsReader
+from lecture_quiz.app.round_submission.ports import QuestionShapeSource
+from lecture_quiz.app.round_submission.service import SubmissionService
+from lecture_quiz.app.round_submission.store import SubmissionStore
 
 STATIC_DIR = Path(__file__).parent / "adapters" / "static"
 LOG_FORMAT = "%(asctime)s %(levelname)s %(name)s %(message)s"
@@ -61,6 +70,21 @@ def _wire_activity(
     app.state.sync_hub = hub
 
 
+def _wire_submission(app: FastAPI, shapes: QuestionShapeSource | None) -> None:
+    """組裝 003 的提交服務；每題子空格數來源：指定者 → 002 的匯入服務。
+
+    `app.state.import_service` 由 002 的 `create_router(app)` 建立，所以本函式
+    必須在它之後呼叫；`ImportService.blanks_per_question` 結構上符合
+    `QuestionShapeSource`（003 研究 R6、002 契約「給 003」）。
+    """
+    if shapes is None:
+        shapes = app.state.import_service
+    app.state.question_shape_source = shapes
+    app.state.submission_service = SubmissionService(
+        app.state.activity_service, SubmissionStore(), shapes
+    )
+
+
 def create_app(
     clock: SupportsNow | None = None,
     scheduler: CountdownScheduler | None = None,
@@ -68,6 +92,7 @@ def create_app(
     import_sheets_reader: SheetsReader | None = None,
     ws_auth_timeout: float = 5.0,
     ws_ping_interval: float = 10.0,
+    question_shape_source: QuestionShapeSource | None = None,
 ) -> FastAPI:
     """建立 FastAPI app。
 
@@ -81,6 +106,8 @@ def create_app(
             省略時使用真實轉接器。
         ws_auth_timeout: WebSocket 等待 auth 的秒數。
         ws_ping_interval: WebSocket ping 間隔秒數。
+        question_shape_source: 每題子空格數來源（003）；測試傳入假來源，省略時
+            使用 002 的 `ImportService`（最後一次成功匯入的結果）。
 
     Returns:
         已掛上共用錯誤處理、請求日誌、所有 API router、WebSocket 與靜態檔的 app。
@@ -97,7 +124,10 @@ def create_app(
     # ── 子功能 router：每個子功能只加一行（順序不限）──
     api.include_router(system.create_router(app))
     api.include_router(http_api.create_router(app))  # 001
+    # 002 先建立 import_service，003 的格數來源才能指向它
     api.include_router(guided_notes_import.create_router(app))  # 002
+    _wire_submission(app, question_shape_source)  # 003 的格數來源依賴 002，須在其後
+    api.include_router(submission_api.create_router(app))  # 003
     # ── 子功能 router 結束 ──
     app.include_router(api)
     install_api_fallback(app)  # 未定義的 /api 路徑一律 404

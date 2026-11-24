@@ -30,6 +30,14 @@
 | `accepts_submission(code, now) -> bool` | `stage == ROUND_OPEN`，而且沒有截止時間，或 `now < deadline`；用 `ActivityStateMachine.is_deadline_passed` 判斷 |
 | `mark_group_submitted(code, group_number) -> Outcome[int]` | 標記該組有提交紀錄，用於「刪除空組」的判定（alignment 2026-11-23 B5）。只在 `ROUND_OPEN` 生效；與刪除組別在同一把活動鎖內處理，所以「標記」與「刪除」只會有一個先生效。**003 必須先呼叫本方法，成功後才寫入答案；被拒（例如 `GROUP_NOT_FOUND`、`STAGE_NOT_ALLOWED`）就不寫入**。照這個順序，才不會出現「答案已記錄但組別被刪除」（2026-11-23 依 PR #15 第三次審查第 3 項修正：原文把這個保證寫成 001 單方面提供，但 001 只保證標記與刪除互斥，寫入答案的順序要由 003 遵守） |
 
+**003 實作後新增（2026-11-23～24，PR #16；003 研究 R2、R4）**：003 以下列介面取代「先呼叫 `mark_group_submitted` 再寫入答案」的兩段式做法，判定、標記與保存在同一把活動鎖內完成，推送在鎖外。上表三個方法仍保留，給其他子功能或測試使用。
+
+| 方法 | 說明 |
+|---|---|
+| `record_submission(code, device_token, handler: SubmissionHandler[T]) -> Outcome[T]`（async） | 取得活動鎖 → 依 token 找組號（活動不存在 `ACTIVITY_GONE`、不屬於任何組 `NOT_IN_GROUP`）→ 在鎖內讀時鐘並組成 `SubmissionWindow`（`group_number`、`stage`、`round_number`、`open_questions`、`deadline`、`accepting`）→ `handler.decide(window, now)`；回傳 `HandlerStep.accept(value)` 時套用 `RecordSubmission`（標記組別有提交，`revision + 1`，`version` 不變）再呼叫 `handler.commit()`，最後離開鎖並推送；回傳 `HandlerStep.no_change(value)` 時不標記、不推送 |
+| `add_snapshot_extension(extension: SnapshotExtension) -> None` | 註冊快照擴充函式 `(activity, viewer) -> Mapping[str, object]`，回傳的欄位併入老師與學生快照；`viewer` 是 `TeacherViewer` 或 `GroupViewer(group_number)`，擴充依角色裁切 |
+| `snapshot_for(activity, requester) -> ActivitySnapshot \| None` | 改為**實例方法**（原為靜態），才能套用已註冊的擴充；`WebSocketHub` 推送時呼叫它，內容相同的快照不重送（學生不因他組提交收到推送，FR-030） |
+
 ## 給 004（順位與定案）
 
 | 方法 | 說明 |

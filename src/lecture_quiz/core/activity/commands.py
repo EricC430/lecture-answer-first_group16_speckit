@@ -139,6 +139,23 @@ class MarkGroupSubmitted:
 
 
 @dataclass(frozen=True)
+class RecordSubmission:
+    """記錄一組的有效提交（給 003 的 `record_submission`，003 研究 R2）。
+
+    只在搶答中、尚未截止且組別存在時成功；標記組別已有提交紀錄，而且每次成功
+    都算變更（`revision` 加 1），老師快照才能以修訂號分辨新舊。只由服務層以
+    `System()` 送出，沒有 HTTP 入口。
+
+    Attributes:
+        actor: 操作者（系統）。
+        group_number: 組號。
+    """
+
+    actor: Actor
+    group_number: int
+
+
+@dataclass(frozen=True)
 class OpenRound:
     """開輪。
 
@@ -209,6 +226,7 @@ Command = (
     | LeaveGroup
     | DeleteGroup
     | MarkGroupSubmitted
+    | RecordSubmission
     | OpenRound
     | CloseRound
     | Finalize
