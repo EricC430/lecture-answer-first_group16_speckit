@@ -92,7 +92,7 @@ package "核心（純資料與純函式）" {
 
 package "應用層" {
   class RankingService {
-    +ensureReview(code, round) : 關輪後第一次被讀取或操作時建立初始結果
+    +currentReview(code, round) : 取存放區的 RoundReview，沒有判錯時以純計算導出初始結果
     +snapshotExtension(activity, viewer) : 併入快照的 ranking
     +finalizedRounds(code) : 給 005 的唯讀定案結果
     +markWrong(code, requester, round, questionNo, groupNo) : Outcome

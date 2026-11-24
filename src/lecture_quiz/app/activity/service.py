@@ -11,8 +11,13 @@
 
 查表、套用、記錄都在同一把鎖內，同一個 key 的並行重送只會套用一次
 （FR-033；PR #15 審查第 2 項）。
+
+給 003 的擴充（003 研究 R2、R4）：
+- `record_submission`：在同一把活動鎖內完成「判定 → 標記組別 → 保存」，鎖外推送。
+- `add_snapshot_extension`：把 003 的提交資料併入依角色裁切的快照。
 """
 
+import dataclasses
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -23,9 +28,14 @@ from lecture_quiz.app.activity.ports import (
     Clock,
     CountdownScheduler,
     DisconnectReason,
+    GroupViewer,
     Outcome,
     Requester,
+    SnapshotExtension,
+    SubmissionHandler,
+    SubmissionWindow,
     SyncPublisher,
+    TeacherViewer,
 )
 from lecture_quiz.app.activity.registry import ActivityRegistry, ProcessedKey
 from lecture_quiz.app.activity.secrets_gen import (
@@ -53,6 +63,7 @@ from lecture_quiz.core.activity.commands import (
     MarkGroupSubmitted,
     OpenJoining,
     OpenRound,
+    RecordSubmission,
     ReplaceQuestions,
     System,
     Teacher,
@@ -174,6 +185,7 @@ class ActivityService:
         self._clock = clock
         self._scheduler = scheduler
         self._publisher = publisher
+        self._extensions: list[SnapshotExtension] = []
 
     @property
     def registry(self) -> ActivityRegistry:
@@ -259,11 +271,18 @@ class ActivityService:
             return Outcome(ok=False, rejection=reason, message=reason.default_message)
         return Outcome(ok=True, value=view)
 
-    @staticmethod
+    def add_snapshot_extension(self, extension: SnapshotExtension) -> None:
+        """註冊快照擴充（003 研究 R4）；之後所有快照都會併入它回傳的欄位。
+
+        Args:
+            extension: 擴充函式。
+        """
+        self._extensions.append(extension)
+
     def snapshot_for(
-        activity: Activity, requester: Requester
+        self, activity: Activity, requester: Requester
     ) -> ActivitySnapshot | None:
-        """依身分裁切快照；身分在這個活動中無效時回傳 `None`。
+        """依身分裁切快照，並併入已註冊的擴充欄位；身分無效時回傳 `None`。
 
         Args:
             activity: 活動。
@@ -273,12 +292,31 @@ class ActivityService:
             快照或 `None`。
         """
         if ActivityStateMachine.is_teacher(activity, requester):
-            return SnapshotView.for_teacher(activity)
+            return self._extend(
+                SnapshotView.for_teacher(activity), activity, TeacherViewer()
+            )
         if isinstance(requester, Device):
             device = activity.devices.get(requester.token_hash)
             if device is not None:
-                return SnapshotView.for_group(activity, device.group_number)
+                return self._extend(
+                    SnapshotView.for_group(activity, device.group_number),
+                    activity,
+                    GroupViewer(device.group_number),
+                )
         return None
+
+    def _extend(
+        self,
+        snapshot: ActivitySnapshot,
+        activity: Activity,
+        viewer: TeacherViewer | GroupViewer,
+    ) -> ActivitySnapshot:
+        if not self._extensions:
+            return snapshot
+        extra = dict(snapshot.extra)
+        for extension in self._extensions:
+            extra.update(extension(activity, viewer))
+        return dataclasses.replace(snapshot, extra=extra)
 
     def current_round(self, code: str) -> Round | None:
         """目前輪次（給 004）。
@@ -546,6 +584,76 @@ class ActivityService:
             MarkGroupSubmitted(System(), group_number),
             None,
             lambda t, a: a.version,
+        )
+
+    async def record_submission(
+        self, code: str, device_token: str, handler: SubmissionHandler[T]
+    ) -> Outcome[T]:
+        """在同一把活動鎖內判定並記錄一筆提交（給 003，003 研究 R2）。
+
+        鎖內順序：找裝置與組號 → 取一次 `now` → 組 `SubmissionWindow` →
+        `handler.decide` → 若為 `accept`：套用 `RecordSubmission`，成功才呼叫
+        `handler.commit`。鎖外推送。關輪與倒數截止走同一把鎖，所以結果公開後
+        不會再加入本輪提交（003 FR-019）。
+
+        Args:
+            code: 活動代碼。
+            device_token: 原始裝置 token。
+            handler: 003 的處理器。
+
+        Returns:
+            `handler` 給的值；活動不存在、token 無效或記錄被拒時回傳拒絕原因。
+        """
+        code = normalize_code_input(code)
+        changed_activity: Activity | None = None
+        async with self._registry.lock(code):
+            activity = self._registry.get(code)
+            if activity is None:
+                return _gone()
+            device = activity.devices.get(hash_token(device_token))
+            if device is None:
+                reason = RejectionReason.NOT_IN_GROUP
+                return Outcome(
+                    ok=False, rejection=reason, message=reason.default_message
+                )
+            now = self._clock.now()
+            step = handler.decide(self._window(activity, device.group_number, now), now)
+            if step.kind == "accept":
+                transition = ActivityStateMachine.apply(
+                    activity, RecordSubmission(System(), device.group_number), now
+                )
+                if not transition.ok:
+                    assert transition.rejection is not None
+                    return Outcome(
+                        ok=False,
+                        rejection=transition.rejection,
+                        message=transition.rejection.default_message,
+                    )
+                assert transition.activity is not None
+                self._registry.put(transition.activity)
+                handler.commit()
+                changed_activity = transition.activity
+        if changed_activity is not None:
+            await self._publish(changed_activity)
+        return Outcome(ok=True, value=step.value)
+
+    @staticmethod
+    def _window(
+        activity: Activity, group_number: int, now: datetime
+    ) -> SubmissionWindow:
+        current = activity.current_round
+        is_open = activity.stage is Stage.ROUND_OPEN and current is not None
+        return SubmissionWindow(
+            group_number=group_number,
+            stage=activity.stage,
+            round_number=current.number if current else None,
+            open_questions=current.rules.question_numbers
+            if is_open and current
+            else (),
+            deadline=current.rules.deadline if is_open and current else None,
+            accepting=is_open
+            and current is not None
+            and not ActivityStateMachine.is_deadline_passed(current, now),
         )
 
     async def open_joining(

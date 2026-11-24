@@ -42,6 +42,6 @@ Recompute --> Fair
 Service --> Activity : 讀取本輪規則與基準；\n定案時交出本輪成果
 Service --> Submit : 讀取本輪已接受提交
 Service --> Activity : 註冊結果擴充（判錯標記、\n顯示狀態、結果版本；關輪後才有）
-Activity ..> Service : 關輪後推送快照時，\n擴充函式第一次建立初始結果
+Activity ..> Service : 關輪後推送快照時，\n擴充函式以純計算導出初始結果
 Export --> Service : 讀取定案結果
 @enduml

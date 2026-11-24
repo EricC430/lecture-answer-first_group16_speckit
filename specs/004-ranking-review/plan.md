@@ -12,7 +12,7 @@
 
 本 plan 的模組、類別與流程依這三張圖命名。plan 階段因研究 R1、R2、R4 調整了「初始結果的產生時機」「鎖」與「推送」，三張圖已在同一個 commit 更新並重新轉出 PNG。實作偏離時先改圖。
 
-**前置條件**：004 依賴 003 的 `SubmissionReader` 與 001 的 `add_snapshot_extension`（兩者目前在 `feature/7-003-round-submission`，尚未合併到 main）。實作（`/speckit-implement`）必須從 003 合併後的 main，或從 003 分支切出；本 plan 與設計文件不受影響。
+**前置條件**：004 依賴 003 的 `SubmissionReader` 與 001 的 `add_snapshot_extension`；兩者已隨 003（PR #16）合併到 main，004 直接從 main 切出即可。`docs/DEVELOPMENT.md` 3.5 規定快照擴充函式必須是同步、無副作用的純讀取，004 遵守（研究 R2）。
 
 ## Summary
 

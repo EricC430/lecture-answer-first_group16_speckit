@@ -17,7 +17,7 @@
 - 001 的 `finalize` 對已定案輪次會以階段不符拒絕；所以重複確認由 004 用自己的定案紀錄冪等處理，不再呼叫 001。
 - 004 對 001 唯一的改動：移除 HTTP 層預留的空 finalize 路由（研究 R7）。
 
-## 004 使用 003 的介面（`SubmissionReader`，在 `feature/7-003-round-submission`）
+## 004 使用 003 的介面（`SubmissionReader`，已合併到 main，PR #16）
 
 | 方法 | 說明 |
 |---|---|

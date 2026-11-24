@@ -120,9 +120,11 @@ finalize_plan(review, baseline) -> (solved_questions, success_increments, final_
 
 ```text
 （輪次關閉）
-    │  第一次被讀取或操作時建立（研究 R2）
+    │  尚無判錯：由純計算導出初始結果（版本 1），不寫入存放區（研究 R2）
     ▼
-RoundReview v1（未定案）
+導出的初始結果 v1（未定案）
+    │  第一次實際判錯：以它為起點建立 RoundReview 並保存（版本 2）
+RoundReview（未定案）
     │  mark／unmark 實際變更：version+1、affected 更新
     │  mark／unmark 無變化：不變
     │  finalize(resultVersion == version) 且 001 接受
