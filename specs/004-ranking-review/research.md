@@ -47,14 +47,15 @@
   2. 擴充函式的回傳是頂層 `update`，無法深層覆寫 003 的 `submissions`；另開欄位不會與 003 互相覆蓋。
   3. 同一份快照裡 `ranking` 與 `submissions` 對應同一個活動狀態；`submissions.published` 在關輪後不再改變，所以不會出現「003 新、004 舊」的混合畫面（FR-035）。
 - **003 的 `judgedWrong` 預留欄位**：維持原狀（一律 `false`），004 的前端不使用它，以 `ranking` 的 `judgedWrong` 為準；是否移除留給 003 的後續整理（研究 R16）。
-- **003 的學生頁需要調整**：003 已合併的學生頁（「已公開的作答」區塊，`renderPublished`）會對所有學生列出全部組的答案與送出先後，與 spec FR-036、FR-037 的學生畫面範圍不同。004 的 tasks 要涵蓋：學生頁關輪後改由 004 的結果區塊呈現（本組狀態、答錯組別與搶答成功者），不再逐組列出全部作答；老師頁沿用 003 的已公開輪次列表並補上 004 資料。003 資料的公開範圍不變，只改前端呈現與其測試。
+- **003 的學生頁需要調整**：003 已合併的學生頁（「已公開的作答」區塊，`renderPublished`）會對所有學生列出全部組的答案與送出先後，與 spec FR-036、FR-037 的學生畫面範圍不同。004 的 tasks 要涵蓋：學生頁關輪後改由 004 的結果區塊呈現（本組狀態、目前搶答成功者與剛被判錯的前一組），不再逐組列出全部作答；老師頁沿用 003 的已公開輪次列表並補上 004 資料。003 資料的公開範圍不變，只改前端呈現與其測試。
 
 ## R6 `ranking` 的角色形狀：資料公開、畫面限縮
 
 - **決定**：
-  - **老師**：每個已關輪輪次的完整資料：每題全部候選的 `rank`、`countAtProcessing`、`reason`、`judgedWrong`、`displayStatus`，另有 `questionOrder`、各組暫算次數 `groupCounts`、`affectedQuestions`、`resultVersion`、`final`。
+  - **老師**：每個已關輪輪次的完整資料：每題全部候選的 `rank`、`countAtProcessing`、`reason`、`judgedWrong`、`displayStatus`，另有 `questionOrder`、各組暫算次數 `groupCounts`、`affectedQuestions`、每題的 `replacedGroup`、`resultVersion`、`final`。
   - **學生（所有學生同一份）**：同樣的輪次與題目，但每個候選只有 `groupNumber`、`rank`、`judgedWrong`、`displayStatus`，不含 `countAtProcessing`、`reason`、`groupCounts`。
-  - 學生畫面如何只顯示「本組狀態、答錯組別與搶答成功者」由前端依 FR-036 決定。
+  - 學生畫面只顯示「本組狀態、每題目前的搶答成功者（`successGroup`）與剛被判錯的前一組（`replacedGroup`）」，由前端依 FR-036 決定；不需要「排在搶答成功者之前」的判準（2026-11-24 澄清已改為只留最近一次被替換的一組）。
+  - `displayStatus` 在定案前名次 1 為 `SUCCESS`（搶答成功），定案後改為 `CORRECT`（搶答正確）；`replacedGroup` 是 `RoundReview` 保存的「被替換的搶答成功者」（題號 → 組號），判錯當下該組是搶答成功者才設定，該題下一次判錯、撤銷或定案時失效。
 - **理由**：使用者 2026-11-24 的決定是「公開」＝資料開放查詢、畫面限縮，且 OpenSpec 要求公開候選順位與判錯標記；因此學生資料可含他組的順位與狀態，但不含理由與他組成功次數（spec FR-036、SC-010）。學生資料與組別無關（本組成功次數沿用 001 的 `ownGroup.successCount`），所以所有學生可共用同一份快取（研究 R14）。
 - **風險（已知取捨）**：限縮只在畫面，懂得看 WebSocket 或 `GET /snapshot` 的學生仍能看到他組的順位與狀態。這是使用者明確選擇的設計，OpenSpec 規定的就是公開，因此接受。
 - **考慮過的替代方案**：伺服端只給學生畫面需要的子集。這會使「資料公開」與 003 已公開所有組答案的現況不一致，且 OpenSpec 要求公開候選順位，所以不採用。

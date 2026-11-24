@@ -45,16 +45,16 @@ description: "004-ranking-review 任務清單"
 
 ### 測試（先寫、確認失敗）
 
-- [ ] T005 [P] 在 `tests/unit/core/ranking_review/test_models.py` 測試核心型別（`Scenario` 不適用，為共用基礎）：所有型別是 `frozen` dataclass，修改欄位拋 `FrozenInstanceError`；`display_status(rank, wrong)`：被判錯 → `DisplayStatus.WRONG`；名次 1 且未判錯 → `SUCCESS`；名次大於 1 且未判錯 → `FAILED`；`RankingInput` 不變式（data-model）：「同一（題號, 組號）最多一個候選；`sequence` 在所有候選中不重複；每個候選的題號都在 `question_numbers`；`wrong_marks` 的每一項都對應一個候選」，違反時 `recompute` 以 `AssertionError` 拒絕
+- [ ] T005 [P] 在 `tests/unit/core/ranking_review/test_models.py` 測試核心型別（`Scenario` 不適用，為共用基礎）：所有型別是 `frozen` dataclass，修改欄位拋 `FrozenInstanceError`；`display_status(rank, wrong)`：被判錯 → `DisplayStatus.WRONG`；名次 1 且未判錯 → `SUCCESS`；名次大於 1 且未判錯 → `FAILED`；`as_final(rankings)`：名次 1 的 `SUCCESS` 改為 `DisplayStatus.CORRECT`，`WRONG`、`FAILED` 不變；`RankingInput` 不變式（data-model）：「同一（題號, 組號）最多一個候選；`sequence` 在所有候選中不重複；每個候選的題號都在 `question_numbers`；`wrong_marks` 的每一項都對應一個候選」，違反時 `recompute` 以 `AssertionError` 拒絕
 - [ ] T006 [P] 在 `tests/unit/app/ranking_review/test_store.py` 測試 `ReviewStore`：未知活動 `get` 回 `None`；`put` 後 `get` 取回同一物件；不同活動、不同輪次互不影響；同一活動代碼永遠回同一把 `asyncio.Lock`、不同活動不同把；`drop(code)` 清掉該活動的審閱狀態、鎖與快取
 - [ ] T007 [P] 在 `tests/unit/app/ranking_review/test_extension_registration.py` 測試：建立 `RankingService` 後，`ActivityService` 恰有一個新增的快照擴充；沒有任何已關輪輪次時擴充回傳空 mapping，快照與未註冊前**完全相同**（既有快照測試不需修改）
 - [ ] T008 [P] 在 `tests/contract/test_http_ranking_review_wiring.py` 測試：`create_app()` 之後 `app.state.ranking_service` 是 `RankingService`；`/api` 之下沒有尚未實作的 004 路徑被意外註冊（只有 T051、T069 之後才會有 PUT judgement 與 POST finalize）
 
 ### 實作
 
-- [ ] T009 在 `<core>/models.py` 實作型別（逐欄位照 data-model.md「核心」；欄位型別與限制逐字）：`Candidate`（`group_number: int`、`question_number: int`、`received_at: datetime`、`sequence: int`）、`RankingInput`（`question_numbers: tuple[int, ...]`、`fair_mode: bool`、`baseline: Mapping[int, int]`、`candidates: tuple[Candidate, ...]`、`wrong_marks: frozenset[tuple[int, int]]`，元素為（組號, 題號）；`baseline` 沒有的組視為 0）、`WinReason`（`SOLE_CANDIDATE`、`EARLIER_SUBMISSION`、`FEWER_SUCCESSES`、`BACKEND_ORDER`）、`DisplayStatus`（`SUCCESS`、`WRONG`、`FAILED`）、`RankEntry`（`group_number: int`、`rank: int | None`、`count_at_processing: int | None`、`reason: WinReason | None`、`wrong: bool`、`display_status: DisplayStatus`；被判錯者 `rank`、`reason` 為 `None`；速度模式 `count_at_processing` 為 `None`）、`QuestionRanking`（`question_number: int`、`entries: tuple[RankEntry, ...]`、`success_group: int | None`；`entries` 先放有名次者再放被判錯者）、`RoundResult`（`order: tuple[int, ...]`、`rankings: tuple[QuestionRanking, ...]`、`group_counts: Mapping[int, int]`、`wins: Mapping[int, int]`）、`display_status()` 函式；全部 `@dataclass(frozen=True)`，集合用 `tuple`／`frozenset`／`MappingProxyType`（依賴 T005 先失敗）
+- [ ] T009 在 `<core>/models.py` 實作型別（逐欄位照 data-model.md「核心」；欄位型別與限制逐字）：`Candidate`（`group_number: int`、`question_number: int`、`received_at: datetime`、`sequence: int`）、`RankingInput`（`question_numbers: tuple[int, ...]`、`fair_mode: bool`、`baseline: Mapping[int, int]`、`candidates: tuple[Candidate, ...]`、`wrong_marks: frozenset[tuple[int, int]]`，元素為（組號, 題號）；`baseline` 沒有的組視為 0）、`WinReason`（`SOLE_CANDIDATE`、`EARLIER_SUBMISSION`、`FEWER_SUCCESSES`、`BACKEND_ORDER`）、`DisplayStatus`（`SUCCESS`＝搶答成功、`CORRECT`＝搶答正確（定案後才有）、`WRONG`、`FAILED`）、`RankEntry`（`group_number: int`、`rank: int | None`、`count_at_processing: int | None`、`reason: WinReason | None`、`wrong: bool`、`display_status: DisplayStatus`；被判錯者 `rank`、`reason` 為 `None`；速度模式 `count_at_processing` 為 `None`）、`QuestionRanking`（`question_number: int`、`entries: tuple[RankEntry, ...]`、`success_group: int | None`；`entries` 先放有名次者再放被判錯者）、`RoundResult`（`order: tuple[int, ...]`、`rankings: tuple[QuestionRanking, ...]`、`group_counts: Mapping[int, int]`、`wins: Mapping[int, int]`）、`display_status()` 函式；全部 `@dataclass(frozen=True)`，集合用 `tuple`／`frozenset`／`MappingProxyType`（依賴 T005 先失敗）
 - [ ] T010 [P] 在 `<core>/outcome.py` 實作 `FinalizedResult`（`version: int`、`rankings: tuple[QuestionRanking, ...]`、`final_counts: Mapping[int, int]`、`solved_questions: frozenset[int]`、`success_increments: Mapping[int, int]`；定案時保存，之後只讀）
-- [ ] T011 [P] 在 `<core>/review.py` 實作 `ReviewRejection`（`StrEnum`，值與 HTTP 狀態、預設訊息逐項照 research R12：`INVALID_REQUEST` 400、`NOT_TEACHER` 403、`ACTIVITY_NOT_FOUND` 404、`ROUND_NOT_FOUND` 404、`SUBMISSION_NOT_FOUND` 404、`ROUND_STILL_OPEN` 409、`NO_ROUND` 409、`STALE_ROUND` 409、`RESULT_ALREADY_FINAL` 409、`ACTIVITY_CANCELLED` 409、`STALE_RESULT_VERSION` 409、`FINALIZE_REJECTED`（依 001））、`MarkDecision`（`ok: bool`、`changed: bool`、`review: RoundReview | None`、`rejection: ReviewRejection | None`）與 `RoundReview` dataclass（`round_number: int`、`version: int`、`wrong_marks: frozenset[tuple[int, int]]`、`result: RoundResult`、`affected: frozenset[int]`、`finalized: FinalizedResult | None`）；`ReviewRejection` 的訊息不含堆疊、路徑、token
+- [ ] T011 [P] 在 `<core>/review.py` 實作 `ReviewRejection`（`StrEnum`，值與 HTTP 狀態、預設訊息逐項照 research R12：`INVALID_REQUEST` 400、`NOT_TEACHER` 403、`ACTIVITY_NOT_FOUND` 404、`ROUND_NOT_FOUND` 404、`SUBMISSION_NOT_FOUND` 404、`ROUND_STILL_OPEN` 409、`NO_ROUND` 409、`STALE_ROUND` 409、`RESULT_ALREADY_FINAL` 409、`ACTIVITY_CANCELLED` 409、`STALE_RESULT_VERSION` 409、`FINALIZE_REJECTED`（依 001））、`MarkDecision`（`ok: bool`、`changed: bool`、`review: RoundReview | None`、`rejection: ReviewRejection | None`）與 `RoundReview` dataclass（`round_number: int`、`version: int`、`wrong_marks: frozenset[tuple[int, int]]`、`result: RoundResult`、`affected: frozenset[int]`、`replaced: Mapping[int, int]`＝題號 → 最近一次因判錯被下一組取代的前一位搶答成功者的組號、每題最多一組、該題下一次判錯／撤銷／定案時失效、初始為空、`finalized: FinalizedResult | None`）；`ReviewRejection` 的訊息不含堆疊、路徑、token
 - [ ] T012 在 `<app>/store.py` 實作 `ReviewStore`（記憶體）：`reviews: dict[tuple[str, int], RoundReview]`、每活動一把 `asyncio.Lock`（`lock(code)`）、`cache: dict[tuple[str, int, int, str], JsonDict]`（鍵為（活動代碼, 輪次, 結果版本, 角色種類）；版本變了即失效）、`get`、`put`、`drop`（依賴 T006）
 - [ ] T013 [P] 在 `<app>/ports.py` 定義 `RankingReader`（Protocol，`finalized_rounds(code) -> tuple[FinalizedRound, ...]`）、`FinalizedRound`（`round_number: int`、`result: FinalizedResult`）、`MarkResult`（`changed: bool`、`result_version: int`、`affected_questions: tuple[int, ...]`）、`FinalizeResult`（`version: int`、`result_version: int`、`already_finalized: bool`）；`Outcome` 沿用 001 的型別，服務不拋業務錯誤
 - [ ] T014 在 `<app>/service.py` 建立 `RankingService` 骨架：建構子接收 `activity_service`（001）、`submissions: SubmissionReader`（003）、`store: ReviewStore`、`publisher: SyncPublisher`；建構時呼叫 `activity_service.add_snapshot_extension(self.snapshot_extension)`；`snapshot_extension` 先回傳 `{}`；`mark_wrong`、`unmark_wrong`、`finalize`、`finalized_rounds` 先留 `NotImplementedError`；模組 docstring 說明「推送在鎖外、日誌只記輪次／題號／組號／版本」（依賴 T007、T012、T013）
@@ -100,7 +100,7 @@ description: "004-ranking-review 任務清單"
 - [ ] T025 [P] [US2] 在 `tests/unit/core/ranking_review/test_rank_speed.py` 測試速度模式排名：甲在題一、題二都比乙早、公平模式關閉 → 甲是兩題搶答成功者，理由 `EARLIER_SUBMISSION`（`Scenario: US2-AS4` ↔ OpenSpec「同組最快回答兩題」）；三個候選 → 名次 1、2、3，第一名為唯一 `success_group`，其餘 `display_status` 為 `FAILED`（`Scenario: US2-AS5`）；接收時間相同 → 接收序號較小者較早，理由 `BACKEND_ORDER`（`Scenario: US2-AS6`）；基準甲 3、乙 0 且甲較早 → 甲仍是搶答成功者（`Scenario: US2-AS7`）；無候選 → `success_group is None`（未成功）；唯一候選理由 `SOLE_CANDIDATE`；理由規則逐列照 research R9 表（速度模式的列）
 - [ ] T026 [P] [US2] 在 `tests/unit/core/ranking_review/test_recompute_speed.py` 測試：決定題序的最早提交被判錯後以**已保存的題序**重算，`result.order` 不變、該組失去該題候選資格、次早的候選成為搶答成功者（`Scenario: US2-AS3` ↔ OpenSpec「最早提交被判錯」）
 - [ ] T027 [P] [US2] 在 `tests/unit/app/ranking_review/test_initial_result.py` 測試：關輪後、沒有任何判錯時 `RankingService.review_for(code, round_number)` 以純計算導出版本 1 的結果，**`ReviewStore` 沒有被寫入**（`store.get(...) is None`），連續兩次呼叫結果逐項相同；活動在搶答中時回傳 `None`（研究 R2）
-- [ ] T028 [P] [US2] 在 `tests/unit/core/ranking_review/test_view_shapes.py` 測試 `ResultView.for_teacher` 與 `for_student` 的 JSON 形狀逐欄照 `contracts/sync-websocket.md`：`rounds[].{roundNumber, fairMode, resultVersion, final, affectedQuestions, questionOrder, questions[]}`、`questions[].{questionNumber, successGroup, entries[]}`、`entries[].{groupNumber, rank, judgedWrong, displayStatus}`；有名次者在前、被判錯者在後；`successGroup: null` 的題 `entries` 可為空；`displayStatus` 值為 `SUCCESS`／`WRONG`／`FAILED`；老師版 entry 另有 `countAtProcessing`、`reason`，每輪另有 `groupCounts`（key 為組號字串）
+- [ ] T028 [P] [US2] 在 `tests/unit/core/ranking_review/test_view_shapes.py` 測試 `ResultView.for_teacher` 與 `for_student` 的 JSON 形狀逐欄照 `contracts/sync-websocket.md`：`rounds[].{roundNumber, fairMode, resultVersion, final, affectedQuestions, questionOrder, questions[]}`、`questions[].{questionNumber, successGroup, replacedGroup, entries[]}`、`entries[].{groupNumber, rank, judgedWrong, displayStatus}`；有名次者在前、被判錯者在後；`successGroup: null` 的題 `entries` 可為空；`displayStatus` 值為 `SUCCESS`／`WRONG`／`FAILED`，`final=true` 時名次 1 為 `CORRECT`；`replacedGroup`：`final=true` 時兩種角色皆為 `null`，未定案時老師版輸出 `RoundReview.replaced[question]`、學生版只在該題 `successGroup` 不是 `null`（有遞補者）時輸出，否則 `null`；老師版 entry 另有 `countAtProcessing`、`reason`，每輪另有 `groupCounts`（key 為組號字串）
 - [ ] T029 [P] [US2] 在 `tests/integration/test_us2_ranking_snapshot.py` 測試：老師關輪後，老師與學生的 `GET /snapshot` 與 WebSocket 推送在 2 秒內出現 `ranking.rounds[0]`，`resultVersion == 1`、`final == false`；搶答中（`ROUND_OPEN`）兩種身分的快照都**沒有** `ranking` 欄位（`Scenario: US7-AS1` 的第一部分）
 
 ### Implementation for User Story 2
@@ -108,7 +108,7 @@ description: "004-ranking-review 任務清單"
 - [ ] T030 [US2] 在 `<core>/order.py` 實作 `QuestionOrder.compute(question_numbers, candidates) -> tuple[int, ...]`：每題取該題全部候選（不論是否被判錯）中 `(received_at, sequence)` 最小者為依據，有依據的題依該鍵遞增，沒有任何候選的題接在後面依題號遞增（FR-004）
 - [ ] T031 [US2] 在 `<core>/ranking.py` 實作 `RankingCalculator.rank_speed`（未被判錯候選依 `(received_at, sequence)` 排名，被判錯者附在後面、無名次）、理由分類（research R9 表）、`recompute(input, order) -> RoundResult`（速度模式分支；`order` 由呼叫端傳入，不在 `recompute` 內重新計算題序）與 `display_status` 推導；`recompute` 不讀時鐘、不依賴字典順序（FR-017）
 - [ ] T032 [US2] 在 `<core>/review.py` 實作 `RoundReview.initial(input: RankingInput) -> RoundReview`（先以 `QuestionOrder.compute` 決定題序一次、呼叫 `recompute`，`version=1`、`affected` 為空、`finalized=None`）
-- [ ] T033 [US2] 在 `<core>/view.py` 實作 `ResultView.for_teacher(reviews)` 與 `ResultView.for_student(reviews)`（純函式，依 T028；`final` 由呼叫端傳入；`affectedQuestions` 在 `final=true` 時為空）
+- [ ] T033 [US2] 在 `<core>/view.py` 實作 `ResultView.for_teacher(reviews)` 與 `ResultView.for_student(reviews)`（純函式，依 T028；`final` 由呼叫端傳入；`final=true` 時 `affectedQuestions` 為空、`SUCCESS` 改為 `CORRECT`、`replacedGroup` 為 `null`；`replacedGroup` 的角色差異見 T028）
 - [ ] T034 [US2] 在 `<app>/service.py` 實作 `review_for(code, round_number)`（stored → 否則導出初始結果；搶答中或輪次不存在回 `None`）與 `snapshot_extension(activity, viewer)`：只輸出已關輪輪次（搶答中的目前輪不輸出）、`final` 依 001 階段與輪次判定（階段結果已定案／已結束，或輪次早於目前輪）、老師用 `for_teacher`、學生用 `for_student`；以 `ReviewStore.cache` 對（輪次, 版本, 角色種類）快取序列化結果；沒有任何已關輪輪次時回傳空 mapping
 - [ ] T035 [US2] 前端老師端：在 `<static>/js/ranking-review-teacher.js` 以 `onTeacherSnapshot` 畫出每輪每題的候選表（名次、組號、答案與送出時間——以（輪次、題號、組號）合併 003 的 `submissions.published` entry、處理當下成功次數、理由、顯示狀態文字「搶答成功」「答錯」「搶答失敗」、整題「未成功」），並顯示活動階段「結果未定案／結果已定案」（FR-031）；所有文字 `textContent`、保留換行；在 `<static>/teacher.html` 只新增一個 `<section id="ranking-review-section" data-feature="004-ranking-review" hidden>` 與一行 `<script type="module" src="js/ranking-review-teacher.js">`（`docs/DEVELOPMENT.md` 約定）
 - [ ] T036 [US2] 前端學生端（基本版，US7 再依 FR-036 限縮）：在 `<static>/js/ranking-review.js` 以 `onStudentSnapshot` 畫出本組每題的顯示狀態（組號取自 `ownGroup.number`）；在 `<static>/student.html` 只新增一個 `<section id="ranking-review-student-section" data-feature="004-ranking-review" hidden>` 與一行 script；`textContent` 輸出
@@ -147,19 +147,20 @@ description: "004-ranking-review 任務清單"
 
 ### Tests for User Story 4（先寫、確認失敗）⚠️
 
-- [ ] T043 [P] [US4] 在 `tests/unit/core/ranking_review/test_review_rules_mark.py` 測試 `RoundReviewRules.mark(review, input, group, question, wrong)`：判錯題組整筆提交，該組在該題無名次、`display_status` 為 `WRONG`，候選的 `answers`、`received_at`、`sequence` 沒有被改動（`Scenario: US4-AS1` ↔ OpenSpec「非勝者與題組判錯」、`US4-AS2`）；撤銷後該筆依原接收時間與序號回到原名次（`Scenario: US4-AS3` ↔ OpenSpec「撤銷誤判」）；（組, 題）沒有候選 → `SUBMISSION_NOT_FOUND`（`Scenario: US4-AS6`）；對已判錯者再判錯、對未判錯者撤銷 → `ok=True, changed=False`、版本不變（FR-025）；實際變更 → `version + 1`
+- [ ] T043 [P] [US4] 在 `tests/unit/core/ranking_review/test_review_rules_mark.py` 測試 `RoundReviewRules.mark(review, input, group, question, wrong)`：判錯題組整筆提交，該組在該題無名次、`display_status` 為 `WRONG`，候選的 `answers`、`received_at`、`sequence` 沒有被改動（`Scenario: US4-AS1` ↔ OpenSpec「非勝者與題組判錯」、`US4-AS2`）；撤銷後該筆依原接收時間與序號回到原名次（`Scenario: US4-AS3` ↔ OpenSpec「撤銷誤判」）；（組, 題）沒有候選 → `SUBMISSION_NOT_FOUND`（`Scenario: US4-AS6`）；對已判錯者再判錯、對未判錯者撤銷 → `ok=True, changed=False`、版本不變（FR-025）；實際變更 → `version + 1`；`replaced`：判錯「判錯前是該題 `success_group`」的組別 → `replaced[question] = 該組`；判錯非搶答成功者、撤銷任何一筆 → 移除該題的 `replaced`；再判錯下一位搶答成功者 → `replaced` 換成新被判錯的組別（`Scenario: US7-AS3` 的核心部分）
 - [ ] T044 [P] [US4] 在 `tests/unit/app/ranking_review/test_mark_permissions.py` 測試：學生裝置、其他活動的老師、匿名請求判錯／撤銷 → `NOT_TEACHER`，`ReviewStore` 與結果版本不變、`RecordingPublisher` 沒被呼叫、回應不含老師專用資料（`Scenario: US4-AS4`）
 - [ ] T045 [P] [US4] 在 `tests/unit/app/ranking_review/test_mark_stages.py` 測試判定順序（data-model「判定規則」表）：活動不存在 `ACTIVITY_NOT_FOUND`；活動已取消 `ACTIVITY_CANCELLED`；還沒有輪次 `NO_ROUND`；輪次編號不存在 `ROUND_NOT_FOUND`；目前輪搶答中 `ROUND_STILL_OPEN`，訊息為「本輪尚未關閉，無法判錯」（`Scenario: US4-AS5`）；該輪已定案 `RESULT_ALREADY_FINAL`；每種都不更動存放區與版本
 - [ ] T046 [P] [US4] 在 `tests/unit/app/ranking_review/test_mark_publish.py` 測試：實際變更恰推送一次且**在 004 鎖釋放後**（`RecordingPublisher` 記錄呼叫時鎖未被持有）；重複判錯、重複撤銷、被拒絕的請求都不推送；推送拋例外時狀態變更仍保留並記 `logger.exception`（研究 R4）
 - [ ] T047 [P] [US4] 在 `tests/contract/test_http_ranking_review.py` 測試 `PUT /api/activities/{code}/rounds/{round}/questions/{q}/groups/{g}/judgement`：本文 `{"wrong": true}` → 200 `{"changed": true, "resultVersion": 2, "affectedQuestions": [...]}`；本文多送 `reason` 等欄位被忽略、不需要也不顯示原因（`Scenario: US4-AS8`）；錯誤碼與 HTTP 狀態逐列照 `contracts/http-api.md` 錯誤表（`INVALID_REQUEST` 400：本文不是物件、缺 `wrong`、`wrong` 不是布林、路徑上輪次／題號／組號不是正整數；`NOT_TEACHER` 403；`ACTIVITY_NOT_FOUND` 404／`ACTIVITY_GONE` 410；`ROUND_NOT_FOUND`、`SUBMISSION_NOT_FOUND` 404；`ROUND_STILL_OPEN`、`NO_ROUND`、`RESULT_ALREADY_FINAL`、`ACTIVITY_CANCELLED` 409）；所有錯誤訊息不含堆疊、檔案路徑、token
 - [ ] T048 [P] [US4] 在 `tests/integration/test_us4_judgement.py` 測試端對端（真 app、HTTP + 快照）：題組候選判錯後快照該筆 `judgedWrong=true`、`displayStatus="WRONG"`，003 的答案仍在 `submissions.published`（`Scenario: US4-AS1`、`US4-AS2`）；速度模式候選 1、2、3、4：老師判 1、2 錯 → 1、2 `WRONG`、3 `SUCCESS`、4 `FAILED` 且 `judgedWrong=false`；再判 3 錯 → 4 遞補 `SUCCESS`（`Scenario: US4-AS7`）；撤銷（`Scenario: US4-AS3`）
+- [ ] T055 [P] [US4] 在 `tests/unit/core/ranking_review/test_diff.py` 測試 `diff`：只有順位或搶答成功者真正改變的題被列入，沒改變的題不列入（`Scenario: US5-AS5`）；對非搶答成功者判錯（有名次 → 無名次）仍列入；初始結果沒有舊版 → 空集合（`diff` 在 T049 實作，所以其測試放在 US4 的測試區先寫、先失敗；US5 的 T053～T054 驗證整輪重算語意）
 
 ### Implementation for User Story 4
 
-- [ ] T049 [US4] 在 `<core>/ranking.py` 實作 `RankingCalculator.diff(old: RoundResult, new: RoundResult) -> frozenset[int]`（逐題比較 `QuestionRanking`：成功者與所有 `RankEntry`，任一項不同即受影響；初始結果無舊版回傳空集合；research R10）；在 `<core>/review.py` 實作 `RoundReviewRules.mark`：驗證 `(group, question)` 有候選 → 狀態相同則 `changed=False` → 否則更新 `wrong_marks`、以**保存的題序**與基準重算整輪、`version + 1`、`affected = diff(old, new)`（依賴 T043）
+- [ ] T049 [US4] 在 `<core>/ranking.py` 實作 `RankingCalculator.diff(old: RoundResult, new: RoundResult) -> frozenset[int]`（逐題比較 `QuestionRanking`：成功者與所有 `RankEntry`，任一項不同即受影響；初始結果無舊版回傳空集合；research R10）；在 `<core>/review.py` 實作 `RoundReviewRules.mark`：驗證 `(group, question)` 有候選 → 狀態相同則 `changed=False` → 否則更新 `wrong_marks`、以**保存的題序**與基準重算整輪、`version + 1`、`affected = diff(old, new)`、依 T043 更新 `replaced`（依賴 T043）
 - [ ] T050 [US4] 在 `<app>/service.py` 實作 `mark_wrong` 與 `unmark_wrong`（共用 `_set_wrong`）：依 data-model 判定順序檢查（活動存在 → 老師身分 `ActivityService.is_teacher` → 未取消 → 有輪次 → 輪次存在 → 該輪是否已定案 → 目前輪已關閉，搶答中 `ROUND_STILL_OPEN`）；在 `ReviewStore.lock(code)` 內讀取或導出 `RoundReview`、呼叫 `RoundReviewRules.mark`、寫回存放區；鎖外 `await publisher.publish(activity)`；日誌 `logger.info("判錯 activity=%s round=%s question=%s group=%s wrong=%s changed=%s version=%s", ...)`，不記答案、token（FR-032）（依賴 T044～T046）
 - [ ] T051 [US4] 在 `<web>/ranking_review.py` 實作 `PUT /activities/{code}/rounds/{round}/questions/{q}/groups/{g}/judgement`：`JudgementBody(BaseModel)`（`wrong: StrictBool`，`extra="ignore"`）；身分用 `service().resolve_requester(code, token)`；`Outcome` 轉 `ApiError(rejection.http_status, rejection.value, message)`；成功回 `{"changed", "resultVersion", "affectedQuestions"}` 並 `annotate_request_log(request, activity_code=code, result=..., version=...)`；路徑參數非正整數回 400 `INVALID_REQUEST`（依賴 T047）
-- [ ] T052 [US4] 前端老師端：`ranking-review-teacher.js` 在活動階段為「結果未定案」時，對每個候選顯示「判錯」與「撤銷判錯」按鈕，呼叫 `api.js` 送出 PUT；**不提供原因輸入欄**；失敗時以 `textContent` 顯示後端訊息；階段為「結果已定案」或「已結束」時不顯示按鈕
+- [ ] T052 [US4] 前端老師端：`ranking-review-teacher.js` 在活動階段為「結果未定案」時，每題**只對目前的搶答成功者（`successGroup`）顯示「判錯」按鈕**（搶答成功者之後的候選沒有按鈕，判完由遞補的下一組接手），並**只對 `replacedGroup` 顯示「撤銷判錯」按鈕**，呼叫 `api.js` 送出 PUT（這只是介面限制，API 仍允許對任一提交判錯與撤銷，FR-034、`Scenario: US4-AS9`）；**不提供原因輸入欄**；失敗時以 `textContent` 顯示後端訊息；階段為「結果已定案」或「已結束」時不顯示按鈕
 
 **Checkpoint**: 判錯與撤銷可用、各種拒絕情境都有明確訊息且不改變狀態
 
@@ -175,13 +176,12 @@ description: "004-ranking-review 任務清單"
 
 - [ ] T053 [P] [US5] 在 `tests/unit/core/ranking_review/test_recompute.py` 用 `CROSS_QUESTION` 測試：公平結果題一甲勝、題二乙勝；判錯題一甲後重算為題一乙勝、題二甲勝，兩題都在受影響集合，各組本輪暫算次數仍各為 1（`Scenario: US5-AS1` ↔ OpenSpec「判錯造成跨題勝者改變」）；撤銷後回到判錯前逐項完全相同（`Scenario: US5-AS2`）；某題所有候選被判錯 → 該題 `success_group is None`、不增加任何組次數（`Scenario: US5-AS3` ↔ OpenSpec「全部被判錯」）；對不同題連續判錯、撤銷數次再回到最初判錯集合 → 與最初結果逐題完全相同（`Scenario: US5-AS4`，SC-003）；同一輸入連續重算 100 次逐項相等（SC-002）
 - [ ] T054 [P] [US5] 在同一檔案加入**負對照**：以測試內定義的 `accumulating_recompute`（在舊暫算次數上累加／扣減的錯誤實作）驗證 SC-003 的比較函式「會失敗」——跑完 T053 的操作序列後，`accumulating_recompute` 的結果與初始結果不同、`RankingCalculator.recompute` 相同；證明這組測試有鑑別力（憲章：評測要分得出好壞）
-- [ ] T055 [P] [US5] 在 `tests/unit/core/ranking_review/test_diff.py` 測試 `diff`：只有順位或搶答成功者真正改變的題被列入，沒改變的題不列入（`Scenario: US5-AS5`）；對非搶答成功者判錯（有名次 → 無名次）仍列入；初始結果沒有舊版 → 空集合
 - [ ] T056 [P] [US5] 在 `tests/unit/app/ranking_review/test_marks_concurrency.py` 測試：兩個判錯請求以 `asyncio.gather` 同時到達（不同提交），依鎖的取得順序逐一套用，結果版本各遞增一次（版本 = 初始 + 2），最終結果等同兩筆判錯都生效後的整輪重算，且與順序無關（`Scenario: US5-AS7`）
 - [ ] T057 [P] [US5] 在 `tests/integration/test_us5_recalc.py` 端對端測試（HTTP + 快照）：先判錯造成題一、題二的 `affectedQuestions == [1, 2]`，再判錯只影響題三的一筆 → `affectedQuestions == [3]`，題一、題二的標示消失；定案後 `affectedQuestions == []`；晚開啟的頁面（新的 `GET /snapshot`）與早開啟頁面看到相同的標示（`Scenario: US5-AS6`）；搶答成功者被判錯後次一名遞補、原搶答成功者 `WRONG`（`Scenario: US5-AS8`）；`resultVersion` 嚴格單調遞增，且連續多次讀取 `GET /snapshot` 永遠不出現較小的版本
 
 ### Implementation for User Story 5
 
-- [ ] T058 [US5] 確認 `<core>/review.py` 的 `RoundReviewRules.mark` 以**保存的** `RoundResult.order`、開輪基準與完整判錯集合重算（絕不使用 `RoundReview.result.group_counts` 當起點），`affected` 每次實際變更時整個覆蓋、不累計；`ResultView` 在 `final=true` 輸出空 `affectedQuestions`（依賴 T053～T055 先失敗）
+- [ ] T058 [US5] 確認 `<core>/review.py` 的 `RoundReviewRules.mark` 以**保存的** `RoundResult.order`、開輪基準與完整判錯集合重算（絕不使用 `RoundReview.result.group_counts` 當起點），`affected` 每次實際變更時整個覆蓋、不累計；`ResultView` 在 `final=true` 輸出空 `affectedQuestions`（本任務為驗證與補測：整輪重算與 `mark` 已在 T031、T041、T049 實作，T053～T054 在寫成時可能就通過，不要求先失敗；負對照 T054 證明這組測試有鑑別力）
 - [ ] T059 [US5] 前端：`ranking-review-teacher.js` 與 `ranking-review.js` 對 `affectedQuestions` 內的題目加標示文字「結果已更新」（其他題不標）；在 `ranking-review.js` 實作並匯出 `acceptRankingVersion(roundNumber, resultVersion)`：為每輪記住已收過的最大 `resultVersion`，收到較小者回傳 `false`，兩個前端模組都用它決定是否更新結果區塊（研究 R3，FR-016；其他區塊照常更新）
 
 **Checkpoint**: 重算可重現、受影響題目標示正確、版本單調
@@ -197,17 +197,17 @@ description: "004-ranking-review 任務清單"
 ### Tests for User Story 6（先寫、確認失敗）⚠️
 
 - [ ] T060 [P] [US6] 在 `tests/unit/core/ranking_review/test_finalize_plan.py` 測試 `RoundReviewRules.finalize_plan(review, baseline)`：`solved_questions` = 有 `success_group` 的題號；`success_increments` = `result.wins`（題組成功只算 1）；`final_counts` = 基準加 `wins`；本輪沒有任何提交（或全被判錯）→ `solved_questions` 為空集合、`success_increments` 為空（`Scenario: US6-AS7`）
-- [ ] T061 [P] [US6] 在 `tests/unit/app/ranking_review/test_finalize.py` 用真 `ActivityService` 測試：以最新 `resultVersion` 確認 → 001 階段變「結果已定案」、`Group.success_count` 依 `success_increments` 增加、`Activity.solved_questions` 含新成功題（`Scenario: US6-AS1` ↔ OpenSpec「定案及重複確認」）；同一版本重送 → `already_finalized=True`、001 的 `finalize` **只被呼叫一次**（以包裝的 spy 驗證）、成功次數只增加一次（`Scenario: US6-AS2`）；舊版本確認 → `STALE_RESULT_VERSION`，存放區、版本、判錯集合、001 階段都不變（`Scenario: US6-AS3` ↔ OpenSpec「定案前結果被更新」）；定案後以**不同**版本確認 → `RESULT_ALREADY_FINAL`，訊息附定案版本；沒有任何判錯就定案（`Scenario: US6-AS6`）
+- [ ] T061 [P] [US6] 在 `tests/unit/app/ranking_review/test_finalize.py` 用真 `ActivityService` 測試：以最新 `resultVersion` 確認 → 001 階段變「結果已定案」、`Group.success_count` 依 `success_increments` 增加、`Activity.solved_questions` 含新成功題（`Scenario: US6-AS1` ↔ OpenSpec「定案及重複確認」）；同一版本重送 → `already_finalized=True`、001 的 `finalize` **只被呼叫一次**（以包裝的 spy 驗證）、成功次數只增加一次（`Scenario: US6-AS2`）；定案後 `ranking` 的名次 1 提交 `displayStatus` 由 `SUCCESS` 變為 `CORRECT`、`replacedGroup` 為 `null`，`FinalizedResult.rankings` 也是 `CORRECT`（`Scenario: US6-AS1`、`US7-AS14`）；舊版本確認 → `STALE_RESULT_VERSION`，存放區、版本、判錯集合、001 階段都不變（`Scenario: US6-AS3` ↔ OpenSpec「定案前結果被更新」）；定案後以**不同**版本確認 → `RESULT_ALREADY_FINAL`，訊息附定案版本；沒有任何判錯就定案（`Scenario: US6-AS6`）
 - [ ] T062 [P] [US6] 在 `tests/unit/app/ranking_review/test_finalize_rejected_by_001.py` 測試：以包裝 `ActivityService` 讓 `finalize` 回 `Outcome(ok=False, ...)`（模擬階段剛好變動、活動已失效）→ 004 回 `FINALIZE_REJECTED`、**不保存**定案紀錄，`RoundReview.finalized is None`，結果仍可判錯、版本不變（edge case「確認定案時 001 拒絕」）
 - [ ] T063 [P] [US6] 在 `tests/unit/app/ranking_review/test_finalize_concurrency.py` 測試：兩個相同版本的確認以 `asyncio.gather` 同時到達 → 只有一次呼叫 001、`success_count` 只增加一次、其中一個回 `already_finalized=True`（SC-005 的「兩個頁面同時確認」）；判錯與確認同時到達 → 依鎖的順序序列化，不會出現「版本 v 已確認但判錯已套用」的混合結果
-- [ ] T064 [P] [US6] 在 `tests/unit/app/ranking_review/test_post_final_lock.py` 測試：定案後判錯、撤銷 → `RESULT_ALREADY_FINAL`（`Scenario: US6-AS4` ↔ OpenSpec「定案後改判」）；下一輪開輪之後修改**舊**輪次判錯狀態 → 同樣 `RESULT_ALREADY_FINAL`，既有搶答成功者與成功次數不變（`Scenario: US6-AS5`）；004 沒有任何切換模式的入口，且 001 對進行中輪次的規則修改回 `RULES_LOCKED`（FR-010；以既有 001 行為驗證，不新增 004 行為）
+- [ ] T064 [P] [US6] 在 `tests/unit/app/ranking_review/test_post_final_lock.py` 測試：定案後判錯、撤銷 → `RESULT_ALREADY_FINAL`（`Scenario: US6-AS4` ↔ OpenSpec「定案後改判」）；下一輪開輪之後修改**舊**輪次判錯狀態 → 同樣 `RESULT_ALREADY_FINAL`，既有搶答成功者與成功次數不變（`Scenario: US6-AS5`）；004 沒有任何切換模式的入口：檢查 `/api` 路由表沒有任何修改輪次模式的端點，且「結果未定案」「結果已定案」階段再開輪回 `STAGE_NOT_ALLOWED`（FR-010；以既有 001 行為驗證，不新增 004 行為；`RULES_LOCKED` 只用於搶答中重複開輪，不在此測）
 - [ ] T065 [P] [US6] 在 `tests/unit/app/ranking_review/test_finalized_reader.py` 測試 `RankingService.finalized_rounds(code)`（`RankingReader`）：只回傳**已定案**輪次、依輪次遞增；未定案與搶答中的輪次不出現；回傳物件不可變；被判錯的提交 `rank is None`、未成功的候選（名次 2、3…）`rank` 為其名次且 `display_status` 為 `FAILED`；`final_counts` 等於 001 定案後各組 `success_count`（005 FR-025 的依據）
 - [ ] T066 [P] [US6] 在 `tests/contract/test_http_ranking_review_finalize.py` 測試 `POST /api/activities/{code}/rounds/current/finalize`：本文 `{"resultVersion": n}` → 200 `{"version", "resultVersion", "alreadyFinalized"}`；本文 `{}` 或缺 `resultVersion`、`resultVersion` 不是整數 → 400 `INVALID_REQUEST`；`NOT_TEACHER` 403；`STALE_RESULT_VERSION` 409；`RESULT_ALREADY_FINAL` 409；`ROUND_STILL_OPEN` 409；`/api` 路由表中此路徑只有**一個**處理器（001 的空定案路由已移除）
 - [ ] T067 [P] [US6] 在 `tests/integration/test_us6_two_rounds.py` 端對端測試兩輪：第 1 輪速度模式，甲組成功一個三格題組並定案 → 第 2 輪開輪後甲組基準為 1（不是 3，`Scenario: US1-AS1` 的端對端版本）；速度模式的成功與公平模式的成功都計入基準（`Scenario: US1-AS2`）；第 2 輪公平模式依基準排名，次數較少的組先成功；定案後全部題都有成功者時開下一輪被 001 拒絕（不屬 004 行為，確認不退步）；本輪所有題都沒有提交時照常定案、成功次數不變（`Scenario: US6-AS7`）
 
 ### Implementation for User Story 6
 
-- [ ] T068 [US6] 在 `<core>/review.py` 實作 `RoundReviewRules.finalize_plan` 與建立 `FinalizedResult`；在 `<app>/service.py` 實作 `finalize(code, requester, result_version)`：在 `ReviewStore.lock(code)` 內依 data-model 判定順序檢查（已定案且版本相同 → 冪等回既有結果，**不再呼叫 001**；已定案但版本不同 → `RESULT_ALREADY_FINAL`；階段須為結果未定案；版本須等於目前結果版本，否則 `STALE_RESULT_VERSION`）→ `await activity_service.finalize(code, requester, FinalizeOutcome(solved, increments))` → 成功才把 `FinalizedResult` 寫回 `RoundReview.finalized`；001 拒絕時回 `FINALIZE_REJECTED` 並沿用 001 訊息；實作 `finalized_rounds`（`RankingReader`）；日誌 `logger.info("定案 activity=%s round=%s version=%s already=%s", ...)`
+- [ ] T068 [US6] 在 `<core>/review.py` 實作 `RoundReviewRules.finalize_plan` 與建立 `FinalizedResult`；在 `<app>/service.py` 實作 `finalize(code, requester, result_version)`：在 `ReviewStore.lock(code)` 內依 data-model 判定順序檢查（已定案且版本相同 → 冪等回既有結果，**不再呼叫 001**；已定案但版本不同 → `RESULT_ALREADY_FINAL`；階段須為結果未定案；版本須等於目前結果版本，否則 `STALE_RESULT_VERSION`）→ `await activity_service.finalize(code, requester, FinalizeOutcome(solved, increments))` → 成功才把 `FinalizedResult` 寫回 `RoundReview.finalized`；001 拒絕時回 `FINALIZE_REJECTED` 並沿用 001 訊息；`FinalizedResult.rankings` 以 `as_final(result.rankings)` 產生（名次 1 的 `SUCCESS` 改為 `CORRECT`）；實作 `finalized_rounds`（`RankingReader`）；日誌 `logger.info("定案 activity=%s round=%s version=%s already=%s", ...)`
 - [ ] T069 [US6] 在 `<web>/ranking_review.py` 實作 `POST /activities/{code}/rounds/current/finalize`（本文 `FinalizeBody(resultVersion: StrictInt)`，`extra="ignore"`；可接受 `Idempotency-Key` 但不依賴它）；**同時**移除 `src/lecture_quiz/adapters/web/http_api.py` 中 001 預留的 `POST /activities/{code}/rounds/current/finalize` 空定案路由（含其 docstring「004 會擴充本文」）；更新 `specs/001-activity-session/contracts/http-api.md` 第 8 項為「由 004 提供，見 `specs/004-ranking-review/contracts/http-api.md` R2」（Complexity Tracking 已說明理由；PR 說明要列出這項對 001 的影響）
 - [ ] T070 [US6] 前端老師端：`ranking-review-teacher.js` 加「確認定案」按鈕，送出畫面上最新的 `resultVersion`；`STALE_RESULT_VERSION` 時顯示「結果已更新，請重新檢視後再確認」且不自動套用；成功或 `alreadyFinalized` 後隱藏判錯與確認按鈕、顯示「結果已定案」；失敗訊息 `textContent`
 
@@ -217,13 +217,13 @@ description: "004-ranking-review 任務清單"
 
 ## Phase 9: User Story 7 - 依角色看到結果、文字安全顯示 (Priority: P2)
 
-**Goal**: 搶答中沒有任何順位；關輪後資料公開查詢（不含理由與他組次數）；學生畫面只顯示本組狀態、答錯組別與搶答成功者；不可信文字安全顯示
+**Goal**: 搶答中沒有任何順位；關輪後資料公開查詢（不含理由與他組次數）；學生畫面只顯示本組狀態、目前搶答成功者與剛被判錯的前一組；不可信文字安全顯示
 
 **Independent Test**: 搶答中與關輪後分別以老師、學生取得資料與畫面；含標記與多行答案的顯示；舊輪次可查、新輪次不洩漏
 
 ### Tests for User Story 7（先寫、確認失敗）⚠️
 
-- [ ] T071 [P] [US7] 在 `tests/integration/test_ranking_visibility.py` 測試：搶答中老師與學生的所有回應與 WebSocket 推送都不含 `ranking` 欄位，且他組動態不使本組學生收到任何推送（`Scenario: US7-AS1`，SC-007）；關輪後學生快照含各題各組的 `rank`、`judgedWrong`、`displayStatus` 與 `successGroup`（資料公開，`Scenario: US7-AS5`），遞迴掃描學生 JSON，鍵 `reason`、`countAtProcessing`、`groupCounts` 出現次數為 **0**（FR-036、SC-010）；老師 JSON 含這些鍵（`Scenario: US7-AS6`）；某題無人提交或全被判錯 → `successGroup: null`、`entries` 不含該題搶答成功者（`Scenario: US7-AS9`）；開下一輪後舊輪次仍在 `ranking.rounds`，新輪次（搶答中）的他組資料不出現（`Scenario: US7-AS10`）；另測資料面支撐學生畫面所需的資訊：候選甲（判錯）、乙（搶答成功）、丙、丁時，學生 JSON 可由 `rank`、`judgedWrong`、`displayStatus`、`successGroup` 推得「本組狀態、排在搶答成功者之前的答錯組別、搶答成功者」（`Scenario: US7-AS2`、`US7-AS3`、`US7-AS4`、`US7-AS11` 的資料部分；沒有提交的組在該題沒有 entry，`US7-AS13`）。**畫面實際只顯示哪些組由前端決定，專案沒有前端單元測試設施，這部分由 T094 的人工驗證負責，不得宣稱已由自動化測試驗證**
+- [ ] T071 [P] [US7] 在 `tests/integration/test_ranking_visibility.py` 測試：搶答中老師與學生的所有回應與 WebSocket 推送都不含 `ranking` 欄位，且他組動態不使本組學生收到任何推送（`Scenario: US7-AS1`，SC-007）；關輪後學生快照含各題各組的 `rank`、`judgedWrong`、`displayStatus` 與 `successGroup`（資料公開，`Scenario: US7-AS5`），遞迴掃描學生 JSON，鍵 `reason`、`countAtProcessing`、`groupCounts` 出現次數為 **0**（FR-036、SC-010）；老師 JSON 含這些鍵（`Scenario: US7-AS6`）；某題無人提交或全被判錯 → `successGroup: null`、`entries` 不含該題搶答成功者（`Scenario: US7-AS9`）；開下一輪後舊輪次仍在 `ranking.rounds`，新輪次（搶答中）的他組資料不出現（`Scenario: US7-AS10`）；另測資料面支撐學生畫面所需的資訊：候選甲、乙、丙、丁，老師把搶答成功者甲判錯後，學生 JSON 該題 `successGroup == 乙`、`replacedGroup == 甲`，甲 entry `displayStatus == "WRONG"`、丙 entry `"FAILED"`（`Scenario: US7-AS3`、`US7-AS4`、`US7-AS11` 的資料部分）；該題下一次判錯（乙）→ `replacedGroup == 乙`、`successGroup == 丙`；撤銷 → `replacedGroup is null`；整題全被判錯 → 學生 JSON `successGroup`、`replacedGroup` 皆 `null`、老師 JSON `replacedGroup` 保留（`Scenario: US7-AS9`）；定案後 `displayStatus` 名次 1 為 `"CORRECT"`、`replacedGroup` 為 `null`（`Scenario: US7-AS14`）；沒有提交的組在該題沒有 entry（`US7-AS13`）。**畫面實際只顯示哪些組由前端決定，專案沒有前端單元測試設施，這部分由 T094 的人工驗證負責，不得宣稱已由自動化測試驗證**
 - [ ] T072 [P] [US7] 在 `tests/unit/core/ranking_review/test_view_student.py` 測試：`for_student` 的輸出與請求者所屬組別無關（任意兩組的學生版相同）；同一份輸入的學生版鍵集合是老師版的真子集；`final=true` 時兩者 `affectedQuestions` 皆為 `[]`
 - [ ] T073 [P] [US7] 在 `tests/architecture/test_static_text_safety.py` 擴充（沿用 003 的掃描方式）：新增的 `ranking-review.js`、`ranking-review-teacher.js` 不得使用 `innerHTML`、`outerHTML`、`insertAdjacentHTML`、`document.write`、`eval`、`new Function`，文字一律 `textContent`／`createTextNode`（`Scenario: US7-AS7`，FR-028）
 - [ ] T074 [P] [US7] 在 `tests/integration/test_us7_safe_display.py` 測試資料面（沿用 003 `test_us6_safe_display.py` 的做法）：含 `<b>`、`<script>` 字樣與 500 字、多行的答案，經 003 送出、判錯、關輪後，快照中 003 的 `answers` 逐字等於原文（不被截斷、不被跳脫改寫）；004 的 JSON 內不含任何答案內容（答案只由 003 提供，避免重複與洩漏）（`Scenario: US7-AS7`、`US7-AS12`）
@@ -231,7 +231,7 @@ description: "004-ranking-review 任務清單"
 
 ### Implementation for User Story 7
 
-- [ ] T076 [US7] 前端學生端（依 FR-036、FR-037 限縮）：`<static>/js/ranking-review.js` 只顯示 ① 本組每題每筆提交的顯示狀態（搶答成功／答錯／搶答失敗；整題無人成功為「未成功」）；② 該題排在搶答成功者之前的答錯組別與搶答成功者（組號、答案與狀態，答案由 003 的 `submissions.published` 以（輪次、題號、組號）合併取得）；③ 本組成功次數（`ownGroup.successCount`，沿用 001）；**不**逐組列出其他候選、不顯示理由與他組成功次數；本組沒有提交的題不顯示狀態（`Scenario: US7-AS2`、`US7-AS3`、`US7-AS4`、`US7-AS11`、`US7-AS13`）；多行答案保留換行、完整顯示（`Scenario: US7-AS12`）
+- [ ] T076 [US7] 前端學生端（依 FR-036、FR-037 限縮）：`<static>/js/ranking-review.js` 只顯示 ① 本組每題每筆提交的顯示狀態（搶答成功／搶答正確／答錯／搶答失敗；整題無人成功為「未成功」）；② 每題目前的搶答成功者（`successGroup`，組號、答案與狀態：定案前「搶答成功」、定案後「搶答正確」）；有 `replacedGroup` 時，把剛被判錯的那一組（組號、答案與「答錯」）與遞補的搶答成功者**一起**顯示，該題下一次判錯、撤銷或定案時由新的取代或移除；整題無搶答成功者只顯示「未成功」與本組狀態（答案由 003 的 `submissions.published` 以（輪次、題號、組號）合併取得）；③ 本組成功次數（`ownGroup.successCount`，沿用 001）；**不**逐組列出其他候選、不顯示理由與他組成功次數；本組沒有提交的題不顯示狀態（`Scenario: US7-AS2`、`US7-AS3`、`US7-AS4`、`US7-AS9`、`US7-AS11`、`US7-AS13`、`US7-AS14`）；多行答案保留換行、完整顯示（`Scenario: US7-AS12`）
 - [ ] T077 [US7] 調整 003 已合併的學生頁（FR-037）：在 `<static>/js/round-submission.js` 讓「已公開的作答」區塊（`renderPublished`）**不再對學生列出全部組的答案與送出先後**（改由 T076 的區塊呈現；老師頁 `round-submission-teacher.js` 的已公開輪次列表保留，並由 T035 補上 004 資料）；只改前端呈現與其測試，**不改 003 的資料與後端**；先 `grep -rn "published" tests/` 找出斷言學生頁文字的測試，只調整與畫面呈現有關的斷言並記在 `verification.md`「問題紀錄」，資料層斷言（`submissions.published` 內容）不得改動
 - [ ] T078 [US7] 確認老師頁 `ranking-review-teacher.js` 與 003 的已公開輪次列表在同一輪、同一快照內以（輪次、題號、組號）合併、沒有重複顯示答案；`judgedWrong` 以 004 的 `ranking` 為準，**不使用** 003 的佔位 `judgedWrong` 欄位（研究 R5，FR-035）
 
@@ -258,8 +258,36 @@ description: "004-ranking-review 任務清單"
 - [ ] T091 [P] 準備 PR 說明（草稿，不自動發布）：列出對既有程式的影響範圍——001 的 HTTP 定案路由改由 004 提供（`resultVersion`）、既有定案測試改用 helper（斷言未改）、003 學生頁「已公開的作答」呈現調整（資料不變）；列出新增檔案、驗證指令與結果數字、與 OpenSpec 無新偏離的說明；結尾加 `🤖 Generated with [Claude Code](https://claude.com/claude-code)`
 - [ ] T092 [P] 與 003 負責人確認 T077 對學生頁的調整（`round-submission.js` 與其測試），把確認日期與結果記在 `verification.md`「問題紀錄」
 - [ ] T093 執行 `quickstart.md` 的「一、自動化驗證」全部指令，確認每條指令與預期相符（含 `tests/SCENARIO_MAP.md` 對照）；結果寫入 `verification.md`
-- [ ] T094 **非實作者**（jacky0407）依 `quickstart.md`「二、手動驗證」13 個步驟在多個瀏覽器分頁（老師＋三組學生）以真實後端完整走一遍，另加兩項前端專屬檢查：① 開兩個老師分頁，在較舊的分頁確認畫面不會被較舊的 `resultVersion` 覆蓋（`Scenario: US7-AS8`）；② 學生頁關輪後只顯示本組狀態、答錯組別與搶答成功者，沒有列出全部組作答（FR-037）。記錄日期、操作步驟、實際看到的畫面文字、各組成功次數與 `resultVersion`、畫面右下角延遲；沒有實際執行不得宣稱完成（憲章原則 VI；SC-009）。題目需經 002 真實匯入，002 尚未合併時在此註明阻塞原因，不得以假資料取代
+- [ ] T094 **非實作者**（jacky0407）依 `quickstart.md`「二、手動驗證」13 個步驟在多個瀏覽器分頁（老師＋三組學生）以真實後端完整走一遍，另加兩項前端專屬檢查：① 開兩個老師分頁，在較舊的分頁確認畫面不會被較舊的 `resultVersion` 覆蓋（`Scenario: US7-AS8`）；② 學生頁關輪後只顯示本組狀態、目前的搶答成功者與（判錯當下）剛被判錯的前一組，沒有列出全部組作答（FR-037）；③ 老師介面每題只有目前的搶答成功者有「判錯」按鈕、只有被替換的那一組有「撤銷判錯」（FR-034）；④ 定案後學生與老師畫面的「搶答成功」同時變成「搶答正確」、「剛被判錯的前一組」消失（`Scenario: US7-AS14`）。記錄日期、操作步驟、實際看到的畫面文字、各組成功次數與 `resultVersion`、畫面右下角延遲；沒有實際執行不得宣稱完成（憲章原則 VI；SC-009）。題目需經 002 真實匯入，002 尚未合併時在此註明阻塞原因，不得以假資料取代
 
+- [ ] T095 確認沒有夾帶機敏資料或不追蹤的檔案（憲章合併前品質關卡第 7 項、原則 V）：`git diff --staged` 與 `git status` 檢查沒有 `.env`、憑證 JSON、`.venv`、`期末專題說明.md`／`.pdf`、`project_proposal_draft.md`；`grep -rn "client_secret\|access_token\|refresh_token" src/ tests/ specs/004-ranking-review/` 無結果；PR、Issue 說明不貼機敏內容；結果記入 `verification.md`
+
+---
+
+## FR／SC 對照表（可追溯性）
+
+| 需求 | 任務 |
+|---|---|
+| FR-001、FR-002、FR-003 基準 | T019～T023、T060、T067 |
+| FR-004、FR-005 固定題序 | T024、T026、T030 |
+| FR-006、FR-009 速度模式 | T025、T031 |
+| FR-007、FR-008 公平模式與理由 | T037～T042 |
+| FR-010 模式固定 | T064 |
+| FR-011～FR-014 判錯與撤銷 | T043～T052 |
+| FR-015～FR-018 重算、版本、標示、全被判錯 | T053～T059 |
+| FR-019～FR-023 定案與鎖定 | T060～T070 |
+| FR-024 搶答中不提供順位 | T029、T071 |
+| FR-025 重複判錯不變 | T043、T046 |
+| FR-026、FR-027 後端判定與輸入驗證 | T044、T045、T047、T066、T081 |
+| FR-028 純文字顯示 | T073、T074 |
+| FR-029 序列化 | T056、T063 |
+| FR-030 2 秒 | T029、T082、T083 |
+| FR-031 階段標示 | T035、T094 |
+| FR-032 日誌 | T050、T068、T080 |
+| FR-033、FR-034 顯示狀態、判錯免填原因與老師介面順序 | T025、T048、T052、T071、T094 |
+| FR-035 一致呈現 | T078 |
+| FR-036、FR-037 角色畫面與 003 學生頁調整 | T071、T072、T076、T077、T094 |
+| SC-001～SC-010 | T079、T053、T054、T082、T061、T063、T071、T073、T074、T094 |
 ---
 
 ## Dependencies & Execution Order
@@ -278,7 +306,7 @@ description: "004-ranking-review 任務清單"
 
 - 測試先寫並確認失敗（失敗數記入 `verification.md`），再寫實作
 - 核心（`<core>`）→ 服務層（`<app>`）→ 外層（`<web>`、`<static>`）
-- 每個 Story 結束時先跑全部測試再勾選、commit
+- 每個 Story 結束時（Checkpoint 前）執行 `ruff check .`、`ruff format --check .`、`mypy` 與全部測試，三者都通過再勾選、commit（憲章技術限制 2：提交前必須通過；T085 是最後的總檢查）
 
 ### Parallel Opportunities
 

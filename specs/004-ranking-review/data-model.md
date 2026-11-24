@@ -20,18 +20,20 @@
 | 型別 | 欄位 | 說明 |
 |---|---|---|
 | `WinReason` | `SOLE_CANDIDATE`、`EARLIER_SUBMISSION`、`FEWER_SUCCESSES`、`BACKEND_ORDER` | 勝出（或排在前一名之後）的理由，演算法見下 |
-| `DisplayStatus` | `SUCCESS`（搶答成功）、`WRONG`（答錯）、`FAILED`（搶答失敗） | 每筆提交的顯示狀態；整題的「未成功」由 `QuestionRanking.success_group is None` 表示，不是 `DisplayStatus` |
+| `DisplayStatus` | `SUCCESS`（搶答成功，結果未定案）、`CORRECT`（搶答正確，定案後）、`WRONG`（答錯）、`FAILED`（搶答失敗） | 每筆提交的顯示狀態；`recompute` 只產生 `SUCCESS`／`WRONG`／`FAILED`，`CORRECT` 只在定案後出現（見下）；整題的「未成功」由 `QuestionRanking.success_group is None` 表示，不是 `DisplayStatus` |
 | `RankEntry` | `group_number: int`、`rank: int \| None`、`count_at_processing: int \| None`、`reason: WinReason \| None`、`wrong: bool`、`display_status: DisplayStatus` | 一個候選在某題的排名；被判錯者 `rank`、`reason` 為 `None`；速度模式 `count_at_processing` 為 `None` |
 | `QuestionRanking` | `question_number: int`、`entries: tuple[RankEntry, ...]`、`success_group: int \| None` | `entries` 先放有名次者（名次由小到大），再放被判錯者（依 `received_at`、`sequence`）；沒有任何有名次者時 `success_group` 為 `None`（「未成功」） |
 | `RoundResult` | `order: tuple[int, ...]`、`rankings: tuple[QuestionRanking, ...]`、`group_counts: Mapping[int, int]`、`wins: Mapping[int, int]` | `order` 是固定題序；`rankings` 依題序排列；`group_counts` 是各組在本輪處理完後的暫算次數（基準＋本輪成功題數）；`wins` 是各組本輪成功題數（定案時的 `success_increments`） |
 
-`DisplayStatus` 的推導：被判錯 → `WRONG`；有名次且名次為 1 → `SUCCESS`；有名次且名次大於 1 → `FAILED`。
+`DisplayStatus` 的推導（`display_status(rank, wrong)`）：被判錯 → `WRONG`；有名次且名次為 1 → `SUCCESS`；有名次且名次大於 1 → `FAILED`。**定案後**（`final=true`）：`ResultView` 與 `FinalizedResult.rankings` 把名次 1 的 `SUCCESS` 改為 `CORRECT`（`as_final(rankings)`，純函式）；`WRONG`、`FAILED` 不變（FR-033、spec US6-AS1、US7-AS14）。
+
+`ResultView` 的 `replacedGroup`：`final=true` 時兩種角色都輸出 `null`；未定案時，老師版輸出 `RoundReview.replaced[question]`（沒有則 `null`），學生版只有在該題 `success_group` 不是 `None`（有遞補者）時才輸出，否則 `null`（spec FR-036、US7-AS3、AS9）。
 
 ### 判定與狀態
 
 | 型別 | 欄位 | 說明 |
 |---|---|---|
-| `RoundReview` | `round_number: int`、`version: int`、`wrong_marks: frozenset[tuple[int, int]]`、`result: RoundResult`、`affected: frozenset[int]`、`finalized: FinalizedResult \| None` | 一輪的審閱狀態；`version` 從 1 開始，只在實際變更時加 1；`affected` 是最近一次變更影響的題號（初始為空） |
+| `RoundReview` | `round_number: int`、`version: int`、`wrong_marks: frozenset[tuple[int, int]]`、`result: RoundResult`、`affected: frozenset[int]`、`replaced: Mapping[int, int]`、`finalized: FinalizedResult \| None` | 一輪的審閱狀態；`replaced` 是「被替換的搶答成功者」：題號 → 最近一次因判錯而被下一組取代的前一位搶答成功者的組號（每題最多一組；該題下一次判錯、撤銷或定案時失效，初始為空）；`version` 從 1 開始，只在實際變更時加 1；`affected` 是最近一次變更影響的題號（初始為空） |
 | `FinalizedResult` | `version: int`、`rankings: tuple[QuestionRanking, ...]`、`final_counts: Mapping[int, int]`、`solved_questions: frozenset[int]`、`success_increments: Mapping[int, int]` | 定案時保存，之後只讀；`final_counts` 是各組定案後的累計成功次數（基準＋本輪成功題數） |
 | `ReviewRejection` | 見 research R12 | `StrEnum`，每個值有 HTTP 狀態碼與預設訊息 |
 | `MarkDecision` | `ok: bool`、`changed: bool`、`review: RoundReview \| None`、`rejection: ReviewRejection \| None` | 判錯／撤銷的判定結果；`changed=False` 時 `review` 是原物件 |
@@ -86,11 +88,14 @@ mark(review, input, group, question, wrong) -> MarkDecision
   (group, question) 沒有候選            -> SUBMISSION_NOT_FOUND
   已是 wrong 狀態                       -> ok, changed=False（版本不變）
   否則 wrong_marks 加／減一項 -> recompute -> version+1 -> affected = diff(old, new)
+  replaced[question] = 被判錯的組別（只有「判錯」且該組在判錯前是該題 success_group 時）；
+                       其餘情況（撤銷、判錯非搶答成功者）移除該題的 replaced
 
 finalize_plan(review, baseline) -> (solved_questions, success_increments, final_counts)
   solved_questions = 有 success_group 的題號
   success_increments = result.wins
   final_counts = baseline + wins
+  rankings = as_final(result.rankings)   # SUCCESS -> CORRECT，replaced 清空
 ```
 
 階段與身分的檢查在服務層（需要 001 的活動資料），順序如下（第一個不成立的就是拒絕原因）：
@@ -125,7 +130,7 @@ finalize_plan(review, baseline) -> (solved_questions, success_increments, final_
 導出的初始結果 v1（未定案）
     │  第一次實際判錯：以它為起點建立 RoundReview 並保存（版本 2）
 RoundReview（未定案）
-    │  mark／unmark 實際變更：version+1、affected 更新
+    │  mark／unmark 實際變更：version+1、affected 與 replaced 更新
     │  mark／unmark 無變化：不變
     │  finalize(resultVersion == version) 且 001 接受
     ▼

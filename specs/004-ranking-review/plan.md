@@ -16,7 +16,7 @@
 
 ## Summary
 
-關輪後，老師對每筆已接受的提交判錯或撤銷判錯；每次判錯狀態改變，系統從開輪時保存的基準與固定題序整輪重算（速度模式或公平模式），產生新的結果版本與「受影響題目」；老師確認所見最新版本後定案，成果只交給 001 一次。結果資料對所有參與者公開查詢，畫面依角色限縮（老師看完整候選情況，學生只看本組狀態、答錯組別與搶答成功者，FR-036）。
+關輪後，老師對每筆已接受的提交判錯或撤銷判錯；每次判錯狀態改變，系統從開輪時保存的基準與固定題序整輪重算（速度模式或公平模式），產生新的結果版本與「受影響題目」；老師確認所見最新版本後定案，成果只交給 001 一次。結果資料對所有參與者公開查詢，畫面依角色限縮（老師看完整候選情況，學生只看本組狀態、目前的搶答成功者與老師判錯當下剛被判錯的前一組，FR-036；老師介面每題只對目前的搶答成功者提供「判錯」，FR-034）。
 
 技術做法：
 
@@ -58,11 +58,11 @@
 | IV 後端為唯一事實來源 | 先後只依 003 保存的接收時間與序號；判錯、定案權限只依 001 的老師身分；結果版本由後端遞增；重算確定性（SC-002）；同一判錯請求重送不產生第二次變更（FR-025） | ✅ |
 | V 資料可見性與安全 | 搶答中 `ranking` 欄位不存在；學生資料不含勝出理由與他組次數；答案由 003 的 `submissions` 提供、前端一律 `textContent`；所有外部輸入（活動代碼、輪次、題號、組號、結果版本、身分）後端驗證，失敗不改狀態；錯誤訊息不含堆疊、路徑、憑證；日誌只記輪次、題號、組號、版本 | ✅ |
 | VI 驗收情境驅動測試 | 每個 Acceptance Scenario 與 OpenSpec Scenario 都有測試並加入 `tests/SCENARIO_MAP.md`；004 不呼叫 Google，自動化測試不呼叫任何外部服務；真實路徑驗證＝非實作者依 quickstart 在多瀏覽器分頁用真實後端人工驗證（SC-009）；效能測試標記 `perf`、本機真實伺服器 | ✅ |
-| VII 簡單與本機運作 | 不新增套件、不新增資料庫；對 001 只刪除一條預留的空定案路由並改由 004 提供（Complexity Tracking）；不改 001 核心、不改 003 | ✅（附理由） |
+| VII 簡單與本機運作 | 不新增套件、不新增資料庫；對 001 只刪除一條預留的空定案路由並改由 004 提供；對 003 只調整學生頁的前端呈現與其測試（FR-037），不改 003 的資料與後端；不改 001 核心（皆列入 Complexity Tracking） | ✅（附理由） |
 | 技術限制：架構（NON-NEGOTIABLE） | `core/ranking_review/` 只匯入標準函式庫與 `lecture_quiz.core` 內模組；`tests/architecture/test_core_is_pure.py` 已涵蓋整個 `core/`；時間資料只來自候選的 `received_at` | ✅ |
 | 技術限制：日誌、風格 | `logging` INFO；Google docstring、型別提示；ruff、ruff format、mypy 全過才提交 | ✅ |
 
-**Post-design 重新檢查（Phase 1 後）**：data-model、contracts 與 quickstart 沒有引入新的違反項目。唯一碰到既有程式的地方是 001 的 HTTP 路由（研究 R7），已列入 Complexity Tracking；003 的 `judgedWrong` 預留欄位維持原狀、前端不使用（研究 R5）。
+**Post-design 重新檢查（Phase 1 後）**：data-model、contracts 與 quickstart 沒有引入新的違反項目。碰到既有程式的地方有三處，都已列入 Complexity Tracking：① 001 的 HTTP 定案路由（研究 R7）；② 既有測試的定案呼叫改用 helper（只改呼叫方式、不改斷言）；③ 003 已合併的學生頁「已公開的作答」呈現（spec FR-037，研究 R5）。003 的 `judgedWrong` 預留欄位維持原狀、前端不使用（研究 R5）。
 
 ## Project Structure
 
@@ -74,6 +74,7 @@ specs/004-ranking-review/
 ├── research.md          # Phase 0：R1～R16 決策
 ├── data-model.md        # Phase 1：實體、狀態轉移、演算法、驗證規則
 ├── quickstart.md        # Phase 1：自動化與人工驗證步驟
+├── verification.md      # 實作時建立：驗證紀錄（日期、指令、結果數字）
 ├── contracts/
 │   ├── http-api.md          # PUT judgement、POST finalize
 │   ├── sync-websocket.md    # 快照新增的 ranking 欄位
@@ -89,10 +90,10 @@ src/lecture_quiz/
 ├── core/
 │   └── ranking_review/             # 004 新增（純函式）
 │       ├── __init__.py
-│       ├── models.py               # Candidate、RankingInput、RankEntry、QuestionRanking、RoundResult、WinReason、DisplayStatus
+│       ├── models.py               # Candidate、RankingInput、RankEntry、QuestionRanking、RoundResult、WinReason、DisplayStatus（含 CORRECT＝搶答正確，定案後）
 │       ├── order.py                # QuestionOrder.compute（固定題序）
 │       ├── ranking.py              # RankingCalculator：rank_speed、rank_fair、recompute、diff
-│       ├── review.py               # RoundReview（版本、判錯集合、結果、定案）、RoundReviewRules：mark（判錯／撤銷）、finalize_plan（新成功題號、各組增量、最終累計）
+│       ├── review.py               # RoundReview（版本、判錯集合、結果、受影響題目、被替換的搶答成功者 `replaced`、定案）、RoundReviewRules：mark（判錯／撤銷）、finalize_plan（新成功題號、各組增量、最終累計）
 │       ├── outcome.py              # FinalizedResult（定案時保存的唯讀結果）
 │       └── view.py                 # ResultView.for_teacher／for_student（依角色裁切 JSON）
 ├── app/
@@ -109,12 +110,14 @@ src/lecture_quiz/
         ├── teacher.html            # 加一個 <section id="ranking-review-section">
         ├── student.html            # 加一個 <section id="ranking-review-student-section">
         └── js/
-            ├── ranking-review-teacher.js   # 老師端：候選情況、判錯／撤銷、確認定案
-            └── ranking-review.js           # 學生端：本組狀態、答錯組別與搶答成功者
+            ├── ranking-review-teacher.js   # 老師端：候選情況、只對目前搶答成功者的「判錯」、對被替換者的「撤銷判錯」、確認定案
+            ├── ranking-review.js           # 學生端：本組狀態、目前搶答成功者與剛被判錯的前一組
+            └── round-submission.js         # 003 小改：學生頁關輪後不再列出全部組作答（FR-037）
 
 tests/
 ├── unit/core/ranking_review/       # 題序、速度／公平排名、重算、受影響題目、判定、View 裁切、確定性
 ├── unit/app/ranking_review/        # 服務 + 真 ActivityService + FakeClock、併發、001 拒絕定案
+├── conftest.py（小改：finalize_current helper）、architecture/test_static_text_safety.py（擴充）、既有定案測試改呼叫 helper（不改斷言）
 ├── contract/test_http_ranking_review.py
 ├── integration/test_us{1..7}_ranking_*.py、test_ranking_visibility.py
 └── perf/test_ranking_latency.py    # 6 組（門檻）與 20 組（記錄）
@@ -127,4 +130,5 @@ tests/
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 |---|---|---|
 | 修改已合併的 001：移除 `POST /activities/{code}/rounds/current/finalize` 的空定案實作，改由 004 在同一路徑提供（需 `resultVersion`） | 001 的 http-api.md 已註明「`{}`（004 會擴充）」；若兩個路由並存，任何人用空本文就能不經 004 定案，結果與成功次數會對不上（FR-020、FR-021） | 保留 001 路由並在 001 內呼叫 004：001 的 adapters 會反向依賴 004，違反「子功能只加一行 router」的擴充約定；既有 001／003 測試以 `{}` 呼叫此路由，需改用 helper 先取得結果版本（tasks 列為必做） |
+| 修改 003 已合併的學生頁前端（`round-submission.js`）與其畫面相關測試：關輪後不再對學生列出全部組的作答 | spec FR-037：使用者決定學生畫面只顯示本組狀態、目前搶答成功者與剛被判錯的前一組；003 的學生頁目前列出全部組作答與送出先後，兩者並存會洩漏畫面上不該有的資訊 | 保留 003 區塊並在 004 區塊旁並列：學生會同時看到全部組作答，違反 FR-036／037；只改前端呈現、不改 003 的資料與後端，資料公開範圍（OpenSpec）不變 |
 | 004 自己持有每活動一把 asyncio 鎖，而不是使用 001 的活動鎖 | 定案要呼叫 `ActivityService.finalize`，該方法本身取得 001 的活動鎖，鎖不可重入；若 004 在 001 鎖內再呼叫會死鎖 | 在 001 加 handler 式的鎖內擴充點（像 003 的 `record_submission`）：要改 001 核心與服務，而 RESULT_PENDING 階段只有 `finalize` 能改變階段，004 專屬鎖已足夠序列化所有 004 操作（研究 R1） |
