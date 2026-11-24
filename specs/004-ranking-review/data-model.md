@@ -27,13 +27,15 @@
 
 `DisplayStatus` 的推導（`display_status(rank, wrong)`）：被判錯 → `WRONG`；有名次且名次為 1 → `SUCCESS`；有名次且名次大於 1 → `FAILED`。**定案後**（`final=true`）：`ResultView` 與 `FinalizedResult.rankings` 把名次 1 的 `SUCCESS` 改為 `CORRECT`（`as_final(rankings)`，純函式）；`WRONG`、`FAILED` 不變（FR-033、spec US6-AS1、US7-AS14）。
 
-`ResultView` 的 `replacedGroup`：`final=true` 時兩種角色都輸出 `null`；未定案時，老師版輸出 `RoundReview.replaced[question]`（沒有則 `null`），學生版只有在該題 `success_group` 不是 `None`（有遞補者）時才輸出，否則 `null`（spec FR-036、US7-AS3、AS9）。
+`ResultView` 的 `replacedGroup`：`final=true` 時兩種角色都輸出 `null`；未定案時，老師版輸出 `RoundReview.replaced[question]` 歷程的**最後一位**（歷程為空則 `null`），學生版只有在該題 `success_group` 不是 `None`（有遞補者）時才輸出，否則 `null`（spec FR-036、US7-AS3、AS9）。
+
+`ResultView` 老師版每題另有 `actions`（純函式輸出，前端只照它顯示按鈕，不自行判斷；學生版沒有）：`judgeGroup` ＝ 未定案時的 `success_group`（沒有則 `null`），`undoGroup` ＝ 未定案時 `replaced[question]` 歷程的最後一位（歷程為空則 `null`）；`final=true` 時兩者皆為 `null`（spec FR-034、US4-AS9、AS10）。
 
 ### 判定與狀態
 
 | 型別 | 欄位 | 說明 |
 |---|---|---|
-| `RoundReview` | `round_number: int`、`version: int`、`wrong_marks: frozenset[tuple[int, int]]`、`result: RoundResult`、`affected: frozenset[int]`、`replaced: Mapping[int, int]`、`finalized: FinalizedResult \| None` | 一輪的審閱狀態；`replaced` 是「被替換的搶答成功者」：題號 → 最近一次因判錯而被下一組取代的前一位搶答成功者的組號（每題最多一組；該題下一次判錯、撤銷或定案時失效，初始為空）；`version` 從 1 開始，只在實際變更時加 1；`affected` 是最近一次變更影響的題號（初始為空） |
+| `RoundReview` | `round_number: int`、`version: int`、`wrong_marks: frozenset[tuple[int, int]]`、`result: RoundResult`、`affected: frozenset[int]`、`replaced: Mapping[int, tuple[int, ...]]`、`finalized: FinalizedResult \| None` | 一輪的審閱狀態；`replaced` 是「被替換的搶答成功者」：題號 → 依判錯順序保存的歷程：因判錯而被下一組取代的前一位搶答成功者的組號（最後一位是最近一位；撤銷判錯時移出歷程，所以可「退回上一步」；定案時清空，初始為空）；`version` 從 1 開始，只在實際變更時加 1；`affected` 是最近一次變更影響的題號（初始為空） |
 | `FinalizedResult` | `version: int`、`rankings: tuple[QuestionRanking, ...]`、`final_counts: Mapping[int, int]`、`solved_questions: frozenset[int]`、`success_increments: Mapping[int, int]` | 定案時保存，之後只讀；`final_counts` 是各組定案後的累計成功次數（基準＋本輪成功題數） |
 | `ReviewRejection` | 見 research R12 | `StrEnum`，每個值有 HTTP 狀態碼與預設訊息 |
 | `MarkDecision` | `ok: bool`、`changed: bool`、`review: RoundReview \| None`、`rejection: ReviewRejection \| None` | 判錯／撤銷的判定結果；`changed=False` 時 `review` 是原物件 |
@@ -88,14 +90,16 @@ mark(review, input, group, question, wrong) -> MarkDecision
   (group, question) 沒有候選            -> SUBMISSION_NOT_FOUND
   已是 wrong 狀態                       -> ok, changed=False（版本不變）
   否則 wrong_marks 加／減一項 -> recompute -> version+1 -> affected = diff(old, new)
-  replaced[question] = 被判錯的組別（只有「判錯」且該組在判錯前是該題 success_group 時）；
-                       其餘情況（撤銷、判錯非搶答成功者）移除該題的 replaced
+  判錯且該組在判錯前是該題 success_group -> 把該組附加到 replaced[question] 末端；
+  判錯非搶答成功者 -> replaced 不變；
+  撤銷某組 -> 若該組在 replaced[question] 歷程中就移除它（最後一位被撤銷即「退回上一步」，
+              前一位成為最近一位）；不在歷程中則 replaced 不變
 
 finalize_plan(review, baseline) -> (solved_questions, success_increments, final_counts)
   solved_questions = 有 success_group 的題號
   success_increments = result.wins
   final_counts = baseline + wins
-  rankings = as_final(result.rankings)   # SUCCESS -> CORRECT，replaced 清空
+  rankings = as_final(result.rankings)   # SUCCESS -> CORRECT，replaced 歷程清空
 ```
 
 階段與身分的檢查在服務層（需要 001 的活動資料），順序如下（第一個不成立的就是拒絕原因）：

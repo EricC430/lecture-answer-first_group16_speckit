@@ -54,8 +54,8 @@
 - **決定**：
   - **老師**：每個已關輪輪次的完整資料：每題全部候選的 `rank`、`countAtProcessing`、`reason`、`judgedWrong`、`displayStatus`，另有 `questionOrder`、各組暫算次數 `groupCounts`、`affectedQuestions`、每題的 `replacedGroup`、`resultVersion`、`final`。
   - **學生（所有學生同一份）**：同樣的輪次與題目，但每個候選只有 `groupNumber`、`rank`、`judgedWrong`、`displayStatus`，不含 `countAtProcessing`、`reason`、`groupCounts`。
-  - 學生畫面只顯示「本組狀態、每題目前的搶答成功者（`successGroup`）與剛被判錯的前一組（`replacedGroup`）」，由前端依 FR-036 決定；不需要「排在搶答成功者之前」的判準（2026-11-24 澄清已改為只留最近一次被替換的一組）。
-  - `displayStatus` 在定案前名次 1 為 `SUCCESS`（搶答成功），定案後改為 `CORRECT`（搶答正確）；`replacedGroup` 是 `RoundReview` 保存的「被替換的搶答成功者」（題號 → 組號），判錯當下該組是搶答成功者才設定，該題下一次判錯、撤銷或定案時失效。
+  - 學生畫面只顯示「本組狀態、每題目前的搶答成功者（`successGroup`）與剛被判錯的前一組（`replacedGroup`）」，由前端依 FR-036 決定；不需要「排在搶答成功者之前」的判準（2026-11-24 澄清：畫面只顯示最近一位被替換者，撤銷判錯時「退回上一步」，所以 `RoundReview` 保存的是歷程）。
+  - `displayStatus` 在定案前名次 1 為 `SUCCESS`（搶答成功），定案後改為 `CORRECT`（搶答正確）；`replacedGroup` 是 `RoundReview.replaced`（題號 → 被替換的搶答成功者歷程，依判錯順序）的最後一位：判錯當下該組是搶答成功者才附加、撤銷時移出歷程（退回上一步）、定案時清空；老師版另有 `actions.{judgeGroup, undoGroup}`，由核心純函式產生並測試，前端只照它顯示按鈕（讓「判錯順序只在介面限制」的規則可自動化驗證）。
 - **理由**：使用者 2026-11-24 的決定是「公開」＝資料開放查詢、畫面限縮，且 OpenSpec 要求公開候選順位與判錯標記；因此學生資料可含他組的順位與狀態，但不含理由與他組成功次數（spec FR-036、SC-010）。學生資料與組別無關（本組成功次數沿用 001 的 `ownGroup.successCount`），所以所有學生可共用同一份快取（研究 R14）。
 - **風險（已知取捨）**：限縮只在畫面，懂得看 WebSocket 或 `GET /snapshot` 的學生仍能看到他組的順位與狀態。這是使用者明確選擇的設計，OpenSpec 規定的就是公開，因此接受。
 - **考慮過的替代方案**：伺服端只給學生畫面需要的子集。這會使「資料公開」與 003 已公開所有組答案的現況不一致，且 OpenSpec 要求公開候選順位，所以不採用。

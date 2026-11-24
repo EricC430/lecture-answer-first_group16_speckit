@@ -10,6 +10,7 @@
 | R2 | `POST /activities/{code}/rounds/current/finalize` | 老師 token | `{"resultVersion": int}` | `200 {"version": int, "resultVersion": int, "alreadyFinalized": bool}` | FR-019～FR-023 |
 
 - `{round}`、`{q}`、`{g}` 是輪次編號、題號、組號，必須是正整數；否則 `400 INVALID_REQUEST`。
+- R1 **不限於**目前的搶答成功者：只要是該輪已接受的提交，對任何一筆（含非搶答成功者）判錯或撤銷都接受（OpenSpec 原文，FR-011）；老師介面每題只提供「判錯」給目前的搶答成功者、「撤銷判錯」給最近一位被替換者，那只是介面限制（FR-034）。
 - R1 是「設定狀態」：`wrong=true` 判錯、`wrong=false` 撤銷判錯。對已是該狀態的提交重送，回 `200` 且 `changed=false`、`resultVersion` 不變、`affectedQuestions` 為空（FR-025）。
 - R1 的 `affectedQuestions` 是這次變更影響的題號（與快照的 `ranking.rounds[].affectedQuestions` 相同）；`changed=false` 時為空。
 - R2 取代 001 預留的空定案實作（同一路徑；研究 R7）。`version` 是 001 定案後的活動狀態版本；`resultVersion` 是被確認的結果版本；`alreadyFinalized=true` 表示這是對已定案同一版本的重複確認（冪等，不再呼叫 001、歷史成功次數不重複增加，FR-022）。

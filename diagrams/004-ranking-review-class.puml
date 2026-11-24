@@ -56,7 +56,7 @@ package "核心（純資料與純函式）" {
   }
 
   class ResultView <<純函式>> {
-    +forTeacher(reviews) : JSON（含次數、理由、replacedGroup）
+    +forTeacher(reviews) : JSON（含次數、理由、replacedGroup、actions：judgeGroup／undoGroup）
     +forStudent(reviews) : JSON（不含理由與他組次數，含 replacedGroup）
     +asFinal(rankings) : 定案後 SUCCESS 改為 CORRECT
   }
@@ -66,7 +66,7 @@ package "核心（純資料與純函式）" {
     wrongMarks : 判錯集合
     result : RoundResult
     affected : 最近一次變更影響的題號
-    replaced : 題號 → 被替換的搶答成功者（最近一次因判錯被下一組取代的前一位）
+    replaced : 題號 → 被替換的搶答成功者歷程（依判錯順序；撤銷時移出，退回上一步）
     finalized : FinalizedResult 或 無
   }
 
