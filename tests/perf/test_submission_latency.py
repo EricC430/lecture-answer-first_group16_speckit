@@ -85,7 +85,7 @@ def _group_sees(question: int) -> Callable[[dict], bool]:
 
 async def _run() -> dict[str, list[float]]:
     shapes = FakeQuestionShapeSource()
-    app = create_app(dev_seed=False, question_shape_source=shapes)
+    app = create_app(question_shape_source=shapes)
     server = uvicorn.Server(
         uvicorn.Config(
             app, host="127.0.0.1", port=0, log_level="warning", lifespan="off"

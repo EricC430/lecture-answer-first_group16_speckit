@@ -24,6 +24,10 @@ FORBIDDEN_MODULES = (
     "asyncio",
     "socket",
     "time",
+    # 002：Google 與網路程式庫只能出現在外層轉接層
+    "googleapiclient",
+    "google",
+    "httpx",
     "lecture_quiz.app",
     "lecture_quiz.adapters",
 )
@@ -173,3 +177,13 @@ def test_checker_detects_violation(tmp_path, source):
 def test_checker_allows_pure_code(tmp_path, source):
     path, root = _write_core_module(tmp_path, source)
     assert find_violations(path, root) == []
+
+
+def test_guided_notes_import_core_package_is_scanned_and_pure():
+    """002：核心套件納入掃描，且真的有檔案可掃（避免掃空目錄而假綠燈）。"""
+    package = CORE_DIR / "guided_notes_import"
+    files = sorted(package.rglob("*.py"))
+    assert len(files) >= 5, (
+        "核心套件應包含 models、numbers、headers、rows、validator、parser"
+    )
+    assert [v for f in files for v in find_violations(f)] == []

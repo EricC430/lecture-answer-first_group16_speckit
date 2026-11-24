@@ -23,11 +23,10 @@ pytest -m perf               # 含 tests/perf/test_submission_latency.py
 ## 啟動
 
 ```powershell
-$env:LECTURE_QUIZ_DEV_SEED = "1"   # 002 合併前；seed 可指定每題格數
 python -m lecture_quiz
 ```
 
-002 合併前，老師頁的 dev seed 區塊輸入格數配置（例如 `2,2,1,1` 代表 4 題、前兩題各兩格）。
+**002 已合併、dev seed 已移除**：每題格數來自 002 的真實匯入（按「匯入學習單」→ 授權 → 選檔 → 確認匯入；Google 設定見 `specs/002-guided-notes-import/quickstart.md`）。建議固定用 002 的版面 1（`2,2,1,1`）與版面 2（整體移位的同內容）驗證。
 
 ## 人工驗證腳本
 

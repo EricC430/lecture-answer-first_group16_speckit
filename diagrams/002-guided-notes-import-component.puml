@@ -35,7 +35,9 @@ cloud "Google 服務" as Google
 Teacher --> UI
 UI --> Api
 UI ..> PickerAdapter : 選檔
-UI ..> AuthAdapter : 授權
+UI ..> Google : 瀏覽器導向 Google 授權畫面
+Api --> AuthAdapter : 授權回呼（/oauth/callback，驗證 state）
+ImportService --> AuthAdapter : 開始授權、檢查授權、取得 Picker 憑證
 Api --> ImportService
 ImportService --> Activity : 查詢階段與身分、\n只寫入題號清單
 ImportService --> SheetsAdapter : 讀取工作表快照

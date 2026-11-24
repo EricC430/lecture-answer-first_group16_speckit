@@ -12,6 +12,10 @@ requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.110",
     "uvicorn[standard]>=0.29",
+    # 002-guided-notes-import：Google 授權與 Sheets／Drive 唯讀存取（核心路徑，不放選用 extra）。
+    "google-api-python-client==2.202.0",
+    "google-auth==2.63.1",
+    "google-auth-oauthlib==1.5.0",
 ]
 
 [project.optional-dependencies]
@@ -32,8 +36,10 @@ packages = ["src/lecture_quiz"]
 testpaths = ["tests"]
 markers = [
     "perf: 效能測試，需真實 uvicorn；以 `pytest -m perf` 執行",
+    "real_google: 真實 Google 路徑驗證（需環境變數與真實帳號，手動執行）；以 `pytest -m real_google` 執行",
 ]
-addopts = "-m 'not perf'"
+# 命令列的 -m 會覆蓋這一行，所以指令一律寫 -m "not real_google and not perf"。
+addopts = "-m 'not perf and not real_google'"
 timeout = 30
 
 [tool.ruff]
@@ -50,8 +56,20 @@ convention = "google"
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["D", "ANN"]
+# Google 官方程式庫沒有型別標註，轉接層以 Any 表示它的憑證與請求物件（核心與應用層不使用 Any）。
+"src/lecture_quiz/adapters/google/**" = ["ANN401"]
 
 [tool.mypy]
 files = ["src"]
 python_version = "3.11"
 disallow_untyped_defs = true
+
+# Google 官方程式庫沒有型別標註或 stub；只在轉接層使用。
+[[tool.mypy.overrides]]
+module = [
+    "googleapiclient.*",
+    "google_auth_oauthlib.*",
+    "oauthlib.*",
+    "httplib2",
+]
+ignore_missing_imports = true

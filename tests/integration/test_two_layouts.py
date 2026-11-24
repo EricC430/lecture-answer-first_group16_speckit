@@ -1,38 +1,46 @@
 """T058：兩份版面的格數（憲章原則 III、SC-009）。
 
-以 dev seed 的格數建立兩個活動：版面 A（課程範本 [2, 2, 1, 1]）、版面 B
-（起始位置不同、含三格題組 [1, 3, 1, 2, 1]）。每個活動完成「格數錯誤被拒 →
-正確格數接受 → 關輪公開」。格數只來自匯入結果，程式沒有假設固定格數。
+格數走 002 真實的匯入路徑：`PUT import/source` → `POST import` → 002 的
+`ImportService`（`blanks_per_question`）→ 003 判定。版面 A（課程範本 [2, 2, 1, 1]）
+與版面 B（整體移位、工作表更名、含三格題組 [1, 2, 3, 1]）各完成「格數錯誤被拒 →
+正確格數接受 → 關輪公開」。格數只來自匯入結果，程式沒有假設固定格數，也沒有任何
+繞過匯入的後門。
+
+注意：Google 端用 002 的 Fake Sheets 讀取器（手寫版面），所以這不等於真實 Google
+回應已驗證（見 002 quickstart B 區）。
 """
 
 import pytest
-from fastapi.testclient import TestClient
 
-from tests.conftest import FakeClock, ManualScheduler, join_group, make_app, submit
+from tests.conftest import create_activity, join_group, submit
+from tests.fixtures.guided_notes_layouts import layout_a, layout_b
 
-LAYOUTS = {"A": [2, 2, 1, 1], "B": [1, 3, 1, 2, 1]}
-
-
-@pytest.fixture
-def dev_client():
-    """啟用 dev seed 的 app：格數走真實的 `DevQuestionShapeSource`。"""
-    with TestClient(make_app(FakeClock(), ManualScheduler(), dev_seed=True)) as c:
-        yield c
+# 版面 → (fake_sheets_reader 內的工作表 ID, 期望)
+LAYOUTS = {"A": (0, layout_a()[1]), "B": (7, layout_b()[1])}
 
 
 @pytest.mark.parametrize("layout", sorted(LAYOUTS))
-def test_layout_blanks_drive_validation(dev_client, layout):
-    client = dev_client
-    blanks = LAYOUTS[layout]
-    created = client.post("/api/activities", json={"maxGroups": 6}).json()
-    code = created["code"]
-    headers = {"Authorization": f"Bearer {created['teacherToken']}"}
-    seeded = client.post(
-        f"/api/dev/activities/{code}/seed-questions",
-        json={"count": len(blanks), "blanks": blanks},
+def test_layout_blanks_drive_validation(import_client, layout):
+    client = import_client
+    sheet_id, expected = LAYOUTS[layout]
+    blanks = [count for _, count, _ in expected.questions]
+
+    teacher = create_activity(client)
+    code = teacher.code
+    headers = teacher.headers
+    put = client.put(
+        f"/api/activities/{code}/import/source",
+        json={"spreadsheetId": "sheet-1", "sheetId": sheet_id},
         headers=headers,
     )
-    assert seeded.status_code == 200, seeded.text
+    assert put.status_code == 200, put.text
+    imported = client.post(f"/api/activities/{code}/import", json={}, headers=headers)
+    assert imported.status_code == 200, imported.text
+
+    # 格數來自 002 的匯入結果，而不是測試寫死的數字
+    shapes = client.app.state.import_service.blanks_per_question(code)
+    assert dict(shapes) == {n: b for n, b in enumerate(blanks, start=1)}
+
     client.post(f"/api/activities/{code}/open-joining", json={}, headers=headers)
     device = join_group(client, code, 1)
     client.post(f"/api/activities/{code}/rounds", json={}, headers=headers)

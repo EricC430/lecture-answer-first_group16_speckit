@@ -1,6 +1,7 @@
 """以 `python -m lecture_quiz` 啟動後端，只監聽 127.0.0.1。
 
 連接埠可用環境變數 `LECTURE_QUIZ_PORT` 指定，預設 8000。
+會載入專案根目錄的 `.env`（002 的 Google 設定；`.env` 已被 `.gitignore` 排除）。
 uvicorn 的日誌交給根 logger，統一輸出到 stdout；逐請求日誌由
 `RequestLogMiddleware` 負責，所以關閉 uvicorn 的 access log（它會記錄查詢字串）。
 
@@ -16,6 +17,7 @@ import uvicorn
 from lecture_quiz.main import configure_logging
 
 GRACEFUL_SHUTDOWN_SECONDS = 3
+ENV_FILE = ".env"  # 002：載入 Google 設定；不存在時 uvicorn 照常啟動
 
 
 def main() -> None:
@@ -29,6 +31,7 @@ def main() -> None:
         log_config=None,
         access_log=False,
         timeout_graceful_shutdown=GRACEFUL_SHUTDOWN_SECONDS,
+        env_file=ENV_FILE,
     )
 
 
