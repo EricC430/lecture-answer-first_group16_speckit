@@ -18,7 +18,7 @@
 
 | 方法 | 說明 |
 |---|---|
-| `QuestionShapeSource.blanks_per_question(code) -> Mapping[int, int] \| None` | 題號 → 子空格數（單題為 1），來自最後一次成功匯入；尚未匯入時為 `None`。002 的 `ImportService` 以 `ImportRecord.blanks` 計數實作（2026-11-23 與 EricC430 口頭協調）。002 合併前由 `DevQuestionShapeSource`（dev seed）提供 |
+| `QuestionShapeSource.blanks_per_question(code) -> Mapping[int, int] \| None` | 題號 → 子空格數（單題為 1），來自最後一次成功匯入；尚未匯入時為 `None`。002 的 `ImportService` 以 `ImportRecord.blanks` 計數實作（2026-11-23 與 EricC430 口頭協調）。002 合併前由 `DevQuestionShapeSource`（dev seed）提供。**在 001 的活動鎖內呼叫，必須是不做 I/O、不取得其他鎖的純讀取**；`None` 與「對應表缺少某個開放題」都使判定回 `SHAPES_UNAVAILABLE`（研究 R6） |
 
 ## 003 提供給 004、005（`SubmissionReader`）
 

@@ -51,7 +51,8 @@ Technical Context 沒有 NEEDS CLARIFICATION；以下是設計決策。每項格
 - **決策**：003 定義 `QuestionShapeSource` Protocol：`blanks_per_question(code) -> Mapping[int, int] | None`（題號 → 格數；尚未成功匯入時為 `None`）。由 002 的 `ImportService` 實作（`ImportRecord.blanks` 依題號計數；已與 EricC430 口頭協調）。002 合併前：`dev_seed` 的 seed 可指定每題格數，並提供 `DevQuestionShapeSource`；只在 dev seed 啟用時組裝；seed 的 `blanks` 長度必須等於題數、每題 1～10 格（只是開發用的防呆上限，不是正式規則）。
 - **理由**：格數一律來自匯入結果（憲章原則 III）；重新匯入只在第一輪前，搶答中格數不變。
 - **替代方案**：001 的 `replace_questions` 改傳格數（改動 001 與 002 已對齊的契約，否決）；003 直接讀 002 的 `ImportRecord`（耦合 002 內部型別，否決）。
-- **防禦**：開放題在 `QuestionShapeSource` 查不到格數時，`decide` 回 `QUESTION_NOT_OPEN` 並記錄 WARNING（不應發生，代表 002／001 資料不一致）。
+- **防禦**：開放題在 `QuestionShapeSource` 查不到格數時，`decide` 回 `SHAPES_UNAVAILABLE`（503）並記錄 WARNING（不應發生，代表尚未接上格數來源或 002／001 資料不一致）。原本回 `QUESTION_NOT_OPEN`，訊息「不在本輪開放範圍」會誤導學生，2026-11-24 依 PR #16 審查改為獨立原因。
+- **非阻塞**：`blanks_per_question` 在 001 的活動鎖內被呼叫，實作 MUST 是不做 I/O、不取得其他鎖的純讀取（002 的 `ImportService` 只讀記憶體中的 `ImportRecord`）。回傳 `None` 表示該活動沒有格數資料；回傳的對應表缺少某個開放題，同樣視為查不到格數。
 
 ## R7 HTTP API 形狀
 

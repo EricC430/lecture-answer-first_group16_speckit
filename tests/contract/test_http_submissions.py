@@ -163,3 +163,24 @@ def test_stale_round_and_closed_are_409(client, opened):
     assert closed.json()["error"]["code"] == "ROUND_CLOSED"
     assert "本輪已結束" in closed.json()["error"]["message"]
     _assert_safe(closed, devices[1], teacher.token)
+
+
+def test_missing_shapes_return_503_not_question_not_open(client):
+    """沒有格數資料時回 503 SHAPES_UNAVAILABLE（PR #16 審查第 3 項）。
+
+    例如尚未匯入，或 002 的格數來源尚未接上。
+    """
+    teacher = create_activity(client)
+    seed_questions(client, teacher, 4)  # 只有題號、沒有格數
+    client.post(
+        f"/api/activities/{teacher.code}/open-joining", json={}, headers=teacher.headers
+    )
+    device = join_group(client, teacher.code, 1)
+    client.post(
+        f"/api/activities/{teacher.code}/rounds", json={}, headers=teacher.headers
+    )
+    response = submit(client, teacher.code, device, 1, 1, ["甲"])
+    assert response.status_code == 503
+    error = response.json()["error"]
+    assert error["code"] == "SHAPES_UNAVAILABLE"
+    assert "格數尚未載入" in error["message"]

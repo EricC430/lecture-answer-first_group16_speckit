@@ -10,6 +10,8 @@
 """
 
 import re
+import shutil
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -101,3 +103,42 @@ def test_network_error_is_reported_as_unconfirmed():
     body = source[start:end]
     assert "NETWORK_ERROR" in body
     assert "送出結果未確認，請重試" in body
+
+
+@pytest.mark.parametrize("name", sorted(p.name for p in JS_DIR.glob("*.js")))
+def test_javascript_parses(name, tmp_path):
+    """每支前端模組都能被解析（PR #16 審查第 1 項：重複宣告讓整支模組不執行）。
+
+    以 `.mjs` 副本檢查：Node 22 以後對含 `import` 的 `.js` 執行 `node --check`，
+    即使有語法錯誤也可能回傳 0（模組自動偵測），所以必須明確當成 ES module。
+    """
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("找不到 node，無法檢查 JavaScript 語法")
+    copy = tmp_path / (Path(name).stem + ".mjs")
+    copy.write_text((JS_DIR / name).read_text(encoding="utf-8"), encoding="utf-8")
+    result = subprocess.run(
+        [node, "--check", str(copy)],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+
+
+def test_busy_state_does_not_reenable_locked_form():
+    """PR #16 審查第 4 項：送出途中倒數歸零，送出結束後按鈕仍維持停用。"""
+    source = _source("submission.js")
+    start, end = _function(source, "setBusy")
+    body = source[start:end]
+    assert "button.disabled = busy;" not in body
+    assert "locked" in body
+
+
+def test_missing_shape_notice_is_not_duplicated():
+    """PR #16 審查第 2 項：缺格數的提示每題只有一則，格數載入後移除。"""
+    source = _source("round-submission.js")
+    start, end = _function(source, "render")
+    body = source[start:end]
+    assert "notices.has(key)" in body and "notices.delete(key)" in body

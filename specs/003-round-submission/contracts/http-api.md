@@ -41,6 +41,7 @@
 | `STALE_ROUND` | 409 | 輪次識別不是目前輪次 |
 | `ROUND_CLOSED` | 409 | 不在搶答中、已截止或已關輪 |
 | `QUESTION_NOT_OPEN` | 400 | 題號不在本輪開放範圍 |
+| `SHAPES_UNAVAILABLE` | 503 | 本輪開放題查不到格數（尚未匯入或格數來源未接上）；不是學生的錯，訊息請稍後再試或請老師確認匯入 |
 | `INVALID_ANSWER` | 400 | `answers` 不是字串陣列 |
 | `WRONG_BLANK_COUNT` | 400 | 格數不符（訊息含需要的格數） |
 | `BLANK_EMPTY` | 400 | 有空格（訊息列出格號） |

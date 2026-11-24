@@ -44,6 +44,7 @@ package "core.round_submission（純函式）" {
     STALE_ROUND
     ROUND_CLOSED
     QUESTION_NOT_OPEN
+    SHAPES_UNAVAILABLE
     INVALID_ANSWER
     WRONG_BLANK_COUNT
     BLANK_EMPTY

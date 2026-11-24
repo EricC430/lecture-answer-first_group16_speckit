@@ -150,6 +150,7 @@ class SubmissionRejection(StrEnum):
     STALE_ROUND = "STALE_ROUND"
     ROUND_CLOSED = "ROUND_CLOSED"
     QUESTION_NOT_OPEN = "QUESTION_NOT_OPEN"
+    SHAPES_UNAVAILABLE = "SHAPES_UNAVAILABLE"
     INVALID_ANSWER = "INVALID_ANSWER"
     WRONG_BLANK_COUNT = "WRONG_BLANK_COUNT"
     BLANK_EMPTY = "BLANK_EMPTY"
@@ -167,6 +168,7 @@ _HTTP_STATUS = {
     SubmissionRejection.STALE_ROUND: 409,
     SubmissionRejection.ROUND_CLOSED: 409,
     SubmissionRejection.QUESTION_NOT_OPEN: 400,
+    SubmissionRejection.SHAPES_UNAVAILABLE: 503,
     SubmissionRejection.INVALID_ANSWER: 400,
     SubmissionRejection.WRONG_BLANK_COUNT: 400,
     SubmissionRejection.BLANK_EMPTY: 400,

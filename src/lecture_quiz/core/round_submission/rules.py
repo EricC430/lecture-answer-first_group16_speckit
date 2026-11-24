@@ -80,13 +80,13 @@ class SubmissionRules:
         if not context.accepting:
             return _reject(SubmissionRejection.ROUND_CLOSED)
         question = attempt.question_number_raw
-        if (
-            not _is_int(question)
-            or question not in context.open_questions
-            or question not in context.blanks_per_question
-        ):
+        # 步驟 3：題號在本輪開放；開放題查不到格數另回 SHAPES_UNAVAILABLE（PR #16 審查）
+        if not _is_int(question) or question not in context.open_questions:
             return _reject(SubmissionRejection.QUESTION_NOT_OPEN)
         assert isinstance(question, int)
+        if question not in context.blanks_per_question:
+            # 開放題卻查不到格數：尚未匯入或 002／001 資料不一致，不是學生的錯
+            return _reject(SubmissionRejection.SHAPES_UNAVAILABLE)
         # 步驟 4：本組本輪本題已有提交時一律回本組已送出，不看內容（FR-007、FR-009）
         existing = ledger.find(context.round_number, question, context.group_number)
         if existing is not None:
@@ -159,4 +159,7 @@ _MESSAGES = {
     SubmissionRejection.STALE_ROUND: "輪次已更新，請重新整理後再作答。",
     SubmissionRejection.ROUND_CLOSED: "本輪已結束（或尚未開始），不能再送出。",
     SubmissionRejection.INVALID_ANSWER: "答案格式不正確，請重新整理後再作答。",
+    SubmissionRejection.SHAPES_UNAVAILABLE: (
+        "這一題的格數尚未載入，暫時無法送出；請稍後再試，或請老師確認已匯入學習單。"
+    ),
 }

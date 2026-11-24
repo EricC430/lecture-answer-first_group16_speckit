@@ -146,6 +146,29 @@
 - T064：非實作者 EricC430 依 quickstart 人工驗證。
 - T065：002 合併後的真實路徑驗證（P-19）。
 
+## PR #16 審查修正（2026-11-24，EricC430 審查）
+
+- **先寫測試並確認失敗**：新增的 6 個測試在修正前 5 個失敗。
+  - `round-submission.js` 語法檢查
+  - 送出中不重新啟用已鎖定的按鈕
+  - 缺格數提示不重複
+  - 核心判定 `SHAPES_UNAVAILABLE`
+  - HTTP 503
+- **修正**：
+  - `round-submission.js` 的重複宣告改名為 `errorCode`（P-30）。
+  - 缺格數提示改為每題一則，格數載入後移除（P-31）。
+  - 新增 `SHAPES_UNAVAILABLE`，回 503 並記 WARNING（P-32）。
+  - 表單送出中結束時，若已截止或已送出就不重新啟用（P-33）。
+  - `judgedWrong` 佔位值寫進同步契約（P-34）。
+  - 格數來源必須非阻塞，`None` 與缺題的處理寫進研究 R6 與契約（P-35）。
+- **新增自動檢查**：`tests/architecture/test_static_text_safety.py::test_javascript_parses` 以 `.mjs` 副本對每支前端模組執行 `node --check`。
+
+| 指令 | 結果 |
+|---|---|
+| `ruff check --no-cache .`、`ruff format --check --no-cache .` | All checks passed! |
+| `mypy` | Success: no issues found in 36 source files |
+| `pytest` | **547 passed**, 2 deselected |
+
 ## 實作問題紀錄
 
 實作 003 過程中發現的問題、偏離與待辦，依發現順序編號。狀態：**已處理**（已改程式或文件）、**已記錄**（行為不變，只需知道）、**待辦**（之後的任務要處理）、**待決定**（需要組員或 OpenSpec 組決定）。
@@ -180,3 +203,9 @@
 | P-27 | Polish | spec SC-001、plan、tasks T059 寫「13 個 OpenSpec Scenario」，實際是 14 個 | T059 掃描時更正三處；SCENARIO_MAP 列出全部 14 個 | 已處理 |
 | P-28 | Polish | 被拒的提交日誌記 `round=-`、`group=-`，查問題時看不出是哪一組（T057 要求要有） | 改為從 001 鎖內的 `SubmissionWindow` 取得；活動不存在或不屬於任何組時仍為 `-` | 已處理 |
 | P-29 | 跨 PR | PR #19（001 修正）與本 PR 都改了 `tests/SCENARIO_MAP.md`；PR #17（002）刪除 dev seed，與本 PR 有 6 個檔案衝突 | #19 已合併，本分支已併入最新 main（無衝突，535 passed）；#17 的衝突待其修改後處理，dev seed 去留與格數來源已在 #17 審查提出 | 待辦（#17）|
+| P-30 | US3～US6 | **學生頁模組載入即 SyntaxError**：`submitAnswer` 內重複宣告 `const code`（US3 加入），整支 `round-submission.js` 不執行，作答表單與已公開作答都不出現。先前各階段寫的「`node --check` 通過」**不正確**：Node 24 對含 `import` 的 `.js` 執行 `node --check` 會回傳 0（模組自動偵測），沒有真的檢查出錯誤 | 改名為 `errorCode`；新增自動測試以 `.mjs` 副本檢查每支前端模組。前端仍須以瀏覽器人工驗證（P-09） | 已處理 |
+| P-31 | US1 | 缺格數時「格數尚未載入」提示在每次推送都多加一則，格數載入後也不清除 | 每題一則（`notices`），格數載入後移除 | 已處理 |
+| P-32 | US1 | 沒有格數資料時所有提交回 `QUESTION_NOT_OPEN`「不在本輪開放範圍」，會誤導學生；研究 R6 寫的 WARNING 日誌沒有實作 | 新增 `SHAPES_UNAVAILABLE`（503）與 WARNING；data-model、契約、類別圖同步 | 已處理 |
+| P-33 | US6 | 送出途中倒數歸零，`setBusy(false)` 會把已停用的按鈕重新啟用 | 表單記住 `locked`，已停用或已送出時不重新啟用 | 已處理 |
+| P-34 | US5 | `judgedWrong` 在 004 接上前一律為 `false`，契約沒有寫明是佔位值 | 寫進 `contracts/sync-websocket.md`；004 接上後提供真值 | 已處理 |
+| P-35 | Foundational | `blanks_per_question` 在 001 活動鎖內呼叫，實作若有 I/O 或其他鎖可能阻塞或死結；`None` 與空對應表沒有區分 | 研究 R6 與 service-interfaces 寫明必須非阻塞；兩者都回 `SHAPES_UNAVAILABLE` | 已處理 |

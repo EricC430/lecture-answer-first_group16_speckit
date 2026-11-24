@@ -32,7 +32,8 @@
 | 1 | 目前還沒有任何輪次（準備中、開放加入） | `ROUND_CLOSED` | 409 | 本輪尚未開始或已結束 |
 | 1b | `round_number_raw` 不是整數，或 ≠ 目前輪次編號 | `STALE_ROUND` | 409 | 輪次已更新，請重新整理後再作答 |
 | 2 | `accepting` 為假 | `ROUND_CLOSED` | 409 | 本輪已結束（或尚未開始），不能再送出 |
-| 3 | 題號不是整數或不在 `open_questions`，或查不到格數 | `QUESTION_NOT_OPEN` | 400 | 第 n 題不在本輪開放範圍 |
+| 3 | 題號不是整數或不在 `open_questions` | `QUESTION_NOT_OPEN` | 400 | 第 n 題不在本輪開放範圍 |
+| 3b | 開放題查不到格數（尚未匯入、002 格數來源未接上，或資料不一致） | `SHAPES_UNAVAILABLE` | 503 | 這一題的格數尚未載入，暫時無法送出（2026-11-24 PR #16 審查新增；記 WARNING） |
 | 4 | 本組本輪本題已有提交 | `ALREADY_SUBMITTED` | 200 | 本組已送出（附既有答案與時間） |
 | 5a | `answers_raw` 不是字串陣列 | `INVALID_ANSWER` | 400 | 答案格式不正確，請重新整理後再作答 |
 | 5b | 格數 ≠ 該題格數 | `WRONG_BLANK_COUNT` | 400 | 這題需要 k 格答案 |

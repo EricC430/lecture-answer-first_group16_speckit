@@ -64,7 +64,11 @@ export function renderAnswerForm({ questionNumber, blanks, onSubmit }) {
     onSubmit(inputs.map((input) => input.value));
   });
 
+  // 已送出或被停用（截止、關輪）後為真；送出中結束時不能把按鈕重新啟用（PR #16 審查第 4 項）
+  let locked = false;
+
   function lock() {
+    locked = true;
     for (const input of inputs) input.disabled = true;
     button.hidden = true;
   }
@@ -72,13 +76,14 @@ export function renderAnswerForm({ questionNumber, blanks, onSubmit }) {
   return {
     element: form,
     setBusy(busy) {
-      button.disabled = busy;
+      button.disabled = busy || locked;
       if (busy) {
         status.textContent = "送出中…";
         status.className = "submit-status";
       }
     },
     setDisabled(disabled) {
+      locked = disabled;
       button.disabled = disabled;
       for (const input of inputs) input.disabled = disabled;
     },

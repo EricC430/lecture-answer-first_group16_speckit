@@ -11,6 +11,7 @@ import { describeSubmitError, el, renderAnswerForm, renderPublished } from "./su
 
 const $ = (id) => document.getElementById(id);
 const forms = new Map(); // key：`${roundNumber}:${questionNumber}`，保留學生已輸入的內容
+const notices = new Map(); // 同一個 key：「格數尚未載入」提示，每題只顯示一則
 let currentRound = null;
 let deadlineTimer = null;
 let scheduledDeadline;
@@ -29,13 +30,13 @@ async function submitAnswer(roundNumber, questionNumber, answers, form) {
     form.showSubmitted(result.data.submission, already ? "本組已送出" : "已送出");
     return;
   }
-  const code = result.error?.code;
-  if (code === "STALE_ROUND") {
+  const errorCode = result.error?.code;
+  if (errorCode === "STALE_ROUND") {
     // 舊頁面：提示並提供重新整理（US3-AS4）
     form.showError(result.error.message, { label: "重新整理", onClick: () => window.location.reload() });
     return;
   }
-  if (code === "ROUND_CLOSED") {
+  if (errorCode === "ROUND_CLOSED") {
     // 已截止或已關輪：停用全部作答表單（US3-AS2、US3-AS3）
     for (const other of forms.values()) if (!other.submitted) other.setDisabled(true);
   }
@@ -84,6 +85,7 @@ function render(snapshot) {
   }
   if (currentRound !== snapshot.roundNumber) {
     forms.clear();
+    notices.clear();
     list.replaceChildren();
     currentRound = snapshot.roundNumber;
   }
@@ -93,8 +95,17 @@ function render(snapshot) {
     if (forms.has(key)) continue;
     const blanks = Number(shapes[String(questionNumber)] ?? 0);
     if (!blanks) {
-      list.append(el("p", `第 ${questionNumber} 題的格數尚未載入，請重新整理。`, "error-message"));
+      // 每次推送都會重畫：提示只建立一次，避免累加（PR #16 審查第 2 項）
+      if (!notices.has(key)) {
+        const notice = el("p", `第 ${questionNumber} 題的格數尚未載入，請稍後或重新整理。`, "error-message");
+        notices.set(key, notice);
+        list.append(notice);
+      }
       continue;
+    }
+    if (notices.has(key)) {
+      notices.get(key).remove();
+      notices.delete(key);
     }
     const roundNumber = snapshot.roundNumber;
     const form = renderAnswerForm({

@@ -59,13 +59,22 @@ def test_question_not_open_or_unknown():
         assert decision.submission is None
 
 
-def test_open_question_without_shape_is_not_open():
-    decision = _decide(
-        SubmissionLedger(),
-        make_attempt(5, ("戊",)),
-        open_questions=(1, 5),
-    )
-    assert decision.rejection is SubmissionRejection.QUESTION_NOT_OPEN
+def test_open_question_without_shape_reports_shapes_unavailable():
+    """開放題查不到格數時不能說「不在本輪」（PR #16 審查第 3 項）。
+
+    例如尚未匯入，或 002 與 001 的題目資料不一致。
+    """
+    for blanks in ({1: 2}, {}):
+        attempt = make_attempt(5, ("戊",))
+        decision = _decide(
+            SubmissionLedger(), attempt, open_questions=(1, 5), blanks=blanks
+        )
+        assert decision.rejection is SubmissionRejection.SHAPES_UNAVAILABLE
+        assert SubmissionRejection.SHAPES_UNAVAILABLE.http_status == 503
+        message = SubmissionRules.describe(decision, attempt)
+        assert "格數尚未載入" in message and "不在本輪" not in message
+    not_open = _decide(SubmissionLedger(), make_attempt(9, ("戊",)), blanks={})
+    assert not_open.rejection is SubmissionRejection.QUESTION_NOT_OPEN
 
 
 def test_rejected_attempt_does_not_consume_chance():

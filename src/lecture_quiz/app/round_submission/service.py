@@ -194,7 +194,13 @@ class SubmissionService:
             if isinstance(raw, int) and not isinstance(raw, bool) and 0 < raw < 10000
             else "-"
         )
-        logger.info(
+        # 開放題查不到格數代表 002／001 資料不一致或尚未接上格數來源（研究 R6）
+        log = (
+            logger.warning
+            if decision.rejection is SubmissionRejection.SHAPES_UNAVAILABLE
+            else logger.info
+        )
+        log(
             "提交 activity=%s round=%s question=%s group=%s result=%s",
             code,
             window.round_number if window and window.round_number else "-",
