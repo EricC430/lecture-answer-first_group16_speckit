@@ -24,10 +24,15 @@
 | US1（T019～T024） | 2026-11-25 | `pytest tests/unit/app/result_export tests/contract/result_export tests/integration/test_export_us1_two_rounds.py -q`（preview／confirm 尚未實作） | 20 failed、37 passed（共 57）；實作後 57 passed |
 | US2（T031～T035） | 2026-11-25 | `pytest test_structure_gate.py test_auth_failures.py test_reauthorization.py test_http_authorization.py -q` | 28 failed、5 passed（共 33）；實作後 150 passed（連同 US1 與核心） |
 | US3（T042～T045） | 2026-11-25 | `pytest tests/unit/adapters/google/test_sheets_writer_request.py ...test_sheets_writer_read.py -q`（`sheets_writer.py` 尚未存在） | 2 個檔案收集階段失敗；實作後 15 passed。`tests/integration/test_export_us3_two_layouts.py` 與 `test_exact_write.py`（8 個）在轉接層實作前就通過：它們驗證的服務層邏輯已在 US1、US2 完成，轉接層（真實 Google 請求形狀）才是 US3 新增的部分，由前兩個檔案涵蓋 |
+| US4（T049～T056） | 2026-11-25 | `pytest test_sheets_writer_outcomes.py test_pending_and_recheck.py test_retry_idempotent.py test_read_only_for_activity.py test_status_push.py test_http_attempts.py -q`（進行中控制、核對、重試尚未實作；`test_in_progress.py` 另跑） | 36 failed、2 passed（共 38）；`test_in_progress.py` 因當時會重複寫入而在 30 秒逾時（視為失敗，共 37 項失敗）；實作後這批與之前所有測試 410 passed（`tests/unit/app/result_export`、`tests/contract/result_export`、`tests/integration`、`tests/unit/adapters/google`、`tests/unit/core/result_export`） |
 
 ## 自動化結果
 
 （Polish 階段填寫：日期、指令、通過／失敗／略過數）
+
+| 日期 | 指令 | 結果 |
+|---|---|---|
+| 2026-11-25（US4 完成時，中途紀錄） | `pytest -m "not real_google and not perf" -q` | 1309 passed、1 failed、5 deselected；失敗的是 `tests/architecture/test_export_static.py::test_protection_prefix_note_is_fixed_text`（US6 的保護前綴說明文字，預期尚未完成） |
 
 ## 效能
 
