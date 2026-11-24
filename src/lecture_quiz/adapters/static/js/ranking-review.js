@@ -29,7 +29,8 @@ function questionBlock(snapshot, round, question, own) {
     const entry = byGroup.get(group);
     if (!entry || shown.has(group)) return;
     shown.add(group);
-    list.append(line(snapshot, round, question, entry, prefix));
+    // 本組剛好是搶答成功者或被判錯者時，標出「（本組）」，學生才知道哪一行是自己
+    list.append(line(snapshot, round, question, entry, group === own ? `${prefix}（本組）` : prefix));
   };
   if (question.replacedGroup !== null) show(question.replacedGroup, "");
   if (question.successGroup !== null) show(question.successGroup, "目前搶答成功者：");

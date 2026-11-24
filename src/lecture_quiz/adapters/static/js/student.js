@@ -24,11 +24,18 @@ const UNAUTHORIZED_MESSAGES = {
 const $ = (id) => document.getElementById(id);
 const countdown = startCountdown(() => $("student-countdown"));
 const renderers = [];
+let lastSnapshot = null;
 
-/** 讓後續 Story 的畫面元件註冊快照渲染函式。 */
+/**
+ * 讓後續 Story 的畫面元件註冊快照渲染函式。
+ * 各子功能的腳本是在 student.js 之後才載入；若第一份快照已經到了，要立刻補畫一次，
+ * 否則要等到下一次狀態變更才看得到（與老師頁 onTeacherSnapshot 一致）。
+ */
 export function onStudentSnapshot(render) {
   renderers.push(render);
+  if (lastSnapshot) render(lastSnapshot);
 }
+
 
 function showJoinForm() {
   $("student-info").hidden = true;
@@ -53,6 +60,7 @@ function render(snapshot) {
     ? snapshot.unsolvedQuestions.map((q) => `第 ${q} 題`).join("、")
     : "無";
   $("student-cancelled").hidden = snapshot.stage !== "CANCELLED";
+  lastSnapshot = snapshot;
   for (const fn of renderers) fn(snapshot);
 }
 
