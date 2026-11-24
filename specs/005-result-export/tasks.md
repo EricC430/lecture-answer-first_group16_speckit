@@ -199,17 +199,17 @@ description: "005-result-export 任務清單"
 
 ### Tests for User Story 5（先寫、確認失敗）⚠️
 
-- [ ] T064 [P] [US5] 在 `tests/unit/core/result_export/test_build_rows.py` 測試 `build_rows`：兩組各提交兩格題組、其中一組被判錯 → 4 筆資料列，被判錯組兩列 `rank=None`、`succeeded=False`、`judged_wrong=True`，另一組兩列共用 `rank=1`、`succeeded=True`、`judged_wrong=False`（`Scenario: US5-AS1` ↔ OpenSpec「題組與判錯紀錄」）；三個候選排名 1、2、3 且都沒被判錯 → 三組各有資料列、只有順位 1 的 `succeeded=True`、`judged_wrong` 皆 `False`，列排序固定（輪次, 題號, 順位, 子空格）（`Scenario: US5-AS4`）；被判錯而無順位者排在該題有順位者之後、彼此依接收時間；無人提交的題不產生任何列、未定案輪次的提交不會進來（呼叫端已過濾，另測「傳入含未定案輪次提交仍不產生列」）（`Scenario: US5-AS2` ↔ OpenSpec「沒有提交與未定案輪次」）；單題 `sub_index=None`、題組 1..n；某題第一輪全被判錯、第二輪由另一組成功 → 兩輪各有列並以 `round_number` 區分（`Scenario: US5-AS6`）；找不到對應提交時明確失敗；確定性
-- [ ] T065 [P] [US5] 在 `tests/unit/app/result_export/test_download_csv.py` 測試 `download_csv`：只含已定案輪次（`FakeSubmissionReader` 含未定案輪次提交，證明被過濾）（`Scenario: US5-AS2`）；沒有已定案輪次（準備中、開放加入、第一輪尚未定案）→ 只含表頭列的有效 CSV（`Scenario: US5-AS3`）；Google 未授權、授權過期、`FakeSheetsWriter` 設為失敗或待確認時仍能下載且內容不變（`Scenario: US5-AS5`、FR-022）；已取消 → `ACTIVITY_CANCELLED`、非老師 → `NOT_TEACHER`；活動結束後照常
-- [ ] T066 [P] [US5] 在 `tests/contract/result_export/test_http_csv.py` 測試 X7：`200`、`Content-Type: text/csv; charset=utf-8`、`Content-Disposition: attachment; filename="quiz-results-<活動代碼>.csv"`、`Cache-Control: no-store`；本文以 UTF-8 BOM 開頭；已取消 409、非老師 403；沒有資料時只有表頭一列
-- [ ] T067 [US5] 在 `tests/integration/test_export_us5_csv.py` 用 `import_client` 世界（002 真實 `ImportService`、003 真實提交、004 真實順位與判錯、含題組與一筆被判錯、一題無人提交、一個未定案輪次）端到端下載並以 `csv.reader` 逐列比對（`Scenario: US5-AS1`～`US5-AS4`）
+- [X] T064 [P] [US5] 在 `tests/unit/core/result_export/test_build_rows.py` 測試 `build_rows`：兩組各提交兩格題組、其中一組被判錯 → 4 筆資料列，被判錯組兩列 `rank=None`、`succeeded=False`、`judged_wrong=True`，另一組兩列共用 `rank=1`、`succeeded=True`、`judged_wrong=False`（`Scenario: US5-AS1` ↔ OpenSpec「題組與判錯紀錄」）；三個候選排名 1、2、3 且都沒被判錯 → 三組各有資料列、只有順位 1 的 `succeeded=True`、`judged_wrong` 皆 `False`，列排序固定（輪次, 題號, 順位, 子空格）（`Scenario: US5-AS4`）；被判錯而無順位者排在該題有順位者之後、彼此依接收時間；無人提交的題不產生任何列、未定案輪次的提交不會進來（呼叫端已過濾，另測「傳入含未定案輪次提交仍不產生列」）（`Scenario: US5-AS2` ↔ OpenSpec「沒有提交與未定案輪次」）；單題 `sub_index=None`、題組 1..n；某題第一輪全被判錯、第二輪由另一組成功 → 兩輪各有列並以 `round_number` 區分（`Scenario: US5-AS6`）；找不到對應提交時明確失敗；確定性
+- [X] T065 [P] [US5] 在 `tests/unit/app/result_export/test_download_csv.py` 測試 `download_csv`：只含已定案輪次（`FakeSubmissionReader` 含未定案輪次提交，證明被過濾）（`Scenario: US5-AS2`）；沒有已定案輪次（準備中、開放加入、第一輪尚未定案）→ 只含表頭列的有效 CSV（`Scenario: US5-AS3`）；Google 未授權、授權過期、`FakeSheetsWriter` 設為失敗或待確認時仍能下載且內容不變（`Scenario: US5-AS5`、FR-022）；已取消 → `ACTIVITY_CANCELLED`、非老師 → `NOT_TEACHER`；活動結束後照常
+- [X] T066 [P] [US5] 在 `tests/contract/result_export/test_http_csv.py` 測試 X7：`200`、`Content-Type: text/csv; charset=utf-8`、`Content-Disposition: attachment; filename="quiz-results-<活動代碼>.csv"`、`Cache-Control: no-store`；本文以 UTF-8 BOM 開頭；已取消 409、非老師 403；沒有資料時只有表頭一列
+- [X] T067 [US5] 在 `tests/integration/test_export_us5_csv.py` 用 `import_client` 世界（002 真實 `ImportService`、003 真實提交、004 真實順位與判錯、含題組與一筆被判錯、一題無人提交、一個未定案輪次）端到端下載並以 `csv.reader` 逐列比對（`Scenario: US5-AS1`～`US5-AS4`）
 
 ### Implementation for User Story 5
 
-- [ ] T068 [P] [US5] 在 `<core>/csv_export.py` 實作 `build_rows(entries, submissions, blanks) -> tuple[ExportRow, ...]`（演算法照 data-model「CSV 資料列」：展開子空格、`rank`／`succeeded`／`judged_wrong` 取自 004 結果不重算、排序鍵（輪次, 題號, 被判錯者排後, 順位, 接收時間, 子編號）、找不到對應提交明確失敗）；`render_csv` 與 `protect_text` 在 US6 完成（依賴 T064）
-- [ ] T069 [US5] 在 `<app>/service.py` 實作 `download_csv(code, requester)`：閘門（取消／非老師）→ 取 004 已定案輪次、003 全部提交**只留已定案輪次**、002 `ImportRecord.blanks` → `build_rows` → `render_csv` → 編碼為 UTF-8 加 BOM 的 `bytes`；沒有已定案輪次時**不讀取匯入記錄**，直接輸出只含表頭的結果（準備中與開放加入的活動可能還沒有匯入記錄）；不呼叫任何 Google 連接埠（依賴 T065、T068）
-- [ ] T070 [US5] 在 `<web>/result_export.py` 實作 X7（`GET /activities/{code}/export/csv`）：回應標頭依 http-api.md；以 `annotate_request_log` 記活動代碼與結果碼，不記內容（依賴 T066、T069）
-- [ ] T071 [US5] 在 `<static>/js/result-export.js` 加入「下載 CSV」按鈕：以 `fetch` 帶 `Authorization` 取得 blob，再以暫時網址觸發下載（`api.js` 只處理 JSON，不修改它）；失敗時以 `textContent` 顯示錯誤（依賴 T070）
+- [X] T068 [P] [US5] 在 `<core>/csv_export.py` 實作 `build_rows(entries, submissions, blanks) -> tuple[ExportRow, ...]`（演算法照 data-model「CSV 資料列」：展開子空格、`rank`／`succeeded`／`judged_wrong` 取自 004 結果不重算、排序鍵（輪次, 題號, 被判錯者排後, 順位, 接收時間, 子編號）、找不到對應提交明確失敗）；`render_csv` 與 `protect_text` 在 US6 完成（依賴 T064）
+- [X] T069 [US5] 在 `<app>/service.py` 實作 `download_csv(code, requester)`：閘門（取消／非老師）→ 取 004 已定案輪次、003 全部提交**只留已定案輪次**、002 `ImportRecord.blanks` → `build_rows` → `render_csv` → 編碼為 UTF-8 加 BOM 的 `bytes`；沒有已定案輪次時**不讀取匯入記錄**，直接輸出只含表頭的結果（準備中與開放加入的活動可能還沒有匯入記錄）；不呼叫任何 Google 連接埠（依賴 T065、T068）
+- [X] T070 [US5] 在 `<web>/result_export.py` 實作 X7（`GET /activities/{code}/export/csv`）：回應標頭依 http-api.md；以 `annotate_request_log` 記活動代碼與結果碼，不記內容（依賴 T066、T069）
+- [X] T071 [US5] 在 `<static>/js/result-export.js` 加入「下載 CSV」按鈕：以 `fetch` 帶 `Authorization` 取得 blob，再以暫時網址觸發下載（`api.js` 只處理 JSON，不修改它）；失敗時以 `textContent` 顯示錯誤（依賴 T070）
 
 **Checkpoint**: CSV 內容與列數正確、只含已定案輪次、不依賴 Google；US5 測試通過
 
@@ -223,15 +223,15 @@ description: "005-result-export 任務清單"
 
 ### Tests for User Story 6（先寫、確認失敗）⚠️
 
-- [ ] T072 [P] [US6] 在 `tests/unit/core/result_export/test_render_csv.py` 測試 `render_csv`：表頭恰為 `輪次,題號,子空格,組別,答案,送出時間,順位,是否成功,是否被判錯`；至少 10 筆樣本（逗號、雙引號、換行、`\r\n`、各種公式開頭）以 `csv.reader` 解析後每列欄位數皆為 9、內容還原差異（保護前綴除外）為 0（`Scenario: US6-AS1`；SC-007）；`rank`、`sub_index` 為 `None` 輸出空字串；布林輸出「是」「否」（`Scenario: US6-AS5`）；時間輸出為 `isoformat(timespec="milliseconds")` 含時區位移，兩筆接收時間差 1 毫秒的提交輸出不同（`Scenario: US6-AS4`）；行結尾為 `\r\n`；相同輸入輸出逐位元組相同
-- [ ] T073 [P] [US6] 在 `tests/unit/core/result_export/test_protect_text.py` 測試 `protect_text`：以 `=`、`+`、`-`、`@`、`\t`、`\r` 開頭 → 前面加 `'`；其他字元或空字串原樣；只套用在「組別」與「答案」欄，輪次、題號、時間、順位、是／否欄**不**被加前綴（`Scenario: US6-AS2` ↔ OpenSpec「特殊文字匯出」）；答案 `-5` 也被保護（介面說明涵蓋）；保護後再以 `csv.reader` 解析，去掉第一個 `'` 即為原答案
-- [ ] T074 [P] [US6] 在 `tests/integration/test_export_us6_safety.py` 用世界資料提交 `=1+1`、含逗號與換行的答案：CSV 內容經保護但 003 保存的原始提交、004 結果、以及寫回時送給 `write_text_cells` 的答案**都沒有**保護前綴（`Scenario: US6-AS3`、FR-029）；CSV 位元組以 UTF-8 BOM 開頭、繁體中文表頭與答案可還原（`Scenario: US6-AS5`）
-- [ ] T075 [P] [US6] 在 `tests/architecture/test_static_text_safety.py` 擴充（追加，不改既有斷言）：`result-export.js` 不含 `innerHTML`、`outerHTML`、`insertAdjacentHTML`、`document.write`、`eval`；且頁面（`teacher.html` 的匯出區塊或 `result-export.js`）含保護前綴說明固定文字「文字保護前綴只為安全開啟，不代表原答案被修改」（`Scenario: US6-AS3`、FR-029）
+- [X] T072 [P] [US6] 在 `tests/unit/core/result_export/test_render_csv.py` 測試 `render_csv`：表頭恰為 `輪次,題號,子空格,組別,答案,送出時間,順位,是否成功,是否被判錯`；至少 10 筆樣本（逗號、雙引號、換行、`\r\n`、各種公式開頭）以 `csv.reader` 解析後每列欄位數皆為 9、內容還原差異（保護前綴除外）為 0（`Scenario: US6-AS1`；SC-007）；`rank`、`sub_index` 為 `None` 輸出空字串；布林輸出「是」「否」（`Scenario: US6-AS5`）；時間輸出為 `isoformat(timespec="milliseconds")` 含時區位移，兩筆接收時間差 1 毫秒的提交輸出不同（`Scenario: US6-AS4`）；行結尾為 `\r\n`；相同輸入輸出逐位元組相同
+- [X] T073 [P] [US6] 在 `tests/unit/core/result_export/test_protect_text.py` 測試 `protect_text`：以 `=`、`+`、`-`、`@`、`\t`、`\r` 開頭 → 前面加 `'`；其他字元或空字串原樣；只套用在「組別」與「答案」欄，輪次、題號、時間、順位、是／否欄**不**被加前綴（`Scenario: US6-AS2` ↔ OpenSpec「特殊文字匯出」）；答案 `-5` 也被保護（介面說明涵蓋）；保護後再以 `csv.reader` 解析，去掉第一個 `'` 即為原答案
+- [X] T074 [P] [US6] 在 `tests/integration/test_export_us6_safety.py` 用世界資料提交 `=1+1`、含逗號與換行的答案：CSV 內容經保護但 003 保存的原始提交、004 結果、以及寫回時送給 `write_text_cells` 的答案**都沒有**保護前綴（`Scenario: US6-AS3`、FR-029）；CSV 位元組以 UTF-8 BOM 開頭、繁體中文表頭與答案可還原（`Scenario: US6-AS5`）
+- [X] T075 [P] [US6] 在 `tests/architecture/test_static_text_safety.py` 擴充（追加，不改既有斷言）：`result-export.js` 不含 `innerHTML`、`outerHTML`、`insertAdjacentHTML`、`document.write`、`eval`；且頁面（`teacher.html` 的匯出區塊或 `result-export.js`）含保護前綴說明固定文字「文字保護前綴只為安全開啟，不代表原答案被修改」（`Scenario: US6-AS3`、FR-029）
 
 ### Implementation for User Story 6
 
-- [ ] T076 [US6] 在 `<core>/csv_export.py` 完成 `protect_text(value)`（`=`、`+`、`-`、`@`、`\t`、`\r` 開頭加 `'`）與 `render_csv(rows) -> str`（標準 `csv.writer`、`QUOTE_MINIMAL`、`lineterminator="\r\n"`、固定表頭、只對組別與答案欄套用 `protect_text`、時間 `isoformat(timespec="milliseconds")`、布林「是」「否」、`None` 輸出空字串）；`<app>/service.py` 的 `download_csv` 以 `"﻿" + text` 編成 UTF-8 位元組（依賴 T072、T073）
-- [ ] T077 [US6] 在 `<static>/teacher.html` 匯出區塊與 `<static>/js/result-export.js` 加入保護前綴說明固定文字（FR-029）；文字以固定字串設定，不由後端或使用者輸入產生（依賴 T074、T075）
+- [X] T076 [US6] 在 `<core>/csv_export.py` 完成 `protect_text(value)`（`=`、`+`、`-`、`@`、`\t`、`\r` 開頭加 `'`）與 `render_csv(rows) -> str`（標準 `csv.writer`、`QUOTE_MINIMAL`、`lineterminator="\r\n"`、固定表頭、只對組別與答案欄套用 `protect_text`、時間 `isoformat(timespec="milliseconds")`、布林「是」「否」、`None` 輸出空字串）；`<app>/service.py` 的 `download_csv` 以 `"﻿" + text` 編成 UTF-8 位元組（依賴 T072、T073）
+- [X] T077 [US6] 在 `<static>/teacher.html` 匯出區塊與 `<static>/js/result-export.js` 加入保護前綴說明固定文字（FR-029）；文字以固定字串設定，不由後端或使用者輸入產生（依賴 T074、T075）
 
 **Checkpoint**: CSV 嚴格解析無誤、公式字元被保護、說明文字存在；US6 測試通過
 
