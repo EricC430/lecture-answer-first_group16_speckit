@@ -1,4 +1,4 @@
-# 服務介面契約：002 的連接埠與提供給 005 的介面
+# 服務介面契約：002 的連接埠與提供給 003、005 的介面
 
 **用途**：002 在 Python 程式內的介面，不經過 HTTP。以 `typing.Protocol` 定義，放在 `src/lecture_quiz/app/guided_notes_import/ports.py`。所有跨出應用層的 I/O 都是 `async`；核心的 `parse` 是同步純函式。
 
@@ -36,6 +36,19 @@
 | `import_sheet(code, requester) -> ImportOutcome` | 持有該活動的匯入鎖；順序見 [research.md](../research.md) R6 |
 | `get_import_record(code) -> ImportRecord \| None` | **給 005 使用**：唯讀；回傳最後一次成功匯入的來源、來源映射與匯入時結構 |
 | `get_import_summary(code, requester) -> ImportPreview \| None` | 老師頁面重新整理後恢復預覽 |
+
+## 給 003（回合提交）
+
+003 需要每題的子空格數（003 定義的 `QuestionShapeSource.blanks_per_question(code) -> Mapping[int, int] | None`，見 PR #16 `specs/003-round-submission/contracts/service-interfaces.md`）。**由 002 的 `ImportService` 實作**（2026-11-23 與 003 負責人協調的結論；tasks T083），003 不需要自己寫轉接：
+
+| 方法 | 說明 |
+|---|---|
+| `blanks_per_question(code) -> Mapping[int, int] \| None` | 題號 → 該題子空格數（單題為 1；題組為子空格數）。由最後一次成功匯入的 `ImportRecord.blanks` 依題號計數換算；**該活動沒有成功匯入過時回 `None`**（活動不存在亦同） |
+
+- **重新匯入後跟著更新**：第一輪開始前重新匯入成功，下一次呼叫就回新的格數；重新匯入失敗（含整份被拒）時 `ImportRecord` 不變，回傳的仍是舊格數。第一輪開始後 `ImportRecord` 鎖定，格數不再變動。
+- 回傳不可變的新字典，003 無法改到 002 保存的資料；方法唯讀、不需要請求者身分，也不呼叫 Google。
+- 002 的程式不匯入 003 的任何型別：`blanks_per_question` 只要方法簽章相符，003 即可把 `ImportService` 當作 `QuestionShapeSource`（結構性相符）。
+- 002 合併前 003 的 `DevQuestionShapeSource` 仍依賴 001 的開發用 seed API；該 API 依 001 plan 在 002 合併後移除（本 PR 的實作 PR 已移除），003 在 002 合併後須改接 `ImportService`。
 
 ## 給 005（結果匯出）
 
