@@ -1,0 +1,100 @@
+@startuml 002-guided-notes-import-sequence
+skinparam defaultFontName "Microsoft JhengHei"
+skinparam sequenceMessageAlign center
+title 002 Guided Notes 匯入 — 時序圖（授權、選檔、匯入、重新匯入與鎖定）
+
+actor "老師" as T
+participant "匯入畫面" as UI
+participant "匯入 API" as API
+participant "匯入服務" as S
+participant "Google 授權／選檔" as G
+participant "Sheets 轉接" as SA
+participant "解析器（純函式）" as P
+participant "活動（001）" as A
+
+== 授權與選檔 ==
+T -> UI : 按下「匯入學習單」
+UI -> G : 要求授權
+alt 取消／拒絕授權
+  G --> UI : 未授權
+  UI --> T : 說明尚未授權，提供重新授權；題目不變
+else 授權成功
+  G --> UI : 已授權
+  UI -> G : 開啟檔案選取介面
+  alt 取消選檔，或選到非 Google 試算表
+    G --> UI : 取消／檔案類型不符
+    UI --> T : 說明原因；題目不變
+  else 選定試算表
+    G --> UI : 試算表識別
+    UI -> API : 檢視試算表（活動代碼、試算表識別）
+    API -> S : inspectSpreadsheet(活動代碼, 請求者, 試算表識別)
+    S -> SA : inspect(活動代碼, 試算表識別)（唯讀）
+    alt 不是 Google 試算表（以檔案類型後端重新驗證）
+      SA --> S : 類型不符
+      S --> API : 被拒絕（不改任何狀態）
+      API --> UI : 請選擇 Google 試算表
+      UI --> T : 說明原因；題目不變
+    else 是試算表
+      SA --> S : 標題＋工作表清單
+      S --> API : 工作表清單＋autoSelectSheetId\n（只有一張時為該張的識別，否則為空；由後端決定）
+      API --> UI : 工作表清單與 autoSelectSheetId
+      alt autoSelectSheetId 有值（只有一張工作表）
+        UI --> T : 自動選用該工作表並顯示名稱
+      else 含多張工作表
+        UI --> T : 列出工作表，要求明確選擇一張
+        T -> UI : 選定工作表
+      end
+      UI -> API : 保存來源（活動代碼、試算表識別、工作表識別）
+      API -> S : selectSource(活動代碼, 請求者, 來源)
+      S -> S : 驗證工作表屬於該試算表後才保存（失敗時舊選擇不變）
+      S --> API : 已選定來源
+    end
+  end
+end
+
+== 匯入（原子） ==
+UI -> API : 匯入（活動代碼；使用已選定的來源）
+API -> S : importSheet(活動代碼, 請求者)
+S -> A : stage(活動代碼)、is_teacher(活動代碼, 請求者)
+alt 活動不存在、非老師，或活動不在第一輪開始前\n（搶答中、結果未定案、結果已定案、已結束、已取消）
+  A --> S : 拒絕條件成立
+  S --> API : 被拒絕（保留原來源映射與既有提交）
+  API --> UI : 可理解的訊息
+  UI --> T : 顯示拒絕原因
+else 老師且在準備中或開放加入（第一輪開始前）
+  S -> SA : read(活動代碼, 來源)（唯讀）
+  alt 授權失效／權限不足／檔案不可讀
+    SA --> S : 讀取失敗
+    S --> API : 失敗（不匯入半份資料）
+    API --> UI : 提示重新授權或調整權限
+  else 取得工作表快照
+    SA --> S : 儲存格值＋合併範圍
+    S -> P : parse(快照)
+    alt 驗證失敗（缺表頭、歧義、跳號、重疊…）
+      P --> S : 錯誤清單（列、欄、原因）
+      S --> API : 整份拒絕（既有題目不變）
+      API --> UI : 錯誤清單
+      UI --> T : 逐項顯示列欄與修正建議
+    else 驗證成功
+      P --> S : 題目清單＋來源映射＋匯入時結構
+      S -> A : replace_questions(活動代碼, 請求者, 題號清單)
+      alt 001 拒絕（階段或身分在此時已改變）
+        A --> S : 被拒絕（001 的題目完全不變）
+        S --> API : 被拒絕（002 保存的來源映射與結構也不變）
+        API --> UI : 可理解的訊息
+        UI --> T : 顯示拒絕原因
+      else 001 接受
+        A --> S : 成功（新 version）
+        S -> S : 依活動代碼整份取代來源映射與匯入時結構（002 自己保存）
+        S --> API : 成功＋預覽
+        API --> UI : 題號、各題空格數、總題數、總空格數
+        UI --> T : 顯示「N 題、M 格」
+      end
+    end
+  end
+end
+
+== 第一輪開始前（準備中、開放加入）重新匯入 ==
+T -> UI : 改選試算表或工作表再匯入
+note right of S : 流程同「匯入」；成功時整份取代舊結果，\n失敗時舊結果完全保留
+@enduml

@@ -1,0 +1,47 @@
+@startuml 002-guided-notes-import-component
+!pragma layout smetana
+skinparam defaultFontName "Microsoft JhengHei"
+skinparam componentStyle rectangle
+title 002 Guided Notes 匯入 — 組件圖（相依方向：外層 → 核心）
+
+actor "老師" as Teacher
+
+package "外層：畫面與 API（轉接層）" {
+  [老師匯入畫面\n（授權、選檔、選工作表、預覽）] as UI
+  [匯入 API\n（身分與階段檢查、錯誤訊息轉換）] as Api
+}
+
+package "應用層" {
+  [匯入服務\n（原子替換、來源鎖定；\n依活動代碼保存來源映射與匯入時結構）] as ImportService
+}
+
+package "核心（純函式：不依賴網路、Web 框架、系統時鐘）" {
+  [學習單解析器\n（依文字表頭定位、題組展開、題號正規化、忽略空白列）\n輸入：工作表快照；輸出：題目＋來源映射\n或驗證錯誤（列、欄、原因）] as Parser
+  [題目完整性驗證器\n（連續性、重疊、孤立子空格）] as Validator
+}
+
+package "外層：外部服務轉接層" {
+  [Google 授權轉接\n（授權、token 保管）] as AuthAdapter
+  [選檔轉接\n（Google 選檔介面）] as PickerAdapter
+  [Sheets 轉接\n（唯讀：儲存格值與合併範圍）] as SheetsAdapter
+}
+
+package "001 活動（相依）" {
+  [活動狀態與老師身分\n（ActivityService：stage、is_teacher、\nreplace_questions，皆帶活動代碼）] as Activity
+}
+
+cloud "Google 服務" as Google
+
+Teacher --> UI
+UI --> Api
+UI ..> PickerAdapter : 選檔
+UI ..> AuthAdapter : 授權
+Api --> ImportService
+ImportService --> Activity : 查詢階段與身分、\n只寫入題號清單
+ImportService --> SheetsAdapter : 讀取工作表快照
+ImportService --> Parser : 傳入工作表快照
+Parser --> Validator
+SheetsAdapter --> Google
+AuthAdapter --> Google
+PickerAdapter --> Google
+@enduml
