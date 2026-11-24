@@ -11,7 +11,7 @@
 **OpenSpec Capability**: [對應的 OpenSpec 能力名稱，例如 activity-session；基準檔 `docs/openspec-reference/<能力>/spec.md`]
 
 <!--
-  專案覆寫範本（憲章 v1.0.0 原則 I、II）。本檔覆寫 core 的 spec-template.md。
+  專案覆寫範本（憲章 v1.1.0 原則 I、II）。本檔覆寫 core 的 spec-template.md。
   - 全文使用台灣繁體中文。
   - 每個 Acceptance Scenario 與 FR 都必須在「OpenSpec Traceability」表中對應到 OpenSpec Requirement／Scenario。
   - 涉及 docs/alignment.md 中仍「待確認」的問題時，標記 [NEEDS CLARIFICATION: Q-xx ...]，不得自行假設。
@@ -144,7 +144,7 @@
 - **SC-002**: [Measurable metric, e.g., "System handles 1000 concurrent users without degradation"]
 - **SC-003**: [User satisfaction metric, e.g., "90% of users successfully complete primary task on first attempt"]
 - **SC-004**: [Business metric, e.g., "Reduce support tickets related to [X] by 50%"]
-- **SC-00X**（涉及即時同步時，憲章技術限制 4）：老師加上 [N] 組學生同時連線時，狀態變更在 2 秒內反映到所有畫面（N 依 001 plan；組數上限待 alignment Q-07，不得自訂）
+- **SC-00X**（涉及即時同步時，憲章技術限制 4）：老師加上 [N] 組學生同時連線時，狀態變更在 2 秒內反映到所有畫面（N 依 001 plan；組數上限由老師建立活動時指定，見 alignment 2026-11-22 決議，系統不自訂固定上限）
 
 ## Assumptions
 
