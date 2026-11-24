@@ -211,6 +211,8 @@ description: "004-ranking-review 任務清單"
 - [X] T069 [US6] 在 `<web>/ranking_review.py` 實作 `POST /activities/{code}/rounds/current/finalize`（本文 `FinalizeBody(resultVersion: StrictInt)`，`extra="ignore"`；可接受 `Idempotency-Key` 但不依賴它）；**同時**移除 `src/lecture_quiz/adapters/web/http_api.py` 中 001 預留的 `POST /activities/{code}/rounds/current/finalize` 空定案路由（含其 docstring「004 會擴充本文」）；更新 `specs/001-activity-session/contracts/http-api.md` 第 8 項為「由 004 提供，見 `specs/004-ranking-review/contracts/http-api.md` R2」（Complexity Tracking 已說明理由；PR 說明要列出這項對 001 的影響）
 - [X] T070 [US6] 前端老師端：`ranking-review-teacher.js` 加「確認定案」按鈕，送出畫面上最新的 `resultVersion`；`STALE_RESULT_VERSION` 時顯示「結果已更新，請重新檢視後再確認」且不自動套用；成功或 `alreadyFinalized` 後隱藏判錯與確認按鈕、顯示「結果已定案」；失敗訊息 `textContent`
 
+- [X] T096 [US6] 移除 001 老師頁原有的「確認定案」按鈕（`teacher.html` 的 `#finalize-round`、`teacher.js` 的顯示與點擊處理），避免與 004 的按鈕重複、且舊按鈕送空本文會得 400（PR #20 審查意見 1）；新增 `tests/architecture/test_single_finalize_button.py` 驗證老師頁只剩 004 的按鈕；同步 001 quickstart 第 18 項說明
+
 **Checkpoint**: 定案流程完整、001 與 004 的結果一致、005 可唯讀取得定案結果
 
 ---
