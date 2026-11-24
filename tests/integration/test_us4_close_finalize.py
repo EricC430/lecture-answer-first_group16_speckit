@@ -128,7 +128,12 @@ def test_finalize_then_next_round(client, teacher):
     open_joining(client, teacher)
     _post(client, teacher, "/rounds", {"questionNumbers": [1]})
     _post(client, teacher, "/rounds/current/close")
-    assert _post(client, teacher, "/rounds/current/finalize").status_code == 200
+    assert (
+        _post(
+            client, teacher, "/rounds/current/finalize", {"resultVersion": 1}
+        ).status_code
+        == 200
+    )
     assert _snapshot(client, teacher)["stage"] == "RESULT_FINAL"
     second = _post(client, teacher, "/rounds", {"questionNumbers": [2, 3]})
     assert second.status_code == 201

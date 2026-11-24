@@ -62,7 +62,9 @@ def test_student_sees_no_trace_of_other_groups_activity(client, teacher):
         assert [t_ws.receive_json()["version"] for _ in range(2)] == [
             snap["version"]
         ] * 2
-        finalized = _post(client, teacher, "/rounds/current/finalize").json()
+        finalized = _post(
+            client, teacher, "/rounds/current/finalize", {"resultVersion": 1}
+        ).json()
         after = s_ws.receive_json()
         assert after["stage"] == "RESULT_FINAL"
         assert after["version"] == snap["version"] + 1 == finalized["version"]

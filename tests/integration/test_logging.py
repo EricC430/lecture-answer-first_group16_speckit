@@ -19,7 +19,8 @@ def test_full_flow_logs_contain_no_secrets(client, caplog):
     ][0]["credential"]
     join_group(client, teacher.code, 1, credential)
     for path in ("/rounds", "/rounds/current/close", "/rounds/current/finalize"):
-        client.post(f"{base}{path}", json={}, headers=teacher.headers)
+        body = {"resultVersion": 1} if path.endswith("/finalize") else {}
+        client.post(f"{base}{path}", json=body, headers=teacher.headers)
     client.post(
         f"{base}/groups/leave", json={}, headers={"Authorization": f"Bearer {device}"}
     )

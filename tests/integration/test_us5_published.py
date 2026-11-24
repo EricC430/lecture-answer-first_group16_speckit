@@ -85,7 +85,7 @@ def test_second_round_keeps_history_and_hides_new_answers(client, round1):
     code = teacher.code
     assert submit(client, code, devices["b"], 1, 1, ["乙一", "乙二"]).status_code == 201
     _post(client, teacher, "/rounds/current/close")
-    _post(client, teacher, "/rounds/current/finalize")
+    _post(client, teacher, "/rounds/current/finalize", {"resultVersion": 1})
     _post(client, teacher, "/rounds")
     a_ctx, a_ws, a_first = _connect(client, code, devices["a"])
     try:
@@ -130,7 +130,7 @@ def test_submission_stays_with_original_group_after_leaving(client, round1):
     code = teacher.code
     assert submit(client, code, devices["a"], 1, 3, ["甲三"]).status_code == 201
     _post(client, teacher, "/rounds/current/close")
-    _post(client, teacher, "/rounds/current/finalize")
+    _post(client, teacher, "/rounds/current/finalize", {"resultVersion": 1})
     left = client.post(
         f"/api/activities/{code}/groups/leave",
         json={},

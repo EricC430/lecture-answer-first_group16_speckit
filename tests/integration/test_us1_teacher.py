@@ -16,7 +16,7 @@ from tests.conftest import (
 TEACHER_ONLY_REQUESTS = [
     ("post", "/rounds", {}),
     ("post", "/rounds/current/close", {}),
-    ("post", "/rounds/current/finalize", {}),
+    ("post", "/rounds/current/finalize", {"resultVersion": 1}),
     ("post", "/end", {}),
     ("post", "/cancel", {}),
 ]

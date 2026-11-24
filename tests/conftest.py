@@ -238,3 +238,21 @@ def submit(
         json=body,
         headers={"Authorization": f"Bearer {device_token}"},
     )
+
+
+def finalize_current(client: TestClient, teacher: TeacherSession):
+    """確認定案目前這一輪（004）；回傳 response。
+
+    先讀老師快照取得該輪最新的 `resultVersion`（還沒有 `ranking` 時為初始版本 1），再
+    以 `{"resultVersion": n}` 送出。004 取代 001 的空定案路由之前與之後都能運作。
+    """
+    snapshot = client.get(
+        f"/api/activities/{teacher.code}/snapshot", headers=teacher.headers
+    ).json()
+    rounds = snapshot.get("ranking", {}).get("rounds", [])
+    version = rounds[-1]["resultVersion"] if rounds else 1
+    return client.post(
+        f"/api/activities/{teacher.code}/rounds/current/finalize",
+        json={"resultVersion": version},
+        headers=teacher.headers,
+    )

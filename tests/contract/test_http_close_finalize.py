@@ -1,6 +1,6 @@
 """T054：關輪與定案端點契約（contracts/http-api.md #7、#8）。"""
 
-from tests.conftest import open_joining
+from tests.conftest import finalize_current, open_joining
 
 
 def _open(client, teacher):
@@ -35,13 +35,11 @@ def test_finalize_contract(client, teacher):
     closed = client.post(
         f"/api/activities/{teacher.code}/rounds/current/close", headers=teacher.headers
     ).json()
-    response = client.post(
-        f"/api/activities/{teacher.code}/rounds/current/finalize",
-        json={},
-        headers=teacher.headers,
-    )
+    response = finalize_current(client, teacher)
     assert response.status_code == 200
-    assert response.json() == {"version": closed["version"] + 1}
+    # 004 取代 001 的空定案路由後，回應多了 resultVersion、alreadyFinalized；
+    # 活動狀態版本的語意不變（關輪後定案 +1）
+    assert response.json()["version"] == closed["version"] + 1
 
 
 def test_close_without_round_is_409(client, teacher):
@@ -56,6 +54,7 @@ def test_finalize_during_round_is_409(client, teacher):
     _open(client, teacher)
     response = client.post(
         f"/api/activities/{teacher.code}/rounds/current/finalize",
+        json={"resultVersion": 1},
         headers=teacher.headers,
     )
     assert response.status_code == 409
