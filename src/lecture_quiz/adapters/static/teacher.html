@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>老師｜Vibe Coding 課堂搶答系統</title>
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <!-- 共用：同步中斷橫幅與右下角狀態列，由 js/sync.js 控制 -->
+  <div id="sync-banner" role="status" hidden></div>
+  <header>
+    <h1>老師頁</h1>
+  </header>
+  <main id="teacher-main">
+    <!--
+      擴充約定（docs/DEVELOPMENT.md）：每個子功能只新增一個 <section>，
+      id 為 "<能力>-section"，邏輯放在 js/<能力>.js，並在頁尾加一行 <script type="module">。
+      例如：<section id="import-section" data-feature="002-guided-notes-import"></section>
+    -->
+    <!-- ── 子功能區塊開始 ── -->
+    <section id="activity-section" data-feature="001-activity-session">
+      <h2>活動</h2>
+      <p id="activity-error" class="error-message" role="alert" hidden></p>
+      <div id="activity-create">
+        <label>組數上限（1～99）：
+          <input type="number" id="create-max-groups" min="1" max="99" step="1" value="6"></label>
+        <button type="button" id="create-activity">建立活動</button>
+      </div>
+      <div id="activity-info" hidden>
+        <p>活動代碼：<strong id="activity-code" class="activity-code"></strong>
+          <span class="muted">組數上限：<span id="activity-max-groups"></span></span></p>
+        <p>目前階段：<strong id="activity-stage"></strong>
+          <span id="activity-round" class="muted"></span></p>
+        <p>題目：<span id="activity-questions" class="muted"></span></p>
+        <h3>組別</h3>
+        <p id="groups-empty" class="muted">尚未有組別加入。</p>
+        <table id="groups-table" hidden>
+          <thead>
+            <tr><th>組號</th><th>加入憑證</th><th>裝置數</th><th>成功次數</th><th>作答紀錄</th><th></th></tr>
+          </thead>
+          <tbody id="groups-body"></tbody>
+        </table>
+        <p id="round-status" hidden>本輪題目：<span id="round-questions"></span>
+          <span id="round-countdown" class="countdown"></span></p>
+        <div class="controls">
+          <button type="button" id="open-joining" hidden>開放加入</button>
+          <button type="button" id="close-round" hidden>關輪</button>
+          <button type="button" id="end-activity" hidden>結束活動</button>
+          <button type="button" id="cancel-activity" hidden>取消活動</button>
+          <button type="button" id="new-activity" hidden>建立新活動</button>
+        </div>
+        <p id="ended-summary" hidden>未成功題：<span id="ended-unsolved"></span></p>
+        <p id="cancelled-summary" class="muted" hidden>活動已取消，不提供寫回與 CSV 下載。</p>
+      </div>
+      <form id="open-round-panel" hidden>
+        <h3>開輪</h3>
+        <fieldset>
+          <legend>本輪題目（預設全選未成功題）</legend>
+          <div id="open-round-questions"></div>
+        </fieldset>
+        <label><input type="checkbox" id="open-round-fair"> 公平模式</label>
+        <label>倒數秒數（選填，1～3600）：
+          <input type="number" id="open-round-countdown" min="1" max="3600" step="1"></label>
+        <button type="submit">開輪</button>
+      </form>
+    </section>
+    <section id="import-section" data-feature="002-guided-notes-import" hidden>
+      <h2>匯入學習單</h2>
+      <p class="muted">從你的 Google 試算表匯入題號與作答位置（只讀取，不會修改你的試算表）。</p>
+      <p id="import-status" role="status"></p>
+      <p id="import-error" class="error-message" role="alert" hidden></p>
+      <div class="controls">
+        <button type="button" id="import-start">匯入學習單</button>
+        <button type="button" id="import-reauth" hidden>重新授權</button>
+      </div>
+      <div id="import-sheet-choice" hidden>
+        <p>這份試算表有多張工作表，請選擇一張：</p>
+        <div id="import-sheet-list"></div>
+      </div>
+      <p id="import-source" hidden>已選定：<strong id="import-source-name"></strong></p>
+      <button type="button" id="import-run" hidden>確認匯入</button>
+      <div id="import-preview" hidden>
+        <h3>匯入結果</h3>
+        <p><strong id="import-summary"></strong></p>
+        <table>
+          <thead><tr><th>題號</th><th>空格數</th></tr></thead>
+          <tbody id="import-preview-body"></tbody>
+        </table>
+      </div>
+      <div id="import-issues" hidden>
+        <h3>學習單有問題，整份未匯入</h3>
+        <p class="muted">題目沒有任何變動；若之前成功匯入過，上方仍是那一次的結果。</p>
+        <table>
+          <thead><tr><th>列</th><th>欄</th><th>原因</th><th>內容</th><th>怎麼修正</th></tr></thead>
+          <tbody id="import-issues-body"></tbody>
+        </table>
+      </div>
+    </section>
+    <section id="round-submission-section" data-feature="003-round-submission" hidden>
+      <h2>作答看板</h2>
+      <div id="submission-board"></div>
+    </section>
+    <section id="published-section" data-feature="003-round-submission" hidden>
+      <h2>已公開的作答</h2>
+      <div id="published-list"></div>
+    </section>
+    <section id="ranking-review-section" data-feature="004-ranking-review" hidden>
+      <h2>順位與判錯</h2>
+      <div id="ranking-review-list"></div>
+    </section>
+    <!-- ── 子功能區塊結束 ── -->
+  </main>
+  <div id="sync-status" aria-live="polite"></div>
+  <!-- ── 子功能 script 開始（每個子功能一行）── -->
+  <script type="module" src="js/teacher.js"></script>
+  <script type="module" src="js/import.js"></script>
+  <script type="module" src="js/round-submission-teacher.js"></script>
+  <!-- ── 子功能 script 結束 ── -->
+</body>
+</html>

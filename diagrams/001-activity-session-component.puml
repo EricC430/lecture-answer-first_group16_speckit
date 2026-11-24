@@ -1,0 +1,58 @@
+@startuml 001-activity-session-component
+!pragma layout smetana
+skinparam defaultFontName "Microsoft JhengHei"
+skinparam componentStyle rectangle
+title 001 活動與階段同步 — 組件圖（相依方向：外層 → 核心）
+
+actor "老師" as Teacher
+actor "學生（各組）" as Student
+
+package "外層：畫面與 API（轉接層）" {
+  [老師畫面\n（指定組數上限建立活動、開輪、關輪、結束／取消、\n查看各組憑證、刪除空組）] as TeacherUI
+  [學生畫面\n（以組號加入、身分恢復、階段顯示、\n查看本組憑證、離開本組）] as StudentUI
+  [活動 API（HTTP）\n（解析 token 與 Idempotency-Key、錯誤訊息轉換；\n共用錯誤格式與請求日誌在 common.py）] as Api
+  [同步推送 WebSocketHub（只推送）\n（實作 SyncPublisher：依角色裁切完整快照、狀態版本、ping）] as Sync
+  [倒數排程 AsyncioCountdownScheduler\n（實作 CountdownScheduler）] as TimerImpl
+  [系統時鐘 SystemClock\n（實作 Clock）] as ClockImpl
+}
+
+package "應用層" {
+  [活動服務\n（實作 002 的 ActivityGateway；\n每活動一把鎖序列化操作、鎖內 Idempotency-Key 去重）] as Service
+  [ports：CountdownScheduler、SyncPublisher、Clock\n（Protocol，由外層實作；倒數到期以\nmax(現在, 截止時間) 關輪）] as Ports
+  [活動登錄表\n（只存在記憶體，重啟清空；\n依老師身分找出存續中活動（C7））] as Registry
+}
+
+package "核心（純函式：不依賴網路、Web 框架、系統時鐘）" {
+  [階段狀態機\n（目前狀態 + 操作 + 傳入時間 → 新狀態或拒絕原因）] as StateMachine
+  [輸入規則\n（組數上限 1～99、組號正規化與 1～N 檢查、\n倒數 1～3600 秒、選題檢查、換組與刪組條件）] as Rules
+  [快照裁切\n（老師版／學生版，只含自己組資料）] as View
+}
+
+package "其他子功能（依賴 001）" {
+  [002 匯入服務] as Import
+  [003 提交服務] as Submit
+  [004 順位與定案] as Ranking
+  [005 匯出] as Export
+}
+
+Teacher --> TeacherUI
+Student --> StudentUI
+TeacherUI --> Api
+StudentUI --> Api
+TeacherUI <.. Sync : 推送
+StudentUI <.. Sync : 推送
+Api --> Service
+TimerImpl ..|> Ports
+Sync ..|> Ports
+ClockImpl ..|> Ports
+TimerImpl --> Service : 截止時呼叫 onDeadline
+Service --> Registry
+Service --> StateMachine
+Service --> Rules
+Service --> View
+Service --> Ports : 經 SyncPublisher 通知狀態變更
+Import --> Service : 查詢階段／老師身分、\n替換題目
+Submit --> Service : 查詢輪次與組別身分、\n標記組別有提交
+Ranking --> Service : 確認定案
+Export --> Service : 讀取已結束活動
+@enduml

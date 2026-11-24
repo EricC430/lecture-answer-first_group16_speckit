@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>學生｜Vibe Coding 課堂搶答系統</title>
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <!-- 共用：同步中斷橫幅與右下角狀態列，由 js/sync.js 控制 -->
+  <div id="sync-banner" role="status" hidden></div>
+  <header>
+    <h1>學生頁</h1>
+  </header>
+  <main id="student-main">
+    <!--
+      擴充約定（docs/DEVELOPMENT.md）：每個子功能只新增一個 <section>，
+      id 為 "<能力>-section"，邏輯放在 js/<能力>.js，並在頁尾加一行 <script type="module">。
+      例如：<section id="import-section" data-feature="002-guided-notes-import"></section>
+    -->
+    <!-- ── 子功能區塊開始 ── -->
+    <section id="activity-section" data-feature="001-activity-session">
+      <h2>活動</h2>
+      <p id="student-error" class="error-message" role="alert" hidden></p>
+      <form id="student-join" novalidate>
+        <h3>加入組別</h3>
+        <label>活動代碼：<input type="text" id="join-code" autocomplete="off" maxlength="12"></label>
+        <label>組號：<input type="text" id="join-number" inputmode="numeric" autocomplete="off" maxlength="8"></label>
+        <label>本組加入憑證（加入已存在的組別時需要；請看同組同學的畫面，同學都不在時請老師查看）：
+          <input type="text" id="join-credential" autocomplete="off" maxlength="12"></label>
+        <button type="submit">加入</button>
+      </form>
+      <div id="student-info" hidden>
+        <p>活動代碼：<strong id="student-code" class="activity-code"></strong></p>
+        <p>本組：<strong id="student-group"></strong>
+          <span class="muted">歷史成功次數：<span id="student-success"></span></span></p>
+        <p>本組加入憑證：<strong id="student-credential" class="activity-code"></strong>
+          <span class="muted">（同組同學用這個憑證加入同一組）</span></p>
+        <p><button type="button" id="leave-group">離開本組</button>
+          <span id="leave-hint" class="muted" hidden>搶答進行中不能換組，請在本輪關閉後再操作，這段期間可以用同組同學的裝置作答。</span></p>
+        <p>目前階段：<strong id="student-stage"></strong>
+          <span id="student-round" class="muted"></span></p>
+        <p id="student-open" hidden>本輪開放題目：<span id="student-open-questions"></span>
+          <span id="student-countdown" class="countdown"></span></p>
+        <p id="student-ended" hidden>活動已結束。未成功題：<span id="student-unsolved"></span></p>
+        <p id="student-cancelled" hidden>活動已取消。</p>
+        <p><button type="button" id="new-join" hidden>加入其他活動</button></p>
+      </div>
+    </section>
+    <section id="round-submission-section" data-feature="003-round-submission" hidden>
+      <h2>作答</h2>
+      <p class="muted">同一組每一題每一輪只算第一次送出；題組要填滿每一格才能送出。</p>
+      <p id="round-deadline-note" class="muted" role="status"></p>
+      <div id="answer-forms"></div>
+    </section>
+    <section id="ranking-review-student-section" data-feature="004-ranking-review" hidden>
+      <h2>本輪結果</h2>
+      <div id="ranking-review-student-list"></div>
+    </section>
+    <!-- ── 子功能區塊結束 ── -->
+  </main>
+  <div id="sync-status" aria-live="polite"></div>
+  <!-- ── 子功能 script 開始（每個子功能一行）── -->
+  <script type="module" src="js/student.js"></script>
+  <script type="module" src="js/round-submission.js"></script>
+  <!-- ── 子功能 script 結束 ── -->
+</body>
+</html>

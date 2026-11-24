@@ -1,0 +1,179 @@
+@startuml 002-guided-notes-import-class
+!pragma layout smetana
+skinparam defaultFontName "Microsoft JhengHei"
+skinparam classAttributeIconSize 0
+title 002 Guided Notes 匯入 — 類別圖
+
+package "核心（純資料與純函式）" {
+  class SheetSnapshot <<資料>> {
+    spreadsheetId
+    sheetId
+    sheetName
+    rowCount
+    colCount
+    cells : 儲存格值（列, 欄）
+    merges : 合併範圍清單
+  }
+
+  class MergeRange <<資料>> {
+    firstRow
+    firstCol
+    lastRow
+    lastCol
+  }
+
+  class CellRef <<資料>> {
+    row
+    col
+  }
+
+  class GuidedNotesParser <<純函式>> {
+    +parse(snapshot) : ParseResult
+  }
+
+  class ParseResult <<資料>> {
+    +ok : 是否成功
+    questions : Question 清單
+    blanks : Blank 清單（每格的題號、子編號、答案位置）
+    structure : StructureSnapshot
+    issues : ValidationIssue 清單
+  }
+
+  class Question <<資料>> {
+    number : 正整數
+    blankCount : 空格數
+    isGroup : 是否題組
+  }
+
+  class Blank <<資料>> {
+    questionNumber
+    subIndex : 子編號（單題為空）
+    target : CellRef（答案格左上角）
+  }
+
+  class StructureSnapshot <<資料>> {
+    headerNumber
+    headerAnswer
+    answerCols
+    dataStartRow
+    merges
+    rowNumbers
+    answerCells
+  }
+
+  class ValidationIssue <<資料>> {
+    kind : 缺表頭／表頭歧義／跳號／非相鄰重複／
+    非數字題號／子編號缺漏／孤立子空格／缺答案格／重疊
+    at : CellRef
+    quoted : 被引用的儲存格文字（截斷）
+    hint : 修正建議
+  }
+}
+
+package "應用層" {
+  class ImportService {
+    +startAuth(code, requester) : 授權網址
+    +authStatus(code, requester) : bool
+    +pickerConfig(code, requester) : PickerConfig
+    +inspectSpreadsheet(code, requester, spreadsheetId) : SpreadsheetInfo
+    +selectSource(code, requester, source : SourceRef) : SourceSelection
+    +importSheet(code, requester) : ImportOutcome（使用已選定的來源）
+    +getImportSummary(code, requester) : ImportPreview（重新整理後恢復預覽）
+    +getImportResult(code, requester) : ImportOutcome（含標題與 001 版本）
+    +getImportRecord(code) : ImportRecord（供 005 寫回）
+    +blanksPerQuestion(code) : 題號→子空格數 | None（供 003）
+  }
+
+  class SourceRef <<資料>> {
+    spreadsheetId
+    sheetId
+  }
+
+  class SpreadsheetInfo <<資料>> {
+    title
+    sheets : SheetInfo 清單（只含可見工作表）
+    autoSelectSheetId : 只有一張工作表時為其識別，否則為空（由後端決定）
+  }
+
+  class SourceSelection <<資料>> {
+    source : SourceRef
+    sheetTitle
+  }
+
+  class ImportRecord <<資料>> {
+    source : SourceRef
+    sheetTitle
+    blanks : Blank 清單（來源映射）
+    structure : StructureSnapshot
+    questionNumbers
+    version : 001 回傳的版本
+  }
+
+  class ImportOutcome <<資料>> {
+    ok : 成功／被拒絕
+    preview : ImportPreview
+    issues : ValidationIssue 清單
+    rejection : ImportRejection
+    version
+    sheetTitle
+  }
+
+  class ImportPreview <<資料>> {
+    questionNumbers
+    blanksPerQuestion
+    totalQuestions
+    totalBlanks
+  }
+}
+
+package "外層轉接層" {
+  interface SheetsReader {
+    +inspect(code, spreadsheetId) : SpreadsheetInfo（先確認是 Google 試算表）
+    +read(code, source) : SheetSnapshot（唯讀）
+  }
+  interface AuthGateway {
+    +isConfigured() : bool
+    +startAuthorization(code, requester) : 授權網址
+    +completeAuthorization(state, authCode)
+    +isAuthorized(code) : bool
+    +pickerCredentials(code) : 選檔用短效憑證
+  }
+  interface ActivityGateway <<由 001 ActivityService 實作；stage、isTeacher 為同步，replaceQuestions 為 async>> {
+    +stage(code) : 階段（活動不存在時為空）
+    +isTeacher(code, requester) : bool
+    +replaceQuestions(code, requester, questionNumbers) : Outcome（成功時回傳新 version）
+  }
+}
+
+note bottom of ActivityGateway
+  契約：001 的 service-interfaces.md。
+  replaceQuestions 只收題號清單（tuple[int, ...]），
+  只允許老師在第一輪開始前（準備中、開放加入）呼叫；被拒時既有題目完全不變。
+  來源映射與匯入時結構由 002 自己依活動代碼保存。
+end note
+
+SheetSnapshot "1" o-- "*" MergeRange
+GuidedNotesParser ..> SheetSnapshot : 讀取
+GuidedNotesParser ..> ParseResult : 產生
+ParseResult "1" *-- "*" Question
+ParseResult "1" *-- "*" Blank
+ParseResult "1" *-- "0..1" StructureSnapshot
+ParseResult "1" *-- "*" ValidationIssue
+Question "1" o-- "1..*" Blank
+Blank --> CellRef
+ValidationIssue --> CellRef
+
+ImportService ..> GuidedNotesParser
+ImportService ..> SheetsReader
+ImportService ..> AuthGateway
+ImportService ..> ActivityGateway : 只傳題號清單
+ImportService "1" o-- "*" ImportRecord : 依活動代碼保存
+ImportService "1" o-- "*" SourceSelection : 依活動代碼保存
+SourceSelection --> SourceRef
+ImportRecord --> SourceRef
+ImportRecord --> StructureSnapshot
+ImportRecord "1" o-- "*" Blank
+SheetsReader ..> SpreadsheetInfo
+ImportService ..> ImportOutcome
+ImportOutcome --> ImportPreview
+@enduml

@@ -1,0 +1,202 @@
+@startuml 003-round-submission-class
+!pragma layout smetana
+skinparam defaultFontName "Microsoft JhengHei"
+title 003 多題搶答與送出 — 類別圖（plan 2026-11-23；實作後校正 2026-11-24）
+
+package "core.round_submission（純函式）" {
+  class SubmissionAttempt <<frozen>> {
+    round_number_raw: object
+    question_number_raw: object
+    answers_raw: object
+  }
+  class Submission <<frozen>> {
+    activity_code: str
+    round_number: int
+    question_number: int
+    group_number: int
+    answers: tuple[str, ...]
+    received_at: datetime
+    sequence: int
+  }
+  class RoundContext <<frozen>> {
+    group_number: int
+    round_number: int | None
+    open_questions: tuple[int, ...]
+    accepting: bool
+    blanks_per_question: Mapping[int, int]
+  }
+  class SubmissionLedger <<frozen>> {
+    submissions: tuple[Submission, ...]
+    next_sequence: int
+    --
+    find(round, question, group): Submission | None
+    for_round(round): tuple[Submission, ...]
+    with_added(submission): SubmissionLedger
+  }
+  enum DecisionKind {
+    ACCEPTED
+    ALREADY_SUBMITTED
+    REJECTED
+  }
+  enum SubmissionRejection {
+    ACTIVITY_GONE
+    NOT_IN_GROUP
+    STALE_ROUND
+    ROUND_CLOSED
+    QUESTION_NOT_OPEN
+    SHAPES_UNAVAILABLE
+    INVALID_ANSWER
+    WRONG_BLANK_COUNT
+    BLANK_EMPTY
+    ANSWER_TOO_LONG
+    --
+    http_status: int
+  }
+  class SubmissionDecision <<frozen>> {
+    kind: DecisionKind
+    submission: Submission | None
+    rejection: SubmissionRejection | None
+    blank_numbers: tuple[int, ...]
+    expected_blanks: int | None
+  }
+  class "answer_rules（模組）" as AnswerModule <<module>> {
+    MAX_ANSWER_CHARS = 500
+  }
+  class AnswerRules {
+    {static} check(raw, expected): tuple[str, ...]
+  }
+  class InvalidAnswerError <<exception>> {
+    rejection: SubmissionRejection
+    blank_numbers: tuple[int, ...]
+    expected_blanks: int | None
+  }
+  class SubmissionRules {
+    {static} decide(ledger, context, code, attempt, now): SubmissionDecision
+    {static} order(submissions): tuple[Submission, ...]
+    {static} describe(decision, attempt): str
+  }
+  class "view（模組常數，Q-21／22／26）" as ViewRules <<module>> {
+    TEACHER_SEES_PROVISIONAL_RANKING_DURING_ROUND = False
+    STUDENT_SEES_OWN_SUCCESS_DURING_ROUND = True
+    STUDENT_SEES_JUDGED_WRONG = True
+  }
+  class SubmissionView {
+    {static} for_teacher(ledger, activity): dict
+    {static} for_group(ledger, activity, group_number, *, student_sees_own_success, student_sees_judged_wrong): dict
+  }
+  SubmissionLedger o-- "0..*" Submission
+  SubmissionDecision --> DecisionKind
+  SubmissionDecision --> SubmissionRejection
+  SubmissionRules ..> SubmissionLedger
+  SubmissionRules ..> RoundContext
+  SubmissionRules ..> SubmissionAttempt
+  SubmissionRules ..> SubmissionDecision
+  SubmissionRules ..> AnswerRules
+  AnswerRules ..> InvalidAnswerError : 拋出
+  AnswerRules ..> AnswerModule
+  SubmissionView ..> SubmissionLedger
+  SubmissionView ..> SubmissionRules : order
+  SubmissionView ..> ViewRules : 預設值
+}
+
+package "app.round_submission" {
+  interface QuestionShapeSource <<Protocol>> {
+    blanks_per_question(code): Mapping[int, int] | None
+  }
+  interface SubmissionReader <<Protocol>> {
+    round_submissions(code, round_number): tuple[Submission, ...]
+    all_submissions(code): tuple[Submission, ...]
+  }
+  class NullQuestionShapeSource {
+    blanks_per_question(code): None
+  }
+  class SubmissionStore {
+    get(code): SubmissionLedger
+    put(code, ledger): None
+  }
+  class SubmissionService {
+    submit(code, device_token, attempt): Outcome[SubmissionDecision]
+    round_submissions(code, round_number): tuple[Submission, ...]
+    all_submissions(code): tuple[Submission, ...]
+    snapshot_extension(activity, viewer): Mapping[str, object]
+  }
+  class "_SubmitHandler" as Handler {
+    window: SubmissionWindow | None
+    --
+    decide(window, now): HandlerStep
+    commit(): None
+  }
+  SubmissionService ..|> SubmissionReader
+  SubmissionService --> SubmissionStore
+  SubmissionService --> QuestionShapeSource
+  SubmissionService ..> Handler : 每次 submit 建立
+  Handler ..> SubmissionRules
+  SubmissionService ..> SubmissionView
+  NullQuestionShapeSource ..|> QuestionShapeSource
+}
+
+package "002 app.guided_notes_import" {
+  class ImportService {
+    blanks_per_question(code): Mapping[int, int] | None
+  }
+  note bottom of ImportService
+    格數來自最後一次成功匯入（ImportRecord.blanks 計數）；
+    結構上符合 QuestionShapeSource。開發用 seed 已移除（T077）
+  end note
+}
+ImportService ..|> QuestionShapeSource
+
+package "001 app.activity（擴充）" {
+  class ActivityService {
+    record_submission(code, device_token, handler): Outcome[T]
+    add_snapshot_extension(ext): None
+    snapshot_for(activity, requester): ActivitySnapshot | None
+    resolve_device(code, device_token): Outcome[DeviceContext]
+    accepts_submission(code, now): bool
+    mark_group_submitted(code, group_number): Outcome[int]
+  }
+  class SubmissionWindow <<frozen>> {
+    group_number: int
+    stage: Stage
+    round_number: int | None
+    open_questions: tuple[int, ...]
+    deadline: datetime | None
+    accepting: bool
+  }
+  interface SubmissionHandler <<Protocol>> {
+    decide(window, now): HandlerStep[T]
+    commit(): None
+  }
+  interface SnapshotExtension <<Protocol>> {
+    __call__(activity, viewer): Mapping[str, object]
+  }
+  interface Clock <<Protocol>> {
+    now(): datetime
+  }
+  interface SyncPublisher <<Protocol>> {
+    publish(activity): None
+  }
+}
+
+package "001 core.activity（擴充）" {
+  class RecordSubmission <<command>> {
+    actor: System
+    group_number: int
+  }
+}
+
+Handler ..|> SubmissionHandler
+Handler ..> SubmissionWindow : 轉成 RoundContext
+SubmissionService ..|> SnapshotExtension : snapshot_extension
+SubmissionService --> ActivityService : record_submission、註冊擴充
+ActivityService --> Clock
+ActivityService --> SyncPublisher
+ActivityService ..> RecordSubmission : 鎖內套用（revision + 1）
+
+note right of SubmissionRules
+  判定順序：輪次識別 → 是否接受（now < deadline）
+  → 題號在本輪 → 本組是否已送出 → 答案內容。
+  不讀系統時鐘：now 由 001 在鎖內取得後傳入；
+  接收序號取自 ledger.next_sequence。
+end note
+@enduml

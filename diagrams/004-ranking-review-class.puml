@@ -1,0 +1,162 @@
+@startuml 004-ranking-review-class
+!pragma layout smetana
+skinparam defaultFontName "Microsoft JhengHei"
+skinparam classAttributeIconSize 0
+title 004 順位計算、判錯重算與定案 — 類別圖
+
+package "核心（純資料與純函式）" {
+  class RankingInput <<資料>> {
+    baseline : 組號 → 開輪時的成功次數（無紀錄視為 0）
+    fairMode : 是否公平模式（開輪時固定）
+    questionNos : 本輪題號清單
+    candidates : Candidate 清單
+    wrongMarks : 判錯集合（組號, 題號）
+  }
+
+  class Candidate <<資料，由 003 的 Submission 轉出>> {
+    groupNo : 組號
+    questionNo : 題號
+    receivedAt : 後端接收時間
+    sequence : 後端接收序號（全活動唯一）
+  }
+
+  class QuestionOrder <<純函式>> {
+    +compute(questionNos, candidates) : 題序（最早提交決定；無提交題置後依題號）
+  }
+
+  class RankingCalculator <<純函式>> {
+    +initialCounts(baseline, groupNos) : 本輪處理前的成功次數
+    +rankSpeed(questionNo, candidates, wrongGroups) : QuestionRanking
+    +rankFair(questionNo, candidates, wrongGroups, counts) : QuestionRanking
+    +recompute(input, order) : RoundResult
+    +diff(old, new) : 受影響題號集合
+  }
+
+  class RoundReviewRules <<純函式>> {
+    +mark(review, input, groupNo, questionNo, wrong) : MarkDecision
+    +finalizePlan(review, baseline) : FinalizedResult（新成功題號、各組增量、最終累計）
+  }
+
+  class RoundResult <<資料>> {
+    order : 固定題序
+    rankings : QuestionRanking 清單
+    groupCounts : 組號 → 處理完本輪後的暫算次數
+    wins : 組號 → 本輪成功題數
+  }
+
+  class QuestionRanking <<資料>> {
+    questionNo
+    entries : RankEntry 清單
+    successGroup : 搶答成功者組號 或 無（未成功）
+  }
+
+  class RankEntry <<資料>> {
+    rank : 名次（被判錯者無名次）
+    groupNo
+    countAtProcessing : 處理當下成功次數（速度模式無）
+    reason : WinReason
+    wrong : 是否被判錯
+    displayStatus : DisplayStatus
+  }
+
+  class ResultView <<純函式>> {
+    +forTeacher(roundViews) : JSON（含次數、理由、replacedGroup、actions：judgeGroup／undoGroup）
+    +forStudent(roundViews) : JSON（不含理由與他組次數，含 replacedGroup）
+  }
+
+  class RoundView <<資料>> {
+    roundNumber
+    fairMode
+    review : RoundReview
+    final : 是否定案
+  }
+
+  class "as_final(rankings)" as AsFinal <<純函式>> {
+    定案後 SUCCESS 改為 CORRECT
+  }
+
+  class RoundReview <<資料>> {
+    version : 結果版本（與 001 的活動狀態版本獨立）
+    wrongMarks : 判錯集合
+    result : RoundResult
+    affected : 最近一次變更影響的題號
+    replaced : 題號 → 被替換的搶答成功者歷程（依判錯順序；撤銷時移出，退回上一步）
+    finalized : FinalizedResult 或 無
+  }
+
+  class FinalizedResult <<資料，只讀>> {
+    version : 依據的結果版本
+    rankings : 各題全部候選的順位與搶答成功者
+    finalCounts : 各組最終累計成功次數
+    solvedQuestions : 本輪新成功題號
+    successIncrements : 各組成功次數增量
+  }
+
+  enum DisplayStatus {
+    SUCCESS : 搶答成功（排第一、未被判錯、結果未定案）
+    CORRECT : 搶答正確（定案後的搶答成功者）
+    WRONG : 答錯（老師判錯）
+    FAILED : 搶答失敗（未判錯但沒排第一，不是答錯）
+  }
+
+  enum WinReason {
+    SOLE_CANDIDATE : 唯一候選
+    EARLIER_SUBMISSION : 提交較早
+    FEWER_SUCCESSES : 成功次數較少
+    BACKEND_ORDER : 次數與時間皆相同，以後端接收先後決定
+  }
+}
+
+package "應用層" {
+  class RankingService {
+    +reviewFor(code, round) : 取存放區的 RoundReview，沒有判錯時以純計算導出初始結果
+    +snapshotExtension(activity, viewer) : 併入快照的 ranking
+    +finalizedRounds(code) : 給 005 的唯讀定案結果
+    +markWrong(code, requester, round, questionNo, groupNo) : ReviewOutcome
+    +unmarkWrong(code, requester, round, questionNo, groupNo) : ReviewOutcome
+    +finalize(code, requester, resultVersion) : ReviewOutcome（重複確認回覆既有定案）
+  }
+
+  class ReviewStore <<記憶體>> {
+    reviews : (活動代碼, 輪次) → RoundReview
+    locks : 活動代碼 → 004 專屬的鎖
+    cache : 依(輪次, 結果版本, 角色種類)快取的 JSON
+  }
+
+  interface ActivityGateway <<001>> {
+    +get(code) : 活動（階段、輪次規則、開輪基準）
+    +finalize(code, requester, outcome : FinalizeOutcome) : Outcome
+    FinalizeOutcome : solvedQuestions、successIncrements（組號 → 增量）
+  }
+
+  interface SubmissionReader <<003>> {
+    +roundSubmissions(code, roundNumber) : Submission 清單（已排序、唯讀）
+  }
+
+  interface SyncPublisher <<001>> {
+    +publish(activity) : 推送最新快照
+  }
+}
+
+RankingCalculator ..> RankingInput : 讀取
+RankingCalculator ..> RoundResult : 產生
+RoundReviewRules ..> RankingCalculator : 呼叫
+RoundReview ..> QuestionOrder : 初始結果時決定一次並保存；重算只傳入
+RoundReviewRules ..> AsFinal : 呼叫（定案結果）
+RankingInput "1" *-- "*" Candidate
+RoundResult "1" *-- "*" QuestionRanking
+QuestionRanking "1" *-- "*" RankEntry
+RankEntry --> WinReason
+RankEntry --> DisplayStatus
+ResultView ..> RoundView : 讀取
+ResultView ..> AsFinal : 呼叫（final=true）
+RoundView "1" o-- "1" RoundReview
+RankingService --> RoundReviewRules : 呼叫（純函式）
+RankingService --> ResultView : 呼叫（純函式）
+RankingService --> ReviewStore
+ReviewStore "1" *-- "*" RoundReview
+RoundReview "1" o-- "0..1" FinalizedResult
+RankingService --> ActivityGateway
+RankingService --> SubmissionReader
+RankingService --> SyncPublisher
+@enduml

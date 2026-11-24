@@ -1,0 +1,168 @@
+@startuml 001-activity-session-sequence
+skinparam defaultFontName "Microsoft JhengHei"
+skinparam sequenceMessageAlign center
+title 001 活動與階段同步 — 時序圖（建立、加入、開輪、關輪、定案、結束、重連與重啟）
+
+actor "老師" as T
+actor "學生 A 組（裝置 1、2）" as SA
+actor "學生 B 組" as SB
+participant "活動 API" as API
+participant "活動服務" as S
+participant "狀態機（純函式）" as M
+participant "倒數排程" as C
+participant "同步推送" as P
+
+== 建立活動 ==
+T -> API : 建立活動（組數上限 N, 同瀏覽器上一個活動的老師身分, Idempotency-Key）
+API -> S : create(maxGroupsRaw, teacherToken, idempotencyKey)
+S -> S : registry.findByTeacher(tokenHash)
+alt 上一個活動仍存續（未結束、未取消）
+  S --> T : 拒絕（你已有一個進行中的活動，代碼 K）
+else 沒有存續中的活動
+  S -> M : apply(無, 建立(N), now, 新代碼與 token 雜湊)
+  alt N 為 1～99 的整數
+    M --> S : 準備中、新代碼、組數上限 N、老師身分
+    S --> API : 活動代碼、老師身分
+    API --> T : 顯示活動代碼與組數上限
+  else N 不合法
+    M --> S : 拒絕（組數上限無效）
+    S --> T : 「組數上限須為 1～99 的整數」
+  end
+end
+note right of S : 同一 key 重送 → 回傳同一活動（查表在鎖內）
+
+== 開放加入（準備中 → 開放加入） ==
+SA -> API : 加入（代碼, 3）（老師還沒開放）
+API -> S : join
+S -> M : apply(加入)
+M --> S : 拒絕（尚未開放加入）
+S --> SA : 「老師還沒開放加入，請稍後再試」，不建立組別
+T -> API : 開放加入
+API -> S : openJoining(code, 老師, key)
+S -> M : apply(開放加入)
+alt 已匯入題目
+  M --> S : 開放加入
+  S -> P : publish（版本 +1）
+else 沒有題目
+  M --> S : 拒絕（未匯入題目）
+  S --> T : 「請先成功匯入學習單」，階段不變
+end
+
+== 組別加入 ==
+SA -> API : 加入（代碼, 組號 " ０３ "）
+API -> S : join(code, numberRaw, credentialRaw, requester, key)
+S -> M : apply(加入, 組號正規化為 3，檢查 1～N)
+M --> S : 建立第 3 組、加入憑證
+S --> SA : 裝置 1 身分 + 第 3 組憑證（本組裝置與老師可見）
+SA -> API : 裝置 2 加入（代碼, 3, 從裝置 1 畫面看到的憑證）
+API -> S : join
+S -> M : apply(加入既有組, 憑證)
+alt 憑證正確（已有提交、所有裝置都離開的組也要憑證）
+  M --> S : 共用第 3 組身分
+  S --> SA : 裝置 2 身分
+else 無憑證或憑證錯誤
+  M --> S : 拒絕（憑證錯誤）
+  S --> SA : 錯誤訊息（不含憑證），狀態不變
+else 組號不是 1～N 的整數
+  M --> S : 拒絕（組號無效）
+  S --> SA : 「組號須為 1～N 的整數」
+end
+SB -> API : 加入（代碼, 2）
+API -> S : join
+S --> SB : 第 2 組身分 + 憑證
+S -> P : publish（老師版：組別清單；學生版：只含自己組）
+
+== 組別更正（OpenSpec 組 2026-11-23 確認） ==
+SB -> API : 離開本組（裝置身分）
+API -> S : leaveGroup(code, 裝置, key)
+S -> M : apply(離開本組)
+alt 階段為開放加入／結果未定案／結果已定案
+  M --> S : 解除裝置身分（原組提交與成功次數不變）
+  S -> P : disconnectDevice(code, 裝置, LEFT_GROUP)
+  S --> SB : 回到加入畫面
+else 搶答中
+  M --> S : 拒絕（搶答中不可換組）
+  S --> SB : 錯誤訊息，身分不變
+end
+T -> API : 刪除組別（第 5 組）
+API -> S : deleteGroup(code, 老師, 5, key)
+S -> M : apply(刪除組別)
+alt 開放加入／結果階段，且該組沒有任何提交紀錄（即使還有裝置）
+  M --> S : 移除組別、解除其所有裝置身分與舊憑證（組號可再使用）
+  S -> P : disconnectDevice(code, 原組裝置, GROUP_DELETED)
+  S -> P : publish
+else 搶答中
+  M --> S : 拒絕（搶答中不可刪除組別）
+  S --> T : 錯誤訊息，資料不變
+else 已有提交紀錄
+  M --> S : 拒絕（組別已有提交）
+  S --> T : 錯誤訊息，資料不變
+end
+
+== 開輪 ==
+T -> API : 開輪（所選題號, 公平模式=關, 倒數 60 秒）
+API -> S : openRound(code, 老師, 選題, 模式, 倒數, key)
+S -> M : apply(開輪, now = clock.now())
+alt 選題合法、階段為開放加入或已定案
+  M --> S : 搶答中、第 n 輪、規則快照、成功次數基準、截止時間
+  S -> C : schedule(代碼, 截止時間)
+  S -> P : publish（版本 +1）
+  P --> T : 搶答中
+  P --> SA : 搶答中（只含本組）
+  P --> SB : 搶答中（只含本組）
+else 準備中／零題／含已成功題／未定案／秒數非正整數
+  M --> S : 拒絕原因
+  S --> T : 可修正的錯誤訊息，狀態不變
+end
+
+== 關輪（手動與倒數同時） ==
+par 老師手動關輪
+  T -> API : 關輪
+  API -> S : closeRound(code, 老師, key)
+else 倒數到期
+  C -> S : onDeadline(code, 截止時間)\n→ closeRound(系統, now = max(現在, 截止時間))
+end
+S -> M : apply(關輪)（同一活動的操作依序處理）
+M --> S : 第一個：結果未定案，產生一份初始結果
+S -> M : apply(關輪)（第二個）
+M --> S : 已關輪：冪等成功、不改變狀態、不重算（alreadyClosed）
+S -> P : publish(activity)（只推送一次變更）
+P --> T : 本輪結果（未定案）
+P --> SA : 本輪結果（未定案）
+P --> SB : 本輪結果（未定案）
+note over T, P : 兩秒內所有頁面顯示相同輪次與狀態版本
+
+== 定案（由 004 觸發） ==
+T -> API : 結束活動
+API -> S : end(老師)
+S -> M : apply(結束, 結果未定案)
+M --> S : 拒絕（請先確認定案）
+S --> T : 錯誤訊息，階段不變
+T -> API : 確認定案（004）
+API -> S : finalize(老師)
+S -> M : apply(定案)
+M --> S : 結果已定案
+S -> P : publish
+
+== 結束活動 ==
+T -> API : 結束活動
+API -> S : end(老師)
+S -> M : apply(結束, 結果已定案)
+M --> S : 已結束、未成功題清單
+S -> P : publish
+P --> T : 已結束＋未成功題
+P --> SA : 已結束＋未成功題
+P --> SB : 已結束＋未成功題
+
+== 重連與重啟 ==
+SA -> P : 連線中斷
+SA -> SA : 顯示「同步中斷，正在重新連線」
+SA -> API : 重新連線（裝置身分）
+API -> S : snapshot(裝置身分)
+alt 活動仍存在
+  S --> SA : 最新完整快照（只含本組）
+else 後端已重啟（記憶體清空）
+  S --> SA : 活動已失效
+  SA -> SA : 顯示「活動已失效，請重新建立或加入」
+end
+@enduml
