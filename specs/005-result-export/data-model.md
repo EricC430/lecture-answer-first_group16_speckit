@@ -83,7 +83,7 @@
 | 型別 | 欄位 | 說明 |
 |---|---|---|
 | `AttemptKind`（列舉） | `WRITE`、`RETRY` | 第一次確認寫回，或重試 |
-| `AttemptReason`（列舉） | `NOT_AUTHORIZED`、`AUTH_EXPIRED`、`PERMISSION_DENIED`、`REJECTED`、`RATE_LIMITED`、`STRUCTURE_CHANGED`、`NOT_CONFIGURED`、`NOT_WRITTEN`、`UNKNOWN` | 失敗或待確認的原因類別（只有代碼；訊息在 `messages.py`） |
+| `AttemptReason`（列舉） | `NOT_AUTHORIZED`、`AUTH_EXPIRED`、`PERMISSION_DENIED`、`REJECTED`、`RATE_LIMITED`、`STRUCTURE_CHANGED`、`NOT_CONFIGURED`、`READ_FAILED`、`NOT_WRITTEN`、`UNKNOWN` | 失敗或待確認的原因類別（只有代碼；訊息在 `messages.py`） |
 | `WriteAttempt` | `attempt_id: int`、`kind`、`snapshot_id`、`items: tuple[WritePlanItem, ...]`、`status: AttemptStatus`、`reason: AttemptReason \| None`、`differences: tuple[StructureDifference, ...]`、`cell_checks: tuple[CellCheck, ...]`、`started_at`、`finished_at: datetime \| None` | `items` 是這次嘗試對應的快照內容，重試與核對都用它；`started_at`／`finished_at` 由服務層從 `Clock` 取得 |
 | `AttemptStatus`（列舉） | `IN_PROGRESS`、`SUCCESS`、`FAILED`、`PENDING` | `IN_PROGRESS` 只是暫時狀態，不屬於 spec 的三種結果 |
 | `ExportRejection`（列舉） | 見 [contracts/http-api.md](contracts/http-api.md) 的錯誤表 | 服務不拋業務錯誤，失敗時 `Result.ok=False` |

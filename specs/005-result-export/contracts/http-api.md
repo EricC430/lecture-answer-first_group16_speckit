@@ -97,7 +97,7 @@
 | `GOOGLE_NOT_CONFIGURED` | 503 | 尚未設定 Google 連線（訊息不含變數名稱） |
 
 - 訊息一律集中在一個對照表，測試逐項檢查**不含** token、授權碼、檔案路徑、堆疊追蹤與他人資料（FR-031）。
-- X2、X4 遇到授權、權限、讀取、結構、限流等失敗時**不**回上述 4xx／5xx，而是 `200 Attempt`（`status=FAILED`、`reason` 為 `NOT_AUTHORIZED`、`AUTH_EXPIRED`、`PERMISSION_DENIED`、`REJECTED`、`RATE_LIMITED`、`STRUCTURE_CHANGED`、`NOT_CONFIGURED`），因為嘗試已被記錄。
+- X2、X4 遇到授權、權限、讀取、結構、限流等失敗時**不**回上述 4xx／5xx，而是 `200 Attempt`（`status=FAILED`、`reason` 為 `NOT_AUTHORIZED`、`AUTH_EXPIRED`、`PERMISSION_DENIED`、`REJECTED`、`RATE_LIMITED`、`STRUCTURE_CHANGED`、`NOT_CONFIGURED`、`READ_FAILED`），因為嘗試已被記錄。
 
 ## 日誌
 
