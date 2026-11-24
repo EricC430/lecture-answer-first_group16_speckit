@@ -258,7 +258,7 @@ description: "004-ranking-review 任務清單"
 - [X] T089 [P] OpenSpec 核對：確認 `docs/openspec-reference/ranking-review/spec.md` 的 SHA-256 仍與 `docs/openspec-reference/README.md` 一致（`7a243602279aa7f22f33436903cb171df7749d2efe951783ec5c56c4615bd23f`）；確認實作沒有新增或偏離 OpenSpec 的功能行為，若有（例如學生畫面範圍），依憲章原則 I 記入 `docs/alignment.md` 並經兩組確認後才能合併
 - [X] T090 在 `verification.md`「N/A 說明」寫明：憲章原則 III 的兩份版面學習單與 Google 真實路徑驗證不適用於 004（不讀寫試算表，理由見 spec Assumptions）；004 以 `LAYOUT_A`／`LAYOUT_B` 兩組不同題數配置的純資料測試（T024、T039）與真實後端多分頁人工驗證（T094）取代；自動化測試完全不呼叫外部服務
 - [X] T091 [P] 準備 PR 說明（草稿，不自動發布）：列出對既有程式的影響範圍——001 的 HTTP 定案路由改由 004 提供（`resultVersion`）、既有定案測試改用 helper（斷言未改）、003 學生頁「已公開的作答」呈現調整（資料不變）；列出新增檔案、驗證指令與結果數字、與 OpenSpec 無新偏離的說明；結尾加 `🤖 Generated with [Claude Code](https://claude.com/claude-code)`
-- [ ] T092 [P] 與 003 負責人確認 T077 對學生頁的調整（`round-submission.js` 與其測試），把確認日期與結果記在 `verification.md`「問題紀錄」
+- [X] T092 [P] 與 003 負責人確認 T077 對學生頁的調整（`round-submission.js` 與其測試），把確認日期與結果記在 `verification.md`「問題紀錄」
 - [X] T093 執行 `quickstart.md` 的「一、自動化驗證」全部指令，確認每條指令與預期相符（含 `tests/SCENARIO_MAP.md` 對照）；結果寫入 `verification.md`
 - [ ] T094 **非實作者**（jacky0407）依 `quickstart.md`「二、手動驗證」13 個步驟在多個瀏覽器分頁（老師＋三組學生）以真實後端完整走一遍，另加四項前端專屬檢查：① 開兩個老師分頁，在較舊的分頁確認畫面不會被較舊的 `resultVersion` 覆蓋（`Scenario: US7-AS8`）；② 學生頁關輪後只顯示本組狀態、目前的搶答成功者與（判錯當下）剛被判錯的前一組，沒有列出全部組作答（FR-037）；③ 老師介面每題只有目前的搶答成功者有「判錯」按鈕、只有被替換的那一組有「撤銷判錯」（FR-034）；④ 定案後學生與老師畫面的「搶答成功」同時變成「搶答正確」、「剛被判錯的前一組」消失（`Scenario: US7-AS14`）。記錄日期、操作步驟、實際看到的畫面文字、各組成功次數與 `resultVersion`、畫面右下角延遲；沒有實際執行不得宣稱完成（憲章原則 VI；SC-009）。題目需經 002 真實匯入，002 尚未合併時在此註明阻塞原因，不得以假資料取代
 
