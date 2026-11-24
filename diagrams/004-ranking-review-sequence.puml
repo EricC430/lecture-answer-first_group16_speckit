@@ -1,0 +1,74 @@
+@startuml 004-ranking-review-sequence
+skinparam defaultFontName "Microsoft JhengHei"
+title 004 順位計算與老師判錯 — 時序圖（關輪後顯示、判錯重算、確認定案；specify 2026-11-24）
+
+actor "老師頁面 A" as TA
+actor "老師頁面 B" as TB
+actor "學生頁面" as S
+participant "判錯與定案 API" as Api
+participant "RankingService" as Svc
+participant "JudgmentStore" as Store
+participant "003 SubmissionReader" as Subs
+participant "RankingRules（純函式）" as Rules
+participant "001 ActivityService" as Act
+participant "WebSocketHub" as Hub
+
+== 關輪後顯示順位（未定案） ==
+Act -> Hub : 關輪 → publish(activity)
+Hub -> Act : snapshot_for（含快照擴充）
+Act -> Svc : snapshot_extension(activity, viewer)
+Svc -> Act : current_round：rules（模式、題目）、baseline
+Svc -> Subs : round_submissions(code, round)
+Svc -> Store : get(code, round)：判錯集合、結果版本
+Svc -> Rules : compute(RankingInput)
+Rules --> Svc : RoundResult（題序、順位、勝者、理由）
+Svc --> Act : 順位欄位（未定案、結果版本）
+Hub --> TA : 結果（老師版）
+Hub --> S : 結果（學生版：關輪後才有順位）
+
+== 判錯（重算整輪） ==
+TA -> Api : 判錯（輪次、題號、組號）
+Api -> Svc : set_judgment(..., wrong = true)
+activate Svc
+note over Svc : 進入該活動的鎖
+Svc -> Act : 檢查老師身分、階段 = 結果未定案、輪次為目前輪次
+Svc -> Store : get → 判錯集合加入該筆
+Svc -> Rules : compute(判錯前) 與 compute(判錯後)
+Rules --> Svc : 新結果
+Svc -> Rules : affected(前, 後)
+Svc -> Store : put（結果版本 + 1、受影響題目）
+note over Svc : 離開鎖
+Svc -> Act : 通知推送最新快照
+deactivate Svc
+Act -> Hub : publish
+Hub --> TA : 新結果（版本 v+1、受影響題目）
+Hub --> TB : 新結果（版本 v+1）
+Hub --> S : 新順位與勝者（受影響題目標示「結果已更新」，Q-25）
+Api --> TA : 200 新結果版本
+
+== 以舊版本確認定案（被拒） ==
+TB -> Api : 確認定案（結果版本 v）
+Api -> Svc : confirm_finalize(code, requester, v)
+Svc -> Store : get：目前版本 v+1
+Svc --> Api : 拒絕（RESULT_OUTDATED）
+Api --> TB : 409 結果已更新，請重新檢視後再確認
+
+== 確認定案（最新版本） ==
+TA -> Api : 確認定案（結果版本 v+1）
+Api -> Svc : confirm_finalize(code, requester, v+1)
+activate Svc
+note over Svc : 進入該活動的鎖
+Svc -> Rules : compute(最新輸入)
+Svc -> Act : finalize(code, requester,\nFinalizeOutcome(本輪新成功題, 各組成功次數增量))
+Act --> Svc : 成功（階段 → 結果已定案、version + 1）
+Svc -> Store : put（保存定案結果，之後拒絕判錯）
+note over Svc : 離開鎖
+deactivate Svc
+Act -> Hub : publish
+Hub --> TA : 已定案
+Hub --> S : 已定案
+Api --> TA : 200 定案結果
+TA -> Api : 重送同一確認
+Api -> Svc : confirm_finalize(...)
+Svc --> Api : 已定案：回傳同一份定案結果（不重複累加）
+@enduml

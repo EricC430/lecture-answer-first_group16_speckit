@@ -1,0 +1,143 @@
+@startuml 004-ranking-review-class
+!pragma layout smetana
+skinparam defaultFontName "Microsoft JhengHei"
+title 004 順位計算與老師判錯 — 類別圖（specify 2026-11-24；plan 以此為藍圖）
+
+package "core.ranking_review（純函式）" {
+  class Candidate <<frozen>> {
+    question_number: int
+    group_number: int
+    answers: tuple[str, ...]
+    received_at: datetime
+    sequence: int
+  }
+  class JudgmentKey <<frozen>> {
+    round_number: int
+    question_number: int
+    group_number: int
+  }
+  class RankingInput <<frozen>> {
+    round_number: int
+    fair_mode: bool
+    question_numbers: tuple[int, ...]
+    baseline: Mapping[int, int]
+    candidates: tuple[Candidate, ...]
+    judged_wrong: frozenset[JudgmentKey]
+  }
+  enum CandidateStatus {
+    WINNER
+    MISSED
+    JUDGED_WRONG
+  }
+  enum WinReason {
+    EARLIER_SUBMISSION
+    FEWER_SUCCESSES
+    RECEIVE_SEQUENCE
+  }
+  class RankedEntry <<frozen>> {
+    candidate: Candidate
+    status: CandidateStatus
+    rank: int | None
+    successes_at_processing: int
+  }
+  class QuestionResult <<frozen>> {
+    question_number: int
+    entries: tuple[RankedEntry, ...]
+    winner_group: int | None
+    reason: WinReason | None
+    no_winner: bool
+  }
+  class RoundResult <<frozen>> {
+    round_number: int
+    fair_mode: bool
+    question_order: tuple[int, ...]
+    questions: tuple[QuestionResult, ...]
+    provisional_successes: Mapping[int, int]
+    --
+    solved_questions(): frozenset[int]
+    success_increments(): Mapping[int, int]
+  }
+  class RankingRules {
+    {static} question_order(candidates, question_numbers): tuple[int, ...]
+    {static} compute(input: RankingInput): RoundResult
+    {static} affected(before: RoundResult, after: RoundResult): frozenset[int]
+  }
+  RankingInput o-- "0..*" Candidate
+  RankingInput o-- "0..*" JudgmentKey
+  RoundResult o-- "1..*" QuestionResult
+  QuestionResult o-- "0..*" RankedEntry
+  RankedEntry --> CandidateStatus
+  QuestionResult --> WinReason
+  RankingRules ..> RankingInput
+  RankingRules ..> RoundResult
+}
+
+package "app.ranking_review" {
+  class RoundReview <<frozen>> {
+    round_number: int
+    judged_wrong: frozenset[JudgmentKey]
+    result_version: int
+    last_affected: frozenset[int]
+    finalized: RoundResult | None
+  }
+  class JudgmentStore {
+    get(code, round_number): RoundReview
+    put(code, review): None
+  }
+  class RankingService {
+    set_judgment(code, requester, round_number, question, group, wrong: bool): Outcome[RoundReview]
+    confirm_finalize(code, requester, result_version: int): Outcome[RoundResult]
+    result_for(code, round_number): RoundResult | None
+    snapshot_extension(activity, viewer): Mapping[str, object]
+  }
+  interface FinalizedResultReader <<Protocol>> {
+    finalized_result(code, round_number): RoundResult | None
+    all_finalized(code): tuple[RoundResult, ...]
+  }
+  interface JudgmentSource <<Protocol>> {
+    is_judged_wrong(code, round, question, group): bool
+  }
+  RankingService --> JudgmentStore
+  RankingService ..> RankingRules
+  RankingService ..|> FinalizedResultReader
+  RankingService ..|> JudgmentSource
+  JudgmentStore o-- RoundReview
+}
+
+package "001 app.activity" {
+  class ActivityService {
+    current_round(code): Round | None
+    finalize(code, requester, outcome: FinalizeOutcome): Outcome[int]
+    add_snapshot_extension(ext): None
+  }
+  class FinalizeOutcome <<frozen>> {
+    solved_questions: frozenset[int]
+    success_increments: Mapping[int, int]
+  }
+  class Round <<frozen>> {
+    number: int
+    rules: RoundRules
+    baseline: Mapping[int, int]
+    closed: bool
+  }
+}
+
+package "003 app.round_submission" {
+  interface SubmissionReader <<Protocol>> {
+    round_submissions(code, round_number): tuple[Submission, ...]
+  }
+}
+
+RankingService --> ActivityService : 規則、基準、定案、快照擴充
+RankingService --> SubmissionReader : 本輪提交（唯讀）
+RankingService ..> FinalizeOutcome : 由 RoundResult 產生
+ActivityService ..> Round
+
+note right of RankingRules
+  速度模式：未被判錯候選依（接收時間, 接收序號）排序。
+  公平模式：依固定題序逐題，依（目前成功次數, 接收時間,
+  接收序號）排序；勝者暫算次數 +1 後才處理下一題（Q-24）。
+  題序：每題最早已接受提交的（時間, 序號），無提交題置後依題號。
+  不讀時鐘、不讀全域狀態：相同輸入 → 相同結果。
+end note
+@enduml

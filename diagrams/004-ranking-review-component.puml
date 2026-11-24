@@ -1,0 +1,46 @@
+@startuml 004-ranking-review-component
+!pragma layout smetana
+skinparam defaultFontName "Microsoft JhengHei"
+skinparam componentStyle rectangle
+title 004 順位計算與老師判錯 — 組件圖（相依方向：外層 → 核心；specify 2026-11-24）
+
+actor "老師" as Teacher
+actor "學生（各組）" as Student
+
+package "外層：畫面與 API（轉接層）" {
+  [老師結果頁\n（各題順位、勝者與理由、答錯／搶答失敗／未成功；\n判錯、撤銷判錯、確認定案（附結果版本））] as TeacherUI
+  [學生結果頁\n（關輪公開後的順位、勝者、答錯、搶答失敗；\n未定案／已定案標示；文字安全顯示）] as StudentUI
+  [判錯與定案 API（HTTP）\n（只限本活動老師；錯誤訊息可修正、不含 token）] as Api
+  [同步推送（沿用 001 WebSocketHub）\n（快照含 004 擴充；結果改變才推送）] as Sync
+}
+
+package "應用層" {
+  [順位服務 RankingService\n（判錯、撤銷、確認定案；結果版本；\n快照擴充；給 005 的唯讀定案結果）] as Service
+  [判錯紀錄 JudgmentStore\n（只存在記憶體；依活動 → 輪次：\n判錯集合、結果版本、定案結果）] as Store
+}
+
+package "核心（純函式：不依賴網路、Web 框架、系統時鐘）" {
+  [順位計算 RankingRules\n（基準 + 模式 + 候選 + 判錯 → 固定題序、\n各題順位、勝者、理由、暫算次數；相同輸入相同結果）] as Rules
+  [受影響題目比較\n（重算前後的勝者與順位差異）] as Affected
+}
+
+package "其他子功能" {
+  [001 活動服務\n（current_round：rules、baseline；finalize；\n快照擴充、版本與推送）] as Activity
+  [003 提交服務\n（SubmissionReader：本輪有效提交，\n依接收時間與序號排序、唯讀）] as Submission
+  [005 匯出\n（讀取定案結果）] as Export
+}
+
+Teacher --> TeacherUI
+Student --> StudentUI
+TeacherUI --> Api : 判錯／撤銷／確認定案
+TeacherUI <.. Sync : 推送
+StudentUI <.. Sync : 推送（關輪後才有順位）
+Api --> Service
+Service --> Store
+Service --> Rules
+Service --> Affected
+Service --> Activity : 讀本輪規則與基準、定案、\n註冊快照擴充、通知推送
+Service --> Submission : 唯讀取得本輪提交
+Export --> Service : 唯讀取得定案結果
+Submission ..> Service : 公開資料的判錯標記\n（judgedWrong 由 004 提供）
+@enduml
