@@ -41,7 +41,6 @@
           </thead>
           <tbody id="groups-body"></tbody>
         </table>
-        <button type="button" id="dev-seed" hidden>放入假題目（開發用）</button>
         <p id="round-status" hidden>本輪題目：<span id="round-questions"></span>
           <span id="round-countdown" class="countdown"></span></p>
         <div class="controls">
@@ -67,11 +66,44 @@
         <button type="submit">開輪</button>
       </form>
     </section>
+    <section id="import-section" data-feature="002-guided-notes-import" hidden>
+      <h2>匯入學習單</h2>
+      <p class="muted">從你的 Google 試算表匯入題號與作答位置（只讀取，不會修改你的試算表）。</p>
+      <p id="import-status" role="status"></p>
+      <p id="import-error" class="error-message" role="alert" hidden></p>
+      <div class="controls">
+        <button type="button" id="import-start">匯入學習單</button>
+        <button type="button" id="import-reauth" hidden>重新授權</button>
+      </div>
+      <div id="import-sheet-choice" hidden>
+        <p>這份試算表有多張工作表，請選擇一張：</p>
+        <div id="import-sheet-list"></div>
+      </div>
+      <p id="import-source" hidden>已選定：<strong id="import-source-name"></strong></p>
+      <button type="button" id="import-run" hidden>確認匯入</button>
+      <div id="import-preview" hidden>
+        <h3>匯入結果</h3>
+        <p><strong id="import-summary"></strong></p>
+        <table>
+          <thead><tr><th>題號</th><th>空格數</th></tr></thead>
+          <tbody id="import-preview-body"></tbody>
+        </table>
+      </div>
+      <div id="import-issues" hidden>
+        <h3>學習單有問題，整份未匯入</h3>
+        <p class="muted">題目沒有任何變動；若之前成功匯入過，上方仍是那一次的結果。</p>
+        <table>
+          <thead><tr><th>列</th><th>欄</th><th>原因</th><th>內容</th><th>怎麼修正</th></tr></thead>
+          <tbody id="import-issues-body"></tbody>
+        </table>
+      </div>
+    </section>
     <!-- ── 子功能區塊結束 ── -->
   </main>
   <div id="sync-status" aria-live="polite"></div>
   <!-- ── 子功能 script 開始（每個子功能一行）── -->
   <script type="module" src="js/teacher.js"></script>
+  <script type="module" src="js/import.js"></script>
   <!-- ── 子功能 script 結束 ── -->
 </body>
 </html>

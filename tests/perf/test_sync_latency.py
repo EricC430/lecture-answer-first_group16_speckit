@@ -56,7 +56,7 @@ class Listener:
 
 
 async def _run() -> dict[str, list[float]]:
-    app = create_app(dev_seed=False)
+    app = create_app()
     server = uvicorn.Server(
         uvicorn.Config(
             app, host="127.0.0.1", port=0, log_level="warning", lifespan="off"
