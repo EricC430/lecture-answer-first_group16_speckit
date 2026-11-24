@@ -1,6 +1,8 @@
-# Scenario 對應表（001-activity-session）
+# Scenario 對應表（001-activity-session、003-round-submission）
 
-依憲章原則 VI，spec 的每個 Acceptance Scenario 至少對應一個自動化測試；測試函式的 docstring 第一行寫 `Scenario: USn-ASm`。本表由 `tests/` 掃描產生（2026-11-23，T077；開放加入等決議後重新掃描）。
+依憲章原則 VI，spec 的每個 Acceptance Scenario 至少對應一個自動化測試；測試函式的 docstring 寫 `Scenario: USn-ASm`。本表由 `tests/` 掃描產生（2026-11-24，003 T059）。001 與 003 的編號各自獨立：003 新增的測試檔歸 003，其餘歸 001。
+
+## 001-activity-session
 
 | Scenario | 測試 |
 |---|---|
@@ -63,3 +65,68 @@
 | US8-AS7 | `tests/unit/core/test_state_machine_open_joining.py::test_cancel_and_replace_questions_allowed_before_first_round`<br>`tests/unit/core/test_state_machine_open_joining.py::test_end_activity_before_first_round_says_cancel_instead` |
 
 共 57 個 Scenario，未對應：無。
+
+## 003-round-submission
+
+| Scenario | 測試 |
+|---|---|
+| US1-AS1 | `tests/contract/test_http_submissions.py::test_accepted_returns_201_without_sequence`<br>`tests/integration/test_us1_question_shapes.py::test_question_shapes_in_snapshots`<br>`tests/unit/app/round_submission/test_submit_us1.py::test_accepted_submission_is_stored_and_pushed`<br>`tests/unit/core/round_submission/test_decide_us1.py::test_any_order_is_accepted` |
+| US1-AS2 | `tests/unit/core/round_submission/test_decide_us1.py::test_partial_set_leaves_others_open` |
+| US1-AS3 | `tests/contract/test_http_submissions.py::test_invalid_content_is_400`<br>`tests/unit/app/round_submission/test_submit_us1.py::test_rejected_submission_changes_nothing`<br>`tests/unit/core/round_submission/test_answer_rules.py::test_blank_cell_lists_every_empty_blank`<br>`tests/unit/core/round_submission/test_decide_us1.py::test_rejected_attempt_does_not_consume_chance` |
+| US1-AS4 | `tests/contract/test_http_submissions.py::test_invalid_content_is_400`<br>`tests/unit/core/round_submission/test_answer_rules.py::test_wrong_blank_count`<br>`tests/unit/core/round_submission/test_decide_us1.py::test_wrong_count_reports_expected` |
+| US1-AS5 | `tests/contract/test_http_submissions.py::test_invalid_content_is_400`<br>`tests/unit/core/round_submission/test_decide_us1.py::test_question_not_open_or_unknown` |
+| US1-AS6 | `tests/unit/core/round_submission/test_answer_rules.py::test_whitespace_only_is_blank` |
+| US1-AS7 | `tests/unit/core/round_submission/test_decide_us1.py::test_nonsense_answer_is_accepted_as_text` |
+| US2-AS1 | `tests/integration/test_submission_visibility.py::test_teacher_board_and_same_group_device_update`<br>`tests/integration/test_us2_submission_once.py::test_resend_returns_200_with_original`<br>`tests/unit/app/round_submission/test_submit_concurrency.py::test_two_devices_race_keeps_one` |
+| US2-AS2 | `tests/integration/test_us2_submission_once.py::test_resend_returns_200_with_original`<br>`tests/unit/app/round_submission/test_submit_concurrency.py::test_resend_returns_original` |
+| US2-AS3 | `tests/unit/core/round_submission/test_decide_us2.py::test_next_round_gives_a_new_chance` |
+| US2-AS4 | `tests/unit/core/round_submission/test_decide_us2.py::test_existing_submission_wins_regardless_of_content` |
+| US2-AS5 | `tests/unit/core/round_submission/test_decide_us2.py::test_invalid_then_valid_is_accepted` |
+| US2-AS6 | `tests/integration/test_us5_published.py::test_submission_stays_with_original_group_after_leaving` |
+| US2-AS7 | `tests/integration/test_us2_submission_once.py::test_cannot_delete_group_with_submissions` |
+| US3-AS1 | `tests/unit/app/round_submission/test_submit_deadline.py::test_one_ms_before_deadline_is_accepted` |
+| US3-AS2 | `tests/unit/app/round_submission/test_submit_deadline.py::test_at_or_after_deadline_is_rejected`<br>`tests/unit/core/round_submission/test_decide_us3.py::test_not_accepting_is_round_closed` |
+| US3-AS3 | `tests/contract/test_http_submissions.py::test_stale_round_and_closed_are_409`<br>`tests/unit/app/round_submission/test_submit_deadline.py::test_no_countdown_accepts_until_teacher_closes`<br>`tests/unit/core/round_submission/test_decide_us3.py::test_not_accepting_is_round_closed` |
+| US3-AS4 | `tests/contract/test_http_submissions.py::test_stale_round_and_closed_are_409`<br>`tests/unit/core/round_submission/test_decide_us3.py::test_stale_round` |
+| US3-AS5 | `tests/unit/core/round_submission/test_decide_us3.py::test_order_by_received_at_then_sequence` |
+| US3-AS6 | `tests/unit/app/round_submission/test_close_vs_submit.py::test_close_and_submit_race_50_times` |
+| US3-AS7 | `tests/contract/test_http_submissions.py::test_client_fields_are_ignored` |
+| US4-AS1 | `tests/unit/core/round_submission/test_view_open_round.py::test_student_sees_only_own_group` |
+| US4-AS2 | `tests/integration/test_submission_visibility.py::test_student_gets_nothing_from_other_groups` |
+| US4-AS3 | `tests/unit/core/round_submission/test_view_open_round.py::test_student_sees_only_own_group` |
+| US4-AS4 | `tests/integration/test_submission_visibility.py::test_teacher_board_and_same_group_device_update`<br>`tests/unit/core/round_submission/test_view_open_round.py::test_teacher_sees_all_groups_with_order_but_no_rank` |
+| US4-AS5 | `tests/unit/core/round_submission/test_view_open_round.py::test_teacher_sees_all_groups_with_order_but_no_rank` |
+| US4-AS6 | `tests/integration/test_submission_visibility.py::test_teacher_board_and_same_group_device_update` |
+| US5-AS1 | `tests/integration/test_us5_published.py::test_close_publishes_to_every_student`<br>`tests/unit/core/round_submission/test_view_published.py::test_closed_round_is_published_to_every_group` |
+| US5-AS2 | `tests/unit/core/round_submission/test_view_published.py::test_closed_round_is_published_to_every_group` |
+| US5-AS3 | `tests/integration/test_us5_published.py::test_second_round_keeps_history_and_hides_new_answers`<br>`tests/unit/core/round_submission/test_view_published.py::test_history_visible_but_new_round_stays_private` |
+| US5-AS4 | `tests/integration/test_us5_published.py::test_close_publishes_to_every_student` |
+| US5-AS5 | `tests/unit/core/round_submission/test_view_published.py::test_judged_wrong_field_follows_constant` |
+| US6-AS1 | `tests/architecture/test_static_text_safety.py::test_no_html_parsing_apis`<br>`tests/integration/test_us6_safe_display.py::test_markup_answer_is_kept_verbatim` |
+| US6-AS2 | `tests/architecture/test_static_text_safety.py::test_deadline_disables_forms_and_open_ended_round_is_labelled`<br>`tests/integration/test_us6_safe_display.py::test_round_with_countdown_exposes_backend_deadline` |
+| US6-AS3 | `tests/architecture/test_static_text_safety.py::test_deadline_disables_forms_and_open_ended_round_is_labelled`<br>`tests/integration/test_us6_safe_display.py::test_round_without_countdown_accepts_until_teacher_closes` |
+| US6-AS4 | `tests/architecture/test_static_text_safety.py::test_network_error_is_reported_as_unconfirmed`<br>`tests/architecture/test_static_text_safety.py::test_submitted_shown_only_after_success_or_from_snapshot` |
+| US6-AS5 | `tests/integration/test_us6_safe_display.py::test_reconnect_shows_submissions_made_while_disconnected` |
+
+共 37 個 Scenario，未對應：無。
+
+## 003 對應的 OpenSpec Scenario（round-submission，14 個）
+
+| OpenSpec Requirement | OpenSpec Scenario | 對應的 Acceptance Scenario | 有測試 |
+|---|---|---|---|
+| 多題作答與題組完整提交 | 不同順序作答 | US1-AS1、US1-AS2 | 是 |
+| 多題作答與題組完整提交 | 題組少一格 | US1-AS3 | 是 |
+| 每組每題每輪一次 | 同組兩裝置競爭 | US2-AS1 | 是 |
+| 每組每題每輪一次 | 回應遺失後重送 | US2-AS2 | 是 |
+| 每組每題每輪一次 | 下一輪重新作答 | US2-AS3 | 是 |
+| 後端截止與接收順序 | 截止邊界 | US3-AS1、US3-AS2 | 是 |
+| 後端截止與接收順序 | 舊輪次頁面提交 | US3-AS4 | 是 |
+| 後端截止與接收順序 | 同時間戳 | US3-AS5 | 是 |
+| 搶答中依角色限制資料 | 檢查學生資料回應 | US4-AS1、US4-AS2、US4-AS3 | 是 |
+| 搶答中依角色限制資料 | 老師即時看板 | US4-AS4、US4-AS5 | 是 |
+| 關輪公開結果與版本一致 | 結果公布與後續輪次 | US5-AS1、US5-AS3 | 是 |
+| 關輪公開結果與版本一致 | 延遲回應 | US5-AS4 | 是 |
+| 倒數與輸入安全顯示 | 特殊文字答案 | US6-AS1 | 是 |
+| 倒數與輸入安全顯示 | 無倒數輪次 | US6-AS3 | 是 |
+
+共 14 個 OpenSpec Scenario，未對應：無。
