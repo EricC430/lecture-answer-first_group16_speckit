@@ -56,10 +56,11 @@ def test_group_changes_bump_only_revision():
 
     second = _join(joined, Y, 2, at=LATER)
     left = apply(second, LeaveGroup(Device(Y)), LATER).activity
+    assert 2 not in left.groups  # 最後一台離開、從未提交：釋放組號（2026-11-24）
     assert left.version == base.version
     assert left.revision == second.revision + 1
 
-    deleted = apply(left, DeleteGroup(TEACHER, 2), LATER).activity
+    deleted = apply(left, DeleteGroup(TEACHER, 1), LATER).activity
     assert deleted.version == base.version
     assert deleted.revision == left.revision + 1
 

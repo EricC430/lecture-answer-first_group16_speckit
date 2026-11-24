@@ -549,6 +549,13 @@ description: "001-activity-session 任務清單"
 - [x] T109 結束或取消之後的畫面一致（EricC430 在 T084 回報）：老師頁與學生頁一律維持在結果畫面，老師按「建立新活動」、學生按「加入其他活動」才回到建立／加入畫面（`teacher.js` 的 `showCreateForm`、`student.js` 的 `joinAnother`；後端重啟的 gone 畫面共用 `showCreateForm`）。前端沒有自動化測試，只做了 `node --check` 語法檢查；請在 T084 重跑 quickstart 第 24、27 步確認。
 - 2026-11-23 驗證（Windows 11、Python 3.14.7；與 T083 的 3.11.5 不同）：`ruff check .` All checks passed；`ruff format --check .` 115 files already formatted；`mypy` Success: no issues found in 26 source files；`pytest` 389 passed、1 deselected；`pytest -m perf` 1 passed。
 
+
+## 修訂「空組免憑證」（2026-11-24，alignment 同日一列）
+
+- [x] T110 測試先行：`tests/unit/core/test_state_machine_open_joining.py` 改寫 US2-AS10（4 個測試：最後一台離開且從未提交 → 釋放組號、舊憑證失效；已有提交 → 保留組別與憑證、重新加入要原憑證、訊息提示請老師查看；還有其他裝置 → 保留；防禦：從未提交且沒有裝置的組視為已釋放）；`tests/integration/test_us7_group_correction.py` 新增 3 個（HTTP 釋放組號、有提交要原憑證、關閉網頁不算離開）。實作前執行：5 failed、34 passed（「還有其他裝置」與「關閉網頁不算離開」兩項原本就成立）。
+- [x] T111 核心：`state_machine._leave_group` 在最後一台裝置離開且該組從未提交、成功次數為 0 時移除該組；`_join_group` 對既有組號一律檢查憑證（已釋放的組視為新組號）；`results.py` 憑證錯誤訊息加上「沒有同學在線時請老師查看」。`tests/unit/core/test_public_version.py` 原本刪除的是剛被釋放的第 2 組，改為刪除仍有裝置的第 1 組，並驗證釋放也只加 `revision`。
+- [x] T112 文件：spec（FR-008、FR-034、US2-AS10、Clarifications、Edge Cases、Traceability、加入組別表）、data-model、contracts/http-api、research、quickstart 第 21 步、時序圖 `.puml` 與 PNG、`tests/SCENARIO_MAP.md`、`docs/alignment.md`。
+
 ---
 
 ## Dependencies & Execution Order
