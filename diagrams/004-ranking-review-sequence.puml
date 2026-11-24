@@ -1,74 +1,63 @@
 @startuml 004-ranking-review-sequence
 skinparam defaultFontName "Microsoft JhengHei"
-title 004 順位計算與老師判錯 — 時序圖（關輪後顯示、判錯重算、確認定案；specify 2026-11-24）
+skinparam sequenceMessageAlign center
+title 004 順位計算、判錯重算與定案 — 時序圖（關輪、判錯、撤銷、定案）
 
-actor "老師頁面 A" as TA
-actor "老師頁面 B" as TB
-actor "學生頁面" as S
-participant "判錯與定案 API" as Api
-participant "RankingService" as Svc
-participant "JudgmentStore" as Store
-participant "003 SubmissionReader" as Subs
-participant "RankingRules（純函式）" as Rules
-participant "001 ActivityService" as Act
-participant "WebSocketHub" as Hub
+actor "老師" as T
+actor "學生" as S
+participant "畫面" as UI
+participant "順位 API" as API
+participant "順位服務" as R
+participant "整輪重算（純函式）" as C
+participant "提交（003）" as SUB
+participant "活動（001）" as A
 
-== 關輪後顯示順位（未定案） ==
-Act -> Hub : 關輪 → publish(activity)
-Hub -> Act : snapshot_for（含快照擴充）
-Act -> Svc : snapshot_extension(activity, viewer)
-Svc -> Act : current_round：rules（模式、題目）、baseline
-Svc -> Subs : round_submissions(code, round)
-Svc -> Store : get(code, round)：判錯集合、結果版本
-Svc -> Rules : compute(RankingInput)
-Rules --> Svc : RoundResult（題序、順位、勝者、理由）
-Svc --> Act : 順位欄位（未定案、結果版本）
-Hub --> TA : 結果（老師版）
-Hub --> S : 結果（學生版：關輪後才有順位）
+== 關輪產生初始結果 ==
+A -> R : 關輪後推送快照；擴充函式第一次讀取該輪（建立初始結果）
+R -> A : 讀取本輪規則（模式、題號）與開輪基準
+R -> SUB : round_submissions（已排序、唯讀）
+R -> C : 基準、模式、提交、判錯集合（空）
+C --> R : 固定題序、各題順位、暫算次數
+R --> UI : 結果版本 1（隨 001 的快照推送給老師與學生）
+UI --> S : 顯示各題各組答案、搶答成功者與顯示狀態\n（搶答成功／答錯／搶答失敗／未成功）
+note over R : 搶答中不提供任何順位\n關輪後才公開；結果畫面同時顯示「結果未定案」
 
-== 判錯（重算整輪） ==
-TA -> Api : 判錯（輪次、題號、組號）
-Api -> Svc : set_judgment(..., wrong = true)
-activate Svc
-note over Svc : 進入該活動的鎖
-Svc -> Act : 檢查老師身分、階段 = 結果未定案、輪次為目前輪次
-Svc -> Store : get → 判錯集合加入該筆
-Svc -> Rules : compute(判錯前) 與 compute(判錯後)
-Rules --> Svc : 新結果
-Svc -> Rules : affected(前, 後)
-Svc -> Store : put（結果版本 + 1、受影響題目）
-note over Svc : 離開鎖
-Svc -> Act : 通知推送最新快照
-deactivate Svc
-Act -> Hub : publish
-Hub --> TA : 新結果（版本 v+1、受影響題目）
-Hub --> TB : 新結果（版本 v+1）
-Hub --> S : 新順位與勝者（受影響題目標示「結果已更新」，Q-25）
-Api --> TA : 200 新結果版本
+== 判錯／撤銷判錯 ==
+T -> UI : 對某組某題判錯
+UI -> API : markWrong（輪次、題號、組號）
+API -> R : 驗證身分、輪次階段、目標提交
+alt 驗證失敗（非老師、尚未關輪、已定案、找不到提交）
+  R --> API : 拒絕（結果與版本不變）
+  API --> UI : 看得懂的訊息，不含內部細節
+else 目標狀態已相同（重複判錯或重複撤銷）
+  R --> API : 回覆目前狀態（版本不變）
+else 實際變更
+  R -> R : 更新判錯集合
+  R -> C : 以開輪基準、固定題序、提交、新判錯集合整輪重算
+  C --> R : 新結果與受影響題號
+  R -> R : 結果版本加一
+  R --> UI : 新版本結果，標示受影響題目（2 秒內推送；判錯免填原因）
+  UI --> T : 顯示新順位與「結果已更新」
+  UI --> S : 公開顯示判錯與遞補的搶答成功者
+end
 
-== 以舊版本確認定案（被拒） ==
-TB -> Api : 確認定案（結果版本 v）
-Api -> Svc : confirm_finalize(code, requester, v)
-Svc -> Store : get：目前版本 v+1
-Svc --> Api : 拒絕（RESULT_OUTDATED）
-Api --> TB : 409 結果已更新，請重新檢視後再確認
-
-== 確認定案（最新版本） ==
-TA -> Api : 確認定案（結果版本 v+1）
-Api -> Svc : confirm_finalize(code, requester, v+1)
-activate Svc
-note over Svc : 進入該活動的鎖
-Svc -> Rules : compute(最新輸入)
-Svc -> Act : finalize(code, requester,\nFinalizeOutcome(本輪新成功題, 各組成功次數增量))
-Act --> Svc : 成功（階段 → 結果已定案、version + 1）
-Svc -> Store : put（保存定案結果，之後拒絕判錯）
-note over Svc : 離開鎖
-deactivate Svc
-Act -> Hub : publish
-Hub --> TA : 已定案
-Hub --> S : 已定案
-Api --> TA : 200 定案結果
-TA -> Api : 重送同一確認
-Api -> Svc : confirm_finalize(...)
-Svc --> Api : 已定案：回傳同一份定案結果（不重複累加）
+== 確認定案 ==
+T -> UI : 確認定案（所見版本 v）
+UI -> API : finalize(v)
+API -> R : 驗證身分與階段
+alt 已定案且 v 等於定案版本
+  R --> API : 回覆同一份定案結果（歷史次數不重複）
+else 已定案但版本不同，或 v 不是最新版本
+  R --> API : 拒絕，要求重新檢視（結果不變）
+else v 是最新版本
+  R -> A : 交出本輪成果（新成功題號、各組次數增量）
+  alt 001 接受
+    A --> R : 成功（階段進入結果已定案）
+    R -> R : 保存定案紀錄、鎖定判錯與模式
+    R --> UI : 定案結果（推送）
+  else 001 拒絕
+    A --> R : 拒絕
+    R --> UI : 定案未生效，仍可判錯
+  end
+end
 @enduml
