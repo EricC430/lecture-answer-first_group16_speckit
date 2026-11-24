@@ -22,7 +22,7 @@ package "核心（純資料與純函式）" {
 
   enum OverwriteImpact <<列舉>> {
     EMPTY : 目標目前為空
-    REPLACE : 將取代原有內容
+    REPLACE : 將取代原有內容（含佔位文字）
     SAME : 內容相同
   }
 
@@ -36,7 +36,7 @@ package "核心（純資料與純函式）" {
   }
 
   class StructureCheckResult <<資料>> {
-    status : 相符 / 不符
+    status : 相符 / 不符（含無法辨識）
     differences : 差異類別與位置清單
   }
 
@@ -53,18 +53,18 @@ package "核心（純資料與純函式）" {
     questionNo : 題號
     subIndex : 子空格（單題為空）
     groupNo : 組別（組號）
-    answer : 答案
-    receivedAt : 後端接收時間
-    rank : 順位（判錯為空）
-    succeeded : 是否成功
-    markedWrong : 是否被判錯
+    answer : 答案（來自 003）
+    receivedAt : 後端接收時間（來自 003，含時區）
+    rank : 順位（答錯為空；來自 004）
+    succeeded : 是否成功（名次 1 且未被判錯）
+    markedWrong : 是否被判錯（搶答失敗不算）
   }
 
   class ExportCore <<純函式>> {
-    +buildSnapshot(finalized, submissions, importRecord, currentCells) : ResultSnapshot
+    +buildSnapshot(finalizedRounds, submissions, importRecord, currentCells) : ResultSnapshot
     +checkStructure(importedStructure, rereadStructure) : StructureCheckResult
     +judgeOutcome(expected, readBack, structureOk) : WriteOutcome
-    +buildRows(finalized, submissions) : ExportRow 清單
+    +buildRows(finalizedRounds, submissions) : ExportRow 清單（只含已定案輪次，以輪次、題號、組號對應）
     +renderCsv(rows, formatTime) : 文字（UTF-8；逗號、引號、換行、公式字元保護）
   }
 }
@@ -89,7 +89,7 @@ package "應用層" {
 
 package "外層轉接" {
   interface SheetsGateway {
-    +readStructure(sourceId) : StructureSnapshot
+    +readStructure(sourceId) : StructureSnapshot（以匯入時相同規則重新辨識）
     +readCells(targets) : 目標格內容
     +writeTextValues(plan) : 外部結果（成功／明確失敗／無法證實）
   }

@@ -9,7 +9,7 @@ actor "老師" as Teacher
 package "外層：畫面與 API（轉接層）" {
   [老師匯出畫面\n（寫回預覽、確認、寫回狀態、\n重新核對／重試、下載 CSV、\n保護前綴說明；內容以純文字顯示）] as UI
   [匯出 API\n（老師身分與階段檢查、輸入驗證、\n錯誤訊息轉換、不含內部細節）] as Api
-  [Google Sheets 轉接\n（OAuth 授權狀態、重新讀取來源、\n寫入文字值、讀回目標格；\n把外部結果分為成功／失敗／無法證實）] as Sheets
+  [Google Sheets 轉接\n（沿用 002 的授權狀態、\n重新讀取來源、寫入文字值、讀回目標格；\n把外部結果分為成功／失敗／無法證實）] as Sheets
 }
 
 package "應用層" {
@@ -18,16 +18,16 @@ package "應用層" {
 
 package "核心（純函式：不依賴網路、Web 框架、系統時鐘）" {
   [成果快照與寫回計畫\n（定案成果 → 子空格清單、\n目標位置、覆寫影響、未寫入題）] as Plan
-  [結構比對\n（匯入時結構 vs 重新讀取的來源：\n身分、表頭位置、題號、子空格、\n合併範圍、答案格映射）] as Check
+  [結構比對\n（匯入時結構 vs 以相同規則\n重新辨識的來源：身分、表頭位置、\n題號、子空格、合併範圍、答案格映射）] as Check
   [寫回核對判定\n（讀回目標格 vs 預期答案 →\n成功／明確失敗／待確認）] as Reconcile
-  [CSV 紀錄產生\n（定案成果＋已接受提交 → 資料列；\n逗號、引號、換行；\n公式字元的文字保護）] as Csv
+  [CSV 紀錄產生\n（004 定案結果＋003 提交 → 資料列；\n逗號、引號、換行；\n公式字元的文字保護）] as Csv
 }
 
 package "其他子功能與活動（相依，唯讀）" {
-  [001 活動服務\n（老師身分、階段、取消／結束）] as Activity
-  [002 匯入紀錄\n（來源識別、各空格目標位置、\n匯入時結構）] as Import
-  [003 提交服務\n（已接受提交：組號、題號、\n各子空格答案、接收時間）] as Submit
-  [004 順位服務\n（已定案各題順位、\n搶答成功者、判錯標記）] as Ranking
+  [001 活動服務\n（匯出檢視：只限老師、\n已取消一律拒絕；階段、題號、\n已成功與未成功題）] as Activity
+  [002 匯入服務\n（唯讀 ImportRecord：來源識別、\n各空格目標位置、匯入時結構；\n可重用同一個 parse 重新辨識）] as Import
+  [003 提交服務\n（全部輪次的有效提交：輪次、題號、\n組號、各格答案、接收時間；\n含未定案輪次，須過濾）] as Submit
+  [004 順位服務\n（已定案輪次：各題全部候選的名次、\n答錯標記、搶答成功者）] as Ranking
 }
 
 cloud "老師的 Google 試算表" as Sheet
@@ -36,17 +36,17 @@ Teacher --> UI
 UI --> Api
 Api --> Service
 Service --> Plan : 傳入定案成果、提交、\n匯入映射、目前目標格內容
-Service --> Check : 傳入匯入時結構、\n重新讀取的來源結構
+Service --> Check : 傳入匯入時結構、\n重新辨識的來源結構
 Service --> Reconcile : 傳入讀回內容、預期答案
-Service --> Csv : 傳入定案成果、已接受提交
+Service --> Csv : 傳入定案成果、提交
 Service --> Sheets : 讀取來源、寫入、讀回
 Sheets --> Sheet : 只動快照內的目標格
-Service --> Activity : 驗證老師身分與階段
+Service --> Activity : 驗證老師身分；取消的活動拒絕
 Service --> Import : 讀取來源識別與映射
-Service --> Submit : 讀取已定案輪次的已接受提交
+Service --> Submit : 讀取提交（只取已定案輪次）
 Service --> Ranking : 讀取定案結果
 note bottom of Service
   005 對活動唯讀：
-  不改變勝者、定案狀態、判錯或成功次數
+  不改變搶答成功者、定案狀態、判錯或成功次數
 end note
 @enduml
