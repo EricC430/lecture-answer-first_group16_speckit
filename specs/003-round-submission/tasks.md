@@ -189,13 +189,13 @@ description: "003-round-submission 任務清單"
 
 ### Tests for User Story 6（先寫、確認失敗）⚠️
 
-- [ ] T052 [P] [US6] 在 `tests/integration/test_us6_safe_display.py` 測試：答案 `<b>粗體</b><script>alert(1)</script>` 被接受，老師與學生快照、HTTP 回應中的答案字串與送出原文完全相同（`Scenario: US6-AS1` ↔ OpenSpec「特殊文字答案」；後端不轉義、不過濾，安全由前端 `textContent` 負責）；無倒數輪次的快照 `deadline` 為 `null`，老師關輪前任何時間（FakeClock 推進 1 小時）都接受提交（`Scenario: US6-AS3` ↔ OpenSpec「無倒數輪次」）；有倒數輪次的快照帶後端 `deadline`（`Scenario: US6-AS2`，前端「歸零後停用送出」另由 T053 靜態檢查與 quickstart 第 15 步驗證，後端拒絕由 T036 驗證）；學生 WebSocket 關閉後，同組另一台裝置提交，再以同一 token 重新連線時，第一份快照就包含該提交（`Scenario: US6-AS5`；FR-033）
-- [ ] T053 [P] [US6] 在 `tests/architecture/test_static_text_safety.py` 靜態檢查：`<static>/js/submission.js`、`student.js`、`teacher.js` 不含 `innerHTML`、`outerHTML`、`insertAdjacentHTML`、`document.write`（`Scenario: US6-AS1`；FR-031、SC-008）；`student.js` 的倒數歸零處理會停用作答表單（以字串規則檢查倒數結束的回呼中有停用表單的呼叫）（`Scenario: US6-AS2`）；`submission.js` 只有在 `response.ok` 分支呼叫顯示「已送出」的函式（以字串規則檢查 `已送出` 文字只出現在成功處理函式內）（`Scenario: US6-AS4`；FR-032）
+- [X] T052 [P] [US6] 在 `tests/integration/test_us6_safe_display.py` 測試：答案 `<b>粗體</b><script>alert(1)</script>` 被接受，老師與學生快照、HTTP 回應中的答案字串與送出原文完全相同（`Scenario: US6-AS1` ↔ OpenSpec「特殊文字答案」；後端不轉義、不過濾，安全由前端 `textContent` 負責）；無倒數輪次的快照 `deadline` 為 `null`，老師關輪前任何時間（FakeClock 推進 1 小時）都接受提交（`Scenario: US6-AS3` ↔ OpenSpec「無倒數輪次」）；有倒數輪次的快照帶後端 `deadline`（`Scenario: US6-AS2`，前端「歸零後停用送出」另由 T053 靜態檢查與 quickstart 第 15 步驗證，後端拒絕由 T036 驗證）；學生 WebSocket 關閉後，同組另一台裝置提交，再以同一 token 重新連線時，第一份快照就包含該提交（`Scenario: US6-AS5`；FR-033）。**實作註記**：4 個測試在實作前就通過（後端早已支援，US6 是前端工作），作為回歸測試保留
+- [X] T053 [P] [US6] 在 `tests/architecture/test_static_text_safety.py` 靜態檢查：`<static>/js/submission.js`、`student.js`、`teacher.js` 不含 `innerHTML`、`outerHTML`、`insertAdjacentHTML`、`document.write`（`Scenario: US6-AS1`；FR-031、SC-008）；`student.js` 的倒數歸零處理會停用作答表單（以字串規則檢查倒數結束的回呼中有停用表單的呼叫）（`Scenario: US6-AS2`）；`submission.js` 只有在 `response.ok` 分支呼叫顯示「已送出」的函式（以字串規則檢查 `已送出` 文字只出現在成功處理函式內）（`Scenario: US6-AS4`；FR-032）。**實作註記**（問題紀錄 P-07、P-18）：檢查範圍改為 003 的實際模組 `submission.js`、`round-submission.js`、`round-submission-teacher.js`，加上 001 的 `student.js`、`teacher.js`；倒數規則檢查 `round-submission.js` 的 `lockAfterDeadline`／`scheduleDeadline`；「已送出」允許出現在成功分支與依快照顯示的 `markOwnSubmissions`（同組其他裝置已送出，來源是後端）；另加網路錯誤訊息檢查
 
 ### Implementation for User Story 6
 
-- [ ] T054 [US6] 前端倒數與送出狀態：`student.js` 以 001 `countdown.js` 依快照 `deadline` 顯示倒數，`deadline` 為 `null` 時顯示「由老師結束」，歸零時停用所有作答表單（`Scenario: US6-AS2`、`Scenario: US6-AS3`；FR-029、FR-030）；`submission.js` 送出期間停用按鈕，網路錯誤或逾時顯示「送出結果未確認，請重試」，不顯示「已送出」（`Scenario: US6-AS4`；FR-032）；同步中斷沿用 001 `sync.js` 的「同步中斷」提示，恢復後取得完整快照即顯示最新本組提交（`Scenario: US6-AS5`；FR-033）（依賴 T053）
-- [ ] T055 [US6] 執行 `node --check` 檢查 `submission.js`、`student.js`、`teacher.js`；T052、T053 通過
+- [X] T054 [US6] 前端倒數與送出狀態：`student.js` 以 001 `countdown.js` 依快照 `deadline` 顯示倒數，`deadline` 為 `null` 時顯示「由老師結束」，歸零時停用所有作答表單（`Scenario: US6-AS2`、`Scenario: US6-AS3`；FR-029、FR-030）；`submission.js` 送出期間停用按鈕，網路錯誤或逾時顯示「送出結果未確認，請重試」，不顯示「已送出」（`Scenario: US6-AS4`；FR-032）；同步中斷沿用 001 `sync.js` 的「同步中斷」提示，恢復後取得完整快照即顯示最新本組提交（`Scenario: US6-AS5`；FR-033）（依賴 T053）。**實作註記**：倒數停用與「由老師結束」放在 `round-submission.js`（001 的 `student.js` 不改）；001 `countdown.js` 照常顯示剩餘秒數，003 另以 `setTimeout` 依同一個 `deadline` 停用表單。送出中停用、「送出結果未確認，請重試」、同步中斷提示在 US1 已完成
+- [X] T055 [US6] 執行 `node --check` 檢查 `submission.js`、`student.js`、`teacher.js`；T052、T053 通過。**實作註記**：`node --check` 另含 `round-submission.js`、`round-submission-teacher.js`
 
 **Checkpoint**: 六個 User Story 都可獨立運作
 

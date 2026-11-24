@@ -3,11 +3,11 @@
 import dataclasses
 
 import pytest
+
 from lecture_quiz.core.round_submission.models import (
     RoundContext,
     SubmissionLedger,
 )
-
 from tests.unit.core.round_submission.helpers import (
     make_attempt,
     make_context,

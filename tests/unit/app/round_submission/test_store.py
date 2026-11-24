@@ -2,7 +2,6 @@
 
 from lecture_quiz.app.round_submission.store import SubmissionStore
 from lecture_quiz.core.round_submission.models import SubmissionLedger
-
 from tests.unit.core.round_submission.helpers import make_submission
 
 

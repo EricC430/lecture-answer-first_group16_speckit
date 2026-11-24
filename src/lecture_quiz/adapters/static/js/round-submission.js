@@ -2,6 +2,8 @@
 // 依快照的 openQuestions 與 questionShapes（每題格數）畫出表單；只有收到成功回應才顯示「已送出」（FR-032）。
 // 快照的 submissions.current.own 有本組已送出的題目時（例如同組另一台裝置送的），該題改為唯讀並顯示答案（US2）。
 // 已關輪的輪次（submissions.published）對所有組公開，顯示在「已公開的作答」（US5）。
+// 倒數依快照的後端 deadline；歸零時停用未送出的表單，沒有截止時間時顯示「由老師結束」（US6）。
+// 截止判定以後端為準：前端時鐘有誤差時，送出仍會被後端以「本輪已結束」拒絕。
 
 import { apiRequest } from "./api.js";
 import { currentIdentity, onStudentSnapshot } from "./student.js";
@@ -10,6 +12,8 @@ import { describeSubmitError, el, renderAnswerForm, renderPublished } from "./su
 const $ = (id) => document.getElementById(id);
 const forms = new Map(); // key：`${roundNumber}:${questionNumber}`，保留學生已輸入的內容
 let currentRound = null;
+let deadlineTimer = null;
+let scheduledDeadline;
 
 async function submitAnswer(roundNumber, questionNumber, answers, form) {
   const { code, token } = currentIdentity();
@@ -46,13 +50,38 @@ function renderHistory(snapshot) {
   if (!history.hidden) renderPublished($("published-list"), published);
 }
 
+function lockAfterDeadline() {
+  // 倒數歸零：停用所有還沒送出的作答表單（US6-AS2；FR-029）
+  for (const form of forms.values()) if (!form.submitted) form.setDisabled(true);
+  $("round-deadline-note").textContent = "已到截止時間，不能再送出。";
+}
+
+function scheduleDeadline(deadline) {
+  if (deadline === scheduledDeadline) return;
+  scheduledDeadline = deadline;
+  clearTimeout(deadlineTimer);
+  deadlineTimer = null;
+  const note = $("round-deadline-note");
+  if (!deadline) {
+    note.textContent = "本輪沒有倒數，由老師結束。"; // US6-AS3；FR-030
+    return;
+  }
+  note.textContent = "倒數結束後就不能再送出（時間以伺服器為準）。";
+  const remaining = Date.parse(deadline) - Date.now();
+  if (remaining <= 0) lockAfterDeadline();
+  else deadlineTimer = setTimeout(lockAfterDeadline, remaining);
+}
+
 function render(snapshot) {
   renderHistory(snapshot);
   const section = $("round-submission-section");
   const list = $("answer-forms");
   const open = snapshot.stage === "ROUND_OPEN";
   section.hidden = !open;
-  if (!open) return;
+  if (!open) {
+    scheduleDeadline(undefined);
+    return;
+  }
   if (currentRound !== snapshot.roundNumber) {
     forms.clear();
     list.replaceChildren();
@@ -77,6 +106,7 @@ function render(snapshot) {
     list.append(form.element);
   }
   markOwnSubmissions(snapshot);
+  scheduleDeadline(snapshot.deadline ?? null);
 }
 
 function markOwnSubmissions(snapshot) {

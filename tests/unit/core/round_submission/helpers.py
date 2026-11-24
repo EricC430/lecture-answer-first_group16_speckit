@@ -14,7 +14,6 @@ from lecture_quiz.core.round_submission.models import (
     Submission,
     SubmissionAttempt,
 )
-
 from tests.conftest import FAKE_CLOCK_START
 
 LAYOUT_A: Mapping[int, int] = MappingProxyType({1: 2, 2: 2, 3: 1, 4: 1})
