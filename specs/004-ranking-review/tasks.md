@@ -125,15 +125,15 @@ description: "004-ranking-review 任務清單"
 
 ### Tests for User Story 3（先寫、確認失敗）⚠️
 
-- [ ] T037 [P] [US3] 在 `tests/unit/core/ranking_review/test_rank_fair.py` 用 `FAIR_TWO_QUESTIONS` 測試：題一由甲成功（理由 `EARLIER_SUBMISSION`），題二由乙成功（理由 `FEWER_SUCCESSES`，因處理題二時甲已有本輪暫算 1 次）（`Scenario: US3-AS1` ↔ OpenSpec「公平分配兩題」）；兩候選次數與接收時間皆相同 → 接收序號較小者勝出，理由 `BACKEND_ORDER`（`Scenario: US3-AS2` ↔ OpenSpec「完全同次數與同時間」）；甲基準 1、乙基準 0、兩人在題一提交且甲較早 → 題一由乙成功，理由 `FEWER_SUCCESSES`（`Scenario: US3-AS3`）
-- [ ] T038 [P] [US3] 在同一檔案測試：甲在題一成功後處理題二，排名依甲「已是 1」計，題二每個 entry 的 `count_at_processing` 是處理當下的值（`Scenario: US3-AS4`）；候選全部是題組提交、該組成功 → `wins` 與 `group_counts` 只加 1，不按子空格數（`Scenario: US3-AS5`）；某題三個候選只有第一名成功 → 其他候選的暫算次數不變（`Scenario: US3-AS6`）；理由規則逐列照 research R9 表（公平模式的列）
-- [ ] T039 [P] [US3] 在 `tests/unit/core/ranking_review/test_fair_layouts.py` 以 `LAYOUT_A`、`LAYOUT_B`（含無提交題、題組）測試：公平模式依**固定題序**而非題號大小處理（例如題序 `(3, 1, 2)` 時先處理題 3），結果不依賴固定題數（憲章原則 III 的「不寫死版面」在 004 的對應驗證）
-- [ ] T040 [P] [US3] 在 `tests/integration/test_us3_fair_snapshot.py` 測試：老師開公平模式輪次、三組提交、關輪後，老師快照 entry 含 `countAtProcessing` 與 `reason`、每輪含 `groupCounts`；數字與 `core` 直接計算相同
+- [X] T037 [P] [US3] 在 `tests/unit/core/ranking_review/test_rank_fair.py` 用 `FAIR_TWO_QUESTIONS` 測試：題一由甲成功（理由 `EARLIER_SUBMISSION`），題二由乙成功（理由 `FEWER_SUCCESSES`，因處理題二時甲已有本輪暫算 1 次）（`Scenario: US3-AS1` ↔ OpenSpec「公平分配兩題」）；兩候選次數與接收時間皆相同 → 接收序號較小者勝出，理由 `BACKEND_ORDER`（`Scenario: US3-AS2` ↔ OpenSpec「完全同次數與同時間」）；甲基準 1、乙基準 0、兩人在題一提交且甲較早 → 題一由乙成功，理由 `FEWER_SUCCESSES`（`Scenario: US3-AS3`）
+- [X] T038 [P] [US3] 在同一檔案測試：甲在題一成功後處理題二，排名依甲「已是 1」計，題二每個 entry 的 `count_at_processing` 是處理當下的值（`Scenario: US3-AS4`）；候選全部是題組提交、該組成功 → `wins` 與 `group_counts` 只加 1，不按子空格數（`Scenario: US3-AS5`）；某題三個候選只有第一名成功 → 其他候選的暫算次數不變（`Scenario: US3-AS6`）；理由規則逐列照 research R9 表（公平模式的列）
+- [X] T039 [P] [US3] 在 `tests/unit/core/ranking_review/test_fair_layouts.py` 以 `LAYOUT_A`、`LAYOUT_B`（含無提交題、題組）測試：公平模式依**固定題序**而非題號大小處理（例如題序 `(3, 1, 2)` 時先處理題 3），結果不依賴固定題數（憲章原則 III 的「不寫死版面」在 004 的對應驗證）
+- [X] T040 [P] [US3] 在 `tests/integration/test_us3_fair_snapshot.py` 測試：老師開公平模式輪次、三組提交、關輪後，老師快照 entry 含 `countAtProcessing` 與 `reason`、每輪含 `groupCounts`；數字與 `core` 直接計算相同
 
 ### Implementation for User Story 3
 
-- [ ] T041 [US3] 在 `<core>/ranking.py` 實作 `RankingCalculator.rank_fair` 與 `recompute` 的公平模式分支：從 `initial_counts` 開始，依傳入的固定題序逐題；候選（未被判錯）依 `(counts[group], received_at, sequence)` 排名；每個候選的 `count_at_processing` 為處理當下的次數；第一名成為 `success_group`、其 `counts` 加 1，其他候選不加；`wins` 為各組本輪成功題數、`group_counts` 為處理完本輪後的暫算次數；一律從基準開始，不使用上一版暫算次數（FR-007、FR-015）
-- [ ] T042 [US3] 前端老師端：`ranking-review-teacher.js` 在公平模式輪次顯示每個候選的「處理當下成功次數」與理由文字（`SOLE_CANDIDATE`＝唯一候選、`EARLIER_SUBMISSION`＝提交較早、`FEWER_SUCCESSES`＝成功次數較少、`BACKEND_ORDER`＝以後端接收先後決定），並顯示每輪各組暫算次數；速度模式不顯示次數欄
+- [X] T041 [US3] 在 `<core>/ranking.py` 實作 `RankingCalculator.rank_fair` 與 `recompute` 的公平模式分支：從 `initial_counts` 開始，依傳入的固定題序逐題；候選（未被判錯）依 `(counts[group], received_at, sequence)` 排名；每個候選的 `count_at_processing` 為處理當下的次數；第一名成為 `success_group`、其 `counts` 加 1，其他候選不加；`wins` 為各組本輪成功題數、`group_counts` 為處理完本輪後的暫算次數；一律從基準開始，不使用上一版暫算次數（FR-007、FR-015）
+- [X] T042 [US3] 前端老師端：`ranking-review-teacher.js` 在公平模式輪次顯示每個候選的「處理當下成功次數」與理由文字（`SOLE_CANDIDATE`＝唯一候選、`EARLIER_SUBMISSION`＝提交較早、`FEWER_SUCCESSES`＝成功次數較少、`BACKEND_ORDER`＝以後端接收先後決定），並顯示每輪各組暫算次數；速度模式不顯示次數欄
 
 **Checkpoint**: 速度與公平兩種模式的順位、理由與次數都正確
 

@@ -23,6 +23,7 @@
 |---|---|---|---|
 | Phase 2 完成（T018） | 2026-11-24 | `pytest -q` | 563 passed, 2 deselected（基準 547 + 新增 16）；`pytest tests/architecture -q` 47 passed；`ruff check .` All checks passed；`ruff format --check .` 201 files already formatted；`mypy` Success: no issues found in 45 source files |
 | Phase 3～4 完成（T019～T036，US1／US2） | 2026-11-24 | `pytest -q`；`ruff check .`；`ruff format --check .`；`mypy`；`pytest tests/architecture -q` | 598 passed, 2 deselected（Phase 2 後 563 + 新增 35）；ruff All checks passed；format 214 files already formatted；mypy Success: no issues found in 48 source files；architecture 50 passed。測試先行：US1 核心測試先因匯入失敗（collection error）、app 4 項失敗，實作後通過；US2 3 個核心測試檔先 collection error、view／app／integration 先失敗，實作後通過。前端（T035／T036）無自動化測試，僅通過靜態文字安全檢查，畫面行為待 T094 人工驗證 |
+| Phase 5 完成（T037～T042，US3） | 2026-11-24 | `pytest -q`；`ruff check .`；`ruff format --check .`；`mypy` | 611 passed, 2 deselected（+13）；ruff All checks passed；format 217 files already formatted；mypy Success: no issues found in 48 source files。**未做到先紅後綠**：`rank_fair` 在 US2 實作 `recompute` 時一併完成，所以 US3 測試一寫完就通過；改以突變檢查補強：暫時把公平排序鍵的成功次數改成常數 0，`test_rank_fair.py`＋`test_fair_layouts.py` 11 項中 5 failed、6 passed，還原後 41 passed（`tests/unit/core/ranking_review`）。前端（T042）無自動化測試，待 T094 |
 
 ## 效能（T082～T083）
 
@@ -45,3 +46,4 @@
 | P-03 | Phase 2 | tasks 寫「`Outcome` 沿用 001 的型別」，但 001 的 `Outcome.rejection` 型別是 001 的 `RejectionReason` | 004 另定 `ReviewOutcome[T]`（`rejection` 為 `ReviewRejection`），與 contracts 的錯誤表一致；不放寬 001 的型別 |
 | P-04 | Phase 2 | `T005` 的「RankingInput 不變式以 recompute 拒絕」依賴 recompute | 該不變式測試放在 US2 的 `test_recompute_speed.py`（recompute 實作時一併驗證） |
 | P-05 | Phase 2 | T017 遷移既有測試：`test_finalize_contract` 原斷言回應 `== {"version": ...}`，004 取代 001 空定案路由後回應多了 `resultVersion`、`alreadyFinalized` | 斷言改為只比對 `["version"]`（活動狀態版本語意不變）；這是契約本身的變更，已記錄；其他測試只改呼叫方式（補 `{"resultVersion": 1}`），斷言未改 |
+| P-06 | Phase 5 | tasks 要求 US3 測試先失敗再實作，但 `rank_fair` 已在 US2 完成 | 如實記錄於上表，並以突變檢查證明測試能分辨對錯 |

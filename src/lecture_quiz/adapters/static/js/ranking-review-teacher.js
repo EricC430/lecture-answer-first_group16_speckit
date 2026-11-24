@@ -45,6 +45,12 @@ function render(snapshot) {
     wrapper.append(
       el("h3", `第 ${round.roundNumber} 輪（${round.fairMode ? "公平模式" : "速度模式"}）・${stage}・結果版本 ${round.resultVersion}`),
     );
+    if (round.fairMode && round.groupCounts) {
+      const counts = Object.entries(round.groupCounts)
+        .map(([group, count]) => `第 ${group} 組 ${count} 次`)
+        .join("、");
+      wrapper.append(el("p", `處理完本輪後各組暫算成功次數：${counts}`, "muted"));
+    }
     for (const question of round.questions) wrapper.append(questionBlock(snapshot, round, question));
     container.append(wrapper);
   }
