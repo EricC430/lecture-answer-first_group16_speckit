@@ -9,10 +9,10 @@ def test_app_wires_ranking_service():
     assert isinstance(app.state.ranking_service, RankingService)
 
 
-def test_no_unimplemented_004_paths_are_exposed():
-    """路由只有 T051、T069 實作後才會出現；實作前不得有半套路徑。"""
+def test_judgement_route_is_exposed_exactly_once():
+    """PUT judgement 已實作（T051）；finalize 路由到 T069 才由 004 接手。"""
     app = make_app()
-    paths = {getattr(route, "path", "") for route in app.routes}
-    judgement = [p for p in paths if p.endswith("/judgement")]
-    # 實作 PUT judgement 之前沒有；實作後恰好一條（本測試在 T051 之後改為斷言一條）
-    assert len(judgement) <= 1
+    paths = app.openapi()["paths"]
+    judgement = {p: list(m) for p, m in paths.items() if p.endswith("/judgement")}
+    assert len(judgement) == 1
+    assert next(iter(judgement.values())) == ["put"]

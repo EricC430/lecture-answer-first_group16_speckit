@@ -6,8 +6,15 @@
 
 import logging
 from collections.abc import Mapping
+from typing import Any
 
-from lecture_quiz.app.activity.ports import SyncPublisher, TeacherViewer, Viewer
+from lecture_quiz.app.activity.ports import (
+    Requester,
+    SyncPublisher,
+    TeacherViewer,
+    Viewer,
+)
+from lecture_quiz.app.activity.secrets_gen import normalize_code_input
 from lecture_quiz.app.activity.service import ActivityService
 from lecture_quiz.app.ranking_review.ports import (
     FinalizedRound,
@@ -20,11 +27,22 @@ from lecture_quiz.app.round_submission.ports import SubmissionReader
 from lecture_quiz.core.activity.models import Activity, Round, Stage
 from lecture_quiz.core.activity.snapshot_view import JsonDict
 from lecture_quiz.core.ranking_review.models import Candidate, RankingInput
-from lecture_quiz.core.ranking_review.review import RoundReview
+from lecture_quiz.core.ranking_review.review import (
+    ReviewRejection,
+    RoundReview,
+    RoundReviewRules,
+)
 from lecture_quiz.core.ranking_review.view import ResultView, RoundView
 from lecture_quiz.core.round_submission.models import Submission
 
 logger = logging.getLogger(__name__)
+
+
+def _rejected(rejection: ReviewRejection) -> ReviewOutcome[Any]:
+    """失敗的回傳值：訊息用預設的中文訊息。"""
+    return ReviewOutcome(
+        ok=False, rejection=rejection, message=rejection.default_message
+    )
 
 
 class RankingService:
@@ -168,7 +186,7 @@ class RankingService:
     async def mark_wrong(
         self,
         code: str,
-        requester: object,
+        requester: Requester,
         round_number: int,
         question_number: int,
         group_number: int,
@@ -185,12 +203,14 @@ class RankingService:
         Returns:
             判定結果。
         """
-        raise NotImplementedError
+        return await self._set_wrong(
+            code, requester, round_number, question_number, group_number, True
+        )
 
     async def unmark_wrong(
         self,
         code: str,
-        requester: object,
+        requester: Requester,
         round_number: int,
         question_number: int,
         group_number: int,
@@ -207,10 +227,88 @@ class RankingService:
         Returns:
             判定結果。
         """
-        raise NotImplementedError
+        return await self._set_wrong(
+            code, requester, round_number, question_number, group_number, False
+        )
+
+    def _gate(
+        self, code: str, requester: Requester, round_number: int
+    ) -> tuple[Activity, Round] | ReviewRejection:
+        """判錯前的身分與階段檢查（data-model「判定規則」的順序）。"""
+        activity = self._activities.get(code)
+        if activity is None:
+            return ReviewRejection.ACTIVITY_NOT_FOUND
+        if not self._activities.is_teacher(code, requester):
+            return ReviewRejection.NOT_TEACHER
+        if activity.stage is Stage.CANCELLED:
+            return ReviewRejection.ACTIVITY_CANCELLED
+        if activity.current_round is None:
+            return ReviewRejection.NO_ROUND
+        round_ = next((r for r in activity.rounds if r.number == round_number), None)
+        if round_ is None:
+            return ReviewRejection.ROUND_NOT_FOUND
+        if self._is_final(activity, round_):
+            return ReviewRejection.RESULT_ALREADY_FINAL
+        if not round_.closed:
+            return ReviewRejection.ROUND_STILL_OPEN
+        return activity, round_
+
+    async def _set_wrong(
+        self,
+        code: str,
+        requester: Requester,
+        round_number: int,
+        question_number: int,
+        group_number: int,
+        wrong: bool,
+    ) -> ReviewOutcome[MarkResult]:
+        """判錯與撤銷共用：在 004 的鎖內判定並保存，鎖外推送（研究 R4）。"""
+        async with self._store.lock(normalize_code_input(code)):
+            gate = self._gate(code, requester, round_number)
+            if isinstance(gate, ReviewRejection):
+                return _rejected(gate)
+            activity, round_ = gate
+            review = self._review_of(activity, round_)
+            submissions = self._submissions.round_submissions(
+                activity.code, round_.number
+            )
+            data = self._build_input(
+                activity, round_.number, submissions, review.wrong_marks
+            )
+            decision = RoundReviewRules.mark(
+                review, data, group_number, question_number, wrong
+            )
+            if not decision.ok or decision.review is None:
+                assert decision.rejection is not None
+                return _rejected(decision.rejection)
+            updated = decision.review
+            if decision.changed:
+                self._store.put(activity.code, updated)
+            result = MarkResult(
+                decision.changed,
+                updated.version,
+                tuple(sorted(updated.affected)) if decision.changed else (),
+            )
+        logger.info(
+            "判錯 activity=%s round=%s question=%s group=%s wrong=%s changed=%s "
+            "version=%s",
+            activity.code,
+            round_.number,
+            question_number,
+            group_number,
+            wrong,
+            decision.changed,
+            updated.version,
+        )
+        if decision.changed:
+            try:
+                await self._publisher.publish(activity)
+            except Exception:
+                logger.exception("推送失敗 activity=%s", activity.code)
+        return ReviewOutcome(ok=True, value=result)
 
     async def finalize(
-        self, code: str, requester: object, result_version: int
+        self, code: str, requester: Requester, result_version: int
     ) -> ReviewOutcome[FinalizeResult]:
         """確認定案。
 

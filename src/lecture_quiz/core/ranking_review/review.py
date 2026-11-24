@@ -151,3 +151,66 @@ class MarkDecision:
     changed: bool = False
     review: RoundReview | None = None
     rejection: ReviewRejection | None = None
+
+
+class RoundReviewRules:
+    """判錯、撤銷的判定規則（純函式）。"""
+
+    @staticmethod
+    def mark(
+        review: RoundReview,
+        data: RankingInput,
+        group_number: int,
+        question_number: int,
+        wrong: bool,
+    ) -> MarkDecision:
+        """判錯或撤銷判錯一筆已被接受的提交，並整輪重算。
+
+        判錯集合以 `review.wrong_marks` 為準（`data.wrong_marks` 會被忽略）；重算一律從
+        開輪基準與**保存的**題序出發（FR-015），所以結果不依賴操作順序。
+
+        Args:
+            review: 目前的審閱狀態。
+            data: 本輪的重算輸入（候選、基準、模式、題號）。
+            group_number: 組號。
+            question_number: 題號。
+            wrong: `True` 為判錯、`False` 為撤銷。
+
+        Returns:
+            判定結果：沒有該筆提交 → `SUBMISSION_NOT_FOUND`；狀態已相同 → 成功但
+            `changed=False`（原物件）；否則為版本加一的新狀態。
+        """
+        key = (group_number, question_number)
+        known = any(
+            c.group_number == group_number and c.question_number == question_number
+            for c in data.candidates
+        )
+        if not known:
+            return MarkDecision(False, rejection=ReviewRejection.SUBMISSION_NOT_FOUND)
+        if (key in review.wrong_marks) == wrong:
+            return MarkDecision(True, False, review)
+        marks = review.wrong_marks | {key} if wrong else review.wrong_marks - {key}
+        old_ranking = review.result.ranking_of(question_number)
+        new_result = RankingCalculator.recompute(
+            replace(data, wrong_marks=marks), review.result.order
+        )
+        history = list(review.replaced.get(question_number, ()))
+        if wrong:
+            if old_ranking is not None and old_ranking.success_group == group_number:
+                history.append(group_number)
+        elif group_number in history:
+            history.remove(group_number)
+        replaced = dict(review.replaced)
+        if history:
+            replaced[question_number] = tuple(history)
+        else:
+            replaced.pop(question_number, None)
+        new = replace(
+            review,
+            version=review.version + 1,
+            wrong_marks=marks,
+            result=new_result,
+            affected=RankingCalculator.diff(review.result, new_result),
+            replaced=replaced,
+        )
+        return MarkDecision(True, True, new)

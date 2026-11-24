@@ -24,6 +24,7 @@
 | Phase 2 完成（T018） | 2026-11-24 | `pytest -q` | 563 passed, 2 deselected（基準 547 + 新增 16）；`pytest tests/architecture -q` 47 passed；`ruff check .` All checks passed；`ruff format --check .` 201 files already formatted；`mypy` Success: no issues found in 45 source files |
 | Phase 3～4 完成（T019～T036，US1／US2） | 2026-11-24 | `pytest -q`；`ruff check .`；`ruff format --check .`；`mypy`；`pytest tests/architecture -q` | 598 passed, 2 deselected（Phase 2 後 563 + 新增 35）；ruff All checks passed；format 214 files already formatted；mypy Success: no issues found in 48 source files；architecture 50 passed。測試先行：US1 核心測試先因匯入失敗（collection error）、app 4 項失敗，實作後通過；US2 3 個核心測試檔先 collection error、view／app／integration 先失敗，實作後通過。前端（T035／T036）無自動化測試，僅通過靜態文字安全檢查，畫面行為待 T094 人工驗證 |
 | Phase 5 完成（T037～T042，US3） | 2026-11-24 | `pytest -q`；`ruff check .`；`ruff format --check .`；`mypy` | 611 passed, 2 deselected（+13）；ruff All checks passed；format 217 files already formatted；mypy Success: no issues found in 48 source files。**未做到先紅後綠**：`rank_fair` 在 US2 實作 `recompute` 時一併完成，所以 US3 測試一寫完就通過；改以突變檢查補強：暫時把公平排序鍵的成功次數改成常數 0，`test_rank_fair.py`＋`test_fair_layouts.py` 11 項中 5 failed、6 passed，還原後 41 passed（`tests/unit/core/ranking_review`）。前端（T042）無自動化測試，待 T094 |
+| Phase 6 完成（T043～T052、T055，US4） | 2026-11-24 | `pytest -q`；`ruff check .`；`ruff format --check .`；`mypy` | 693 passed, 2 deselected（+82）；ruff All checks passed；format 224 files already formatted；mypy Success: no issues found in 48 source files。測試先行：`test_review_rules_mark.py` 先 ImportError（`RoundReviewRules` 不存在）、服務層 3 個測試檔先 `NotImplementedError`、HTTP 契約與端對端 19 項先全數失敗（`19 failed`），實作後 `19 passed`。`test_diff.py` 的 3 項在 `diff` 於 US2 已實作時就通過（同 P-06）。前端判錯／撤銷按鈕（T052）無自動化測試，待 T094 人工驗證 |
 
 ## 效能（T082～T083）
 
@@ -47,3 +48,5 @@
 | P-04 | Phase 2 | `T005` 的「RankingInput 不變式以 recompute 拒絕」依賴 recompute | 該不變式測試放在 US2 的 `test_recompute_speed.py`（recompute 實作時一併驗證） |
 | P-05 | Phase 2 | T017 遷移既有測試：`test_finalize_contract` 原斷言回應 `== {"version": ...}`，004 取代 001 空定案路由後回應多了 `resultVersion`、`alreadyFinalized` | 斷言改為只比對 `["version"]`（活動狀態版本語意不變）；這是契約本身的變更，已記錄；其他測試只改呼叫方式（補 `{"resultVersion": 1}`），斷言未改 |
 | P-06 | Phase 5 | tasks 要求 US3 測試先失敗再實作，但 `rank_fair` 已在 US2 完成 | 如實記錄於上表，並以突變檢查證明測試能分辨對錯 |
+| P-07 | Phase 6 | 測試寫「已取消且有輪次」的活動判錯，但 001 只允許第一輪之前取消，該情境不可能發生 | 改為對「取消後（沒有輪次）的活動」判錯，回 `ACTIVITY_CANCELLED`；判定順序仍是取消先於 `NO_ROUND` |
+| P-08 | Phase 6 | 佈線測試原本用 `app.routes` 的 `path` 找路由，但巢狀 router 的 path 是空字串，斷言恆為 0（上一版的 `<= 1` 是假綠燈） | 改用 `app.openapi()["paths"]`，斷言恰有一條 `PUT .../judgement` |
