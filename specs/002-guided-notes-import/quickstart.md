@@ -105,6 +105,7 @@ pytest -m "not real_google and not perf"
 | 2026-11-23 | EricC430 | T028 授權 → Picker → inspect | 通過（使用者回報） | 細節依使用者決定不記錄；先前因 `GOOGLE_APP_ID` 填成非專案編號而 404 `notFound`，更正後通過 |
 | 2026-11-23 | EricC430 | 真實路徑 B-1～B-13（版面 1、版面 2） | 通過（使用者回報） | 細節依使用者決定不記錄，**沒有 SC-006 秒數與題數可對照** |
 | 2026-11-23 | EricC430 的環境（Claude Code 執行） | T080～T082 後：`ruff check .`、`ruff format --check .`、`mypy`、`pytest -m "not real_google and not perf"` | 通過；188 個檔案格式正確；46 個檔案無型別問題；715 passed、2 deselected | 新增 `GOOGLE_APP_ID` 純數字驗證（紅燈 5 個測試後轉綠） |
+| 2026-11-24 | EricC430 的環境（Claude Code 執行） | 合併 #11 審查修改與最新 `main`、T083 後：`ruff check .`、`ruff format --check .`、`mypy`、`pytest -m "not real_google and not perf"` | 通過；189 個檔案格式正確；46 個檔案無型別問題；726 passed、2 deselected | 新增 `ImportService.blanks_per_question`（給 003），6 個測試先紅燈後轉綠 |
 | | jacky0407 | T076 非實作者人工驗證 | | 尚未執行 |
 
 - **實作者**：EricC430。**非實作者人工驗證**：jacky0407（執行 B 區並簽名，記錄日期與結果）。

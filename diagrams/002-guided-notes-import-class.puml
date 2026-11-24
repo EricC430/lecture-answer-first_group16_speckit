@@ -81,6 +81,7 @@ package "應用層" {
     +getImportSummary(code, requester) : ImportPreview（重新整理後恢復預覽）
     +getImportResult(code, requester) : ImportOutcome（含標題與 001 版本）
     +getImportRecord(code) : ImportRecord（供 005 寫回）
+    +blanksPerQuestion(code) : 題號→子空格數 | None（供 003）
   }
 
   class SourceRef <<資料>> {

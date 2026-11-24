@@ -8,6 +8,7 @@
 """
 
 from collections.abc import Mapping
+from types import MappingProxyType
 
 from lecture_quiz.app.activity.ports import ActivityGateway, Clock, Requester
 from lecture_quiz.app.guided_notes_import.models import (
@@ -338,6 +339,26 @@ class ImportService:
                 sheet_title=record.sheet_title,
             )
         )
+
+    def blanks_per_question(self, code: str) -> Mapping[int, int] | None:
+        """給 003 使用：每題的子空格數（單題為 1）。
+
+        由最後一次成功匯入的 `ImportRecord.blanks` 依題號計數；重新匯入成功後跟著更新，
+        重新匯入失敗時記錄不變，所以回傳的仍是舊格數。唯讀、不呼叫 Google。
+
+        Args:
+            code: 活動代碼。
+
+        Returns:
+            題號 → 子空格數的唯讀對應；沒有成功匯入過（或活動不存在）時為 `None`。
+        """
+        record = self._store.records.get(code)
+        if record is None:
+            return None
+        counts: dict[int, int] = {}
+        for blank in record.blanks:
+            counts[blank.question_number] = counts.get(blank.question_number, 0) + 1
+        return MappingProxyType(counts)
 
     def get_import_record(self, code: str) -> ImportRecord | None:
         """給 005 使用：唯讀回傳最後一次成功匯入的記錄。
