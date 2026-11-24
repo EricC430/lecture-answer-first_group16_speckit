@@ -1,7 +1,7 @@
 @startuml 003-round-submission-class
 !pragma layout smetana
 skinparam defaultFontName "Microsoft JhengHei"
-title 003 多題搶答與送出 — 類別圖（plan 2026-11-23）
+title 003 多題搶答與送出 — 類別圖（plan 2026-11-23；實作後校正 2026-11-24）
 
 package "core.round_submission（純函式）" {
   class SubmissionAttempt <<frozen>> {
@@ -48,6 +48,8 @@ package "core.round_submission（純函式）" {
     WRONG_BLANK_COUNT
     BLANK_EMPTY
     ANSWER_TOO_LONG
+    --
+    http_status: int
   }
   class SubmissionDecision <<frozen>> {
     kind: DecisionKind
@@ -56,20 +58,30 @@ package "core.round_submission（純函式）" {
     blank_numbers: tuple[int, ...]
     expected_blanks: int | None
   }
-  class AnswerRules {
+  class "answer_rules（模組）" as AnswerModule <<module>> {
     MAX_ANSWER_CHARS = 500
+  }
+  class AnswerRules {
     {static} check(raw, expected): tuple[str, ...]
+  }
+  class InvalidAnswerError <<exception>> {
+    rejection: SubmissionRejection
+    blank_numbers: tuple[int, ...]
+    expected_blanks: int | None
   }
   class SubmissionRules {
     {static} decide(ledger, context, code, attempt, now): SubmissionDecision
     {static} order(submissions): tuple[Submission, ...]
+    {static} describe(decision, attempt): str
   }
-  class SubmissionView {
+  class "view（模組常數，Q-21／22／26）" as ViewRules <<module>> {
     TEACHER_SEES_PROVISIONAL_RANKING_DURING_ROUND = False
     STUDENT_SEES_OWN_SUCCESS_DURING_ROUND = True
     STUDENT_SEES_JUDGED_WRONG = True
+  }
+  class SubmissionView {
     {static} for_teacher(ledger, activity): dict
-    {static} for_group(ledger, activity, group_number): dict
+    {static} for_group(ledger, activity, group_number, *, student_sees_own_success, student_sees_judged_wrong): dict
   }
   SubmissionLedger o-- "0..*" Submission
   SubmissionDecision --> DecisionKind
@@ -79,7 +91,11 @@ package "core.round_submission（純函式）" {
   SubmissionRules ..> SubmissionAttempt
   SubmissionRules ..> SubmissionDecision
   SubmissionRules ..> AnswerRules
+  AnswerRules ..> InvalidAnswerError : 拋出
+  AnswerRules ..> AnswerModule
   SubmissionView ..> SubmissionLedger
+  SubmissionView ..> SubmissionRules : order
+  SubmissionView ..> ViewRules : 預設值
 }
 
 package "app.round_submission" {
@@ -89,6 +105,9 @@ package "app.round_submission" {
   interface SubmissionReader <<Protocol>> {
     round_submissions(code, round_number): tuple[Submission, ...]
     all_submissions(code): tuple[Submission, ...]
+  }
+  class NullQuestionShapeSource {
+    blanks_per_question(code): None
   }
   class SubmissionStore {
     get(code): SubmissionLedger
@@ -101,6 +120,8 @@ package "app.round_submission" {
     snapshot_extension(activity, viewer): Mapping[str, object]
   }
   class "_SubmitHandler" as Handler {
+    window: SubmissionWindow | None
+    --
     decide(window, now): HandlerStep
     commit(): None
   }
@@ -110,7 +131,20 @@ package "app.round_submission" {
   SubmissionService ..> Handler : 每次 submit 建立
   Handler ..> SubmissionRules
   SubmissionService ..> SubmissionView
+  NullQuestionShapeSource ..|> QuestionShapeSource
 }
+
+package "adapters.web" {
+  class DevQuestionShapeSource {
+    set(code, blanks): None
+    blanks_per_question(code): Mapping[int, int] | None
+  }
+  note bottom of DevQuestionShapeSource
+    開發用（LECTURE_QUIZ_DEV_SEED=1）；002 合併後
+    由 ImportService 取代（T065）
+  end note
+}
+DevQuestionShapeSource ..|> QuestionShapeSource
 
 package "001 app.activity（擴充）" {
   class ActivityService {
@@ -151,7 +185,7 @@ package "001 core.activity（擴充）" {
   }
 }
 
-package "002（實作 003 的連接埠）" {
+package "002（合併後實作 003 的連接埠，T065）" {
   class ImportService
 }
 

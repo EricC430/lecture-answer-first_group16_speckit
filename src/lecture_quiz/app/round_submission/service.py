@@ -63,10 +63,12 @@ class _SubmitHandler:
         self._attempt = attempt
         self._ledger: SubmissionLedger | None = None
         self._decision: SubmissionDecision | None = None
+        self.window: SubmissionWindow | None = None  # 給日誌：001 判定的組號與輪次
 
     def decide(
         self, window: SubmissionWindow, now: datetime
     ) -> HandlerStep[SubmissionDecision]:
+        self.window = window
         ledger = self._store.get(self._code)
         context = RoundContext(
             group_number=window.group_number,
@@ -135,7 +137,7 @@ class SubmissionService:
                 DecisionKind.REJECTED,
                 rejection=_from_activity_rejection(outcome.rejection),
             )
-        self._log(code, attempt, decision)
+        self._log(code, attempt, decision, handler.window)
         return Outcome(ok=True, value=decision)
 
     def round_submissions(self, code: str, round_number: int) -> tuple[Submission, ...]:
@@ -165,8 +167,16 @@ class SubmissionService:
 
     @staticmethod
     def _log(
-        code: str, attempt: SubmissionAttempt, decision: SubmissionDecision
+        code: str,
+        attempt: SubmissionAttempt,
+        decision: SubmissionDecision,
+        window: SubmissionWindow | None,
     ) -> None:
+        """記錄一筆提交的結果；不記 token 與答案（研究 R13）。
+
+        組號與輪次取自 001 在鎖內判定的 `window`（不採信學生送來的值）；活動不存在
+        或裝置不屬於任何組時 001 不會呼叫判定，記為 `-`。
+        """
         sub = decision.submission
         result = (
             "accepted"
@@ -187,9 +197,9 @@ class SubmissionService:
         logger.info(
             "提交 activity=%s round=%s question=%s group=%s result=%s",
             code,
-            sub.round_number if sub else "-",
+            window.round_number if window and window.round_number else "-",
             question,
-            sub.group_number if sub else "-",
+            window.group_number if window else "-",
             result,
         )
 

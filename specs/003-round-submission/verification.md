@@ -116,6 +116,34 @@
 | `mypy` | Success: no issues found in 36 source files |
 | `pytest` | **527 passed**, 1 deselected（新增 12 個；001 既有測試未修改） |
 
+## Polish（T056～T063）
+
+- 日期：2026-11-24；Windows 11、Python 3.11.5。
+- **先寫測試**：
+  - T057 日誌測試實作前失敗：被拒的提交記成 `round=-`、`group=-`。
+  - T058 兩份版面的 2 個測試實作前就通過，功能在 US1～US5 已完成。
+  - T056 效能測試是量測，沒有「先失敗」的階段。
+- **效能（T056，老師 + 6 組 × 2 連線，20 筆提交）**：
+  - 提交到老師看板、到同組另一台：最大都是 39.7 ms，平均都是 5.6 ms，門檻 2000 ms。兩者在同一次推送送出，量到的時間幾乎相同。
+  - 001 的狀態變更同次執行：開輪最大 19.5 ms、關輪 14.3 ms、定案 14.8 ms、結束 17.0 ms。
+- **Scenario 對應（T059）**：001 有 57 個、003 有 37 個、OpenSpec round-submission 有 14 個，全部有測試，未對應：無。
+  - OpenSpec 實際是 14 個 Scenario，spec、plan、tasks 原寫 13 個，已更正（P-27）。
+- **圖表（T060）**：類別圖與組件圖依實作更新並重新轉出 PNG，時序圖不變（P-22）。
+- **機敏資料（T063）**：`src/` 沒有 `print(`；追蹤檔案沒有 `.env`、憑證、`.venv`、課程說明、提案草稿。
+
+| 指令 | 結果 |
+|---|---|
+| `ruff check --no-cache .`、`ruff format --check --no-cache .` | All checks passed!；165 files already formatted |
+| `mypy` | Success: no issues found in 36 source files |
+| `pytest` | **530 passed**, 2 deselected（perf 2 個） |
+| `pytest -m perf` | **2 passed**（001 狀態同步、003 提交同步） |
+
+與 T002 基準比較：001 原有測試全部保留且通過；003 新增的測試讓總數從 389 增加到 530。
+
+**尚未完成**：
+- T064：非實作者 EricC430 依 quickstart 人工驗證。
+- T065：002 合併後的真實路徑驗證（P-19）。
+
 ## 實作問題紀錄
 
 實作 003 過程中發現的問題、偏離與待辦，依發現順序編號。狀態：**已處理**（已改程式或文件）、**已記錄**（行為不變，只需知道）、**待辦**（之後的任務要處理）、**待決定**（需要組員或 OpenSpec 組決定）。
@@ -143,7 +171,10 @@
 | P-19 | 跨子功能 | 每題格數由 002 實作 `QuestionShapeSource`（與 EricC430 口頭約定）；002 合併前只能用 dev seed | T065 真實路徑驗證要等 002 合併 | 待辦（002） |
 | P-20 | 跨子功能 | 「搶答失敗」要等 004 提供勝者；全部判錯顯示「未成功」也由 004 決定 | 已寫在 tasks Notes 的 004 交接 | 待辦（004） |
 | P-21 | 環境 | 在本機執行 `pytest -p no:logging` 會讓用到 `caplog` 的 12 個測試報錯（不是程式問題） | 驗證一律用不加參數的 `pytest` | 已記錄 |
-| P-22 | US1～US4 | 類別圖與程式的小差異：可見性常數在程式是 `view.py` 的模組常數，圖畫成 `SubmissionView` 的屬性；`SubmissionRules.describe` 不在圖上；`SubmissionView.for_group` 多了 `student_sees_own_success`、`student_sees_judged_wrong` 兩個參數（方便測試 Q-22、Q-26 改為假） | 留給 Polish 的圖表一致性任務一併更新類別圖並重新輸出 PNG | 待辦（Polish） |
-| P-23 | US5 | 每次推送快照都帶全部已公開輪次，資料量隨輪次增加 | 一堂課的輪次與組數有限；留給 T060 效能測試觀察，超標再改成只送差異 | 待辦（Polish） |
+| P-22 | US1～US4 | 類別圖與程式的小差異：可見性常數在程式是 `view.py` 的模組常數，圖畫成 `SubmissionView` 的屬性；`SubmissionRules.describe` 不在圖上；`SubmissionView.for_group` 多了 `student_sees_own_success`、`student_sees_judged_wrong` 兩個參數（方便測試 Q-22、Q-26 改為假） | T060 已更新類別圖（模組常數、`describe`、`http_status`、`InvalidAnswerError`、`for_group` 參數、兩個格數來源）與組件圖，重新轉出 PNG | 已處理 |
+| P-23 | US5 | 每次推送快照都帶全部已公開輪次，資料量隨輪次增加 | T056 量測單一輪 20 筆提交，最大 39.7 ms；多輪累積的資料量沒有另外量測，一堂課的輪次與組數有限，先不改 | 已記錄 |
 | P-25 | US1～US3 | `test_store.py`、`round_submission/helpers.py`、`test_models.py` 的匯入分組不符 ruff 規則（`tests` 應與 `lecture_quiz` 同組）；之前的 `ruff check` 都回報通過，推測是 ruff 快取，切換分支改寫檔案後才被檢查出來 | 已用 `ruff check --fix` 修正；之後的驗證一律加 `--no-cache` | 已處理 |
 | P-26 | US6 | 前端倒數停用表單依瀏覽器時鐘，與後端時鐘有誤差時可能早停或晚停 | 截止判定以後端為準（T036）：晚停時送出會被拒並顯示「本輪已結束」；早停的情況在 quickstart 人工驗證觀察 | 已記錄 |
+| P-27 | Polish | spec SC-001、plan、tasks T059 寫「13 個 OpenSpec Scenario」，實際是 14 個 | T059 掃描時更正三處；SCENARIO_MAP 列出全部 14 個 | 已處理 |
+| P-28 | Polish | 被拒的提交日誌記 `round=-`、`group=-`，查問題時看不出是哪一組（T057 要求要有） | 改為從 001 鎖內的 `SubmissionWindow` 取得；活動不存在或不屬於任何組時仍為 `-` | 已處理 |
+| P-29 | 跨 PR | 001 修正 PR #19 與本 PR 都改了 `tests/SCENARIO_MAP.md` 的 US2-AS10 與 001 契約；PR #17（002）刪除 dev seed，與本 PR 有 6 個檔案衝突 | 後合併的一方重新執行 Scenario 掃描並處理衝突；dev seed 的去留與格數來源已在 PR #17 審查提出 | 待辦（合併時） |

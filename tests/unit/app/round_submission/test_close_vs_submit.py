@@ -10,7 +10,10 @@ from tests.unit.app.round_submission.conftest import open_world
 
 
 def test_close_and_submit_race_50_times():
-    """提交要嘛在關輪前保存並出現在關輪推送中，要嘛被拒且未保存。"""
+    """Scenario: US3-AS6
+
+    提交要嘛在關輪前保存並出現在關輪推送中，要嘛被拒且未保存。
+    """
     rng = random.Random(7)
 
     async def once(close_first):
