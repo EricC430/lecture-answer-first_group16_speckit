@@ -22,7 +22,7 @@
 |---|---|---|---|---|---|
 | 1 | `POST /activities` | 無，或同瀏覽器上一個活動的老師 token（C7） | `{"maxGroups": int}` | `201 {"code", "teacherToken", "maxGroups", "version"}` | FR-001～003、FR-036、FR-037 |
 | 2 | `GET /activities/{code}/snapshot` | 老師或裝置 | — | `200 ActivitySnapshot`（依角色裁切） | FR-028 |
-| 3 | `POST /activities/{code}/groups/join`（準備中回 `409 JOIN_NOT_OPEN`；組別沒有裝置時免憑證） | 無或裝置 | `{"groupNumber": int \| str, "credential": str \| null}` | `200 {"deviceToken", "groupNumber", "credential", "version"}` | FR-006～012 |
+| 3 | `POST /activities/{code}/groups/join`（準備中回 `409 JOIN_NOT_OPEN`；既有組號一律要憑證；最後一台裝置離開且從未提交的組號已釋放，視為新組號） | 無或裝置 | `{"groupNumber": int \| str, "credential": str \| null}` | `200 {"deviceToken", "groupNumber", "credential", "version"}` | FR-006～012 |
 | 4 | `POST /activities/{code}/groups/leave` | 裝置 | `{}` | `200 {"version"}` | FR-034 |
 | 5 | `DELETE /activities/{code}/groups/{number}`（搶答中回 `409 GROUP_DELETE_DURING_ROUND`） | 老師 | — | `200 {"version"}` | FR-035 |
 | 6 | `POST /activities/{code}/rounds` | 老師 | `{"questionNumbers": [int], "fairMode": bool, "countdownSeconds": int \| null}` | `201 {"roundNumber", "deadline" \| null, "version"}` | FR-013～018 |

@@ -156,8 +156,8 @@
 | `CreateActivity` | （無） | `max_groups` 為 1～99 時：`PREPARING`，version = 1。C7 的跨活動檢查在服務層（研究 R10） |
 | `OpenJoining` | `PREPARING`（須已有題目，否則 `NO_QUESTIONS`） | `JOINING` |
 | `ReplaceQuestions`（002） | `PREPARING`、`JOINING` | 更新 `question_numbers`；`solved_questions` 清空 |
-| `JoinGroup` | `JOINING`、`ROUND_OPEN`、`RESULT_PENDING`、`RESULT_FINAL`（`PREPARING` 回 `JOIN_NOT_OPEN`） | 裝置不在任何組；組號 1～N；新組號：建立 `Group`＋裝置；既有組號：組別**還有裝置**時憑證正確才新增裝置，**沒有任何裝置**時免憑證直接新增 |
-| `LeaveGroup` | `JOINING`、`RESULT_PENDING`、`RESULT_FINAL`（`ROUND_OPEN` 回 `NO_GROUP_SWITCH_DURING_ROUND`） | 移除該裝置 |
+| `JoinGroup` | `JOINING`、`ROUND_OPEN`、`RESULT_PENDING`、`RESULT_FINAL`（`PREPARING` 回 `JOIN_NOT_OPEN`） | 裝置不在任何組；組號 1～N；新組號：建立 `Group`＋裝置；既有組號：憑證正確才新增裝置（含已有提交、所有裝置都已離開的組）；從未提交且沒有裝置的組視為已釋放，以新憑證重建（2026-11-24） |
+| `LeaveGroup` | `JOINING`、`RESULT_PENDING`、`RESULT_FINAL`（`ROUND_OPEN` 回 `NO_GROUP_SWITCH_DURING_ROUND`） | 移除該裝置；若是該組最後一台裝置，且該組 `has_submissions` 為假、`success_count` 為 0，一併移除該 `Group`（釋放組號、舊憑證失效；2026-11-24） |
 | `DeleteGroup` | `JOINING`、`RESULT_PENDING`、`RESULT_FINAL`（`ROUND_OPEN` 回 `GROUP_DELETE_DURING_ROUND`） | 組別存在且 `has_submissions == False` 時，移除組別與其所有裝置（即使還有裝置）；組號可再使用並取得新憑證，舊憑證失效 |
 | `OpenRound` | `JOINING`、`RESULT_FINAL`（`PREPARING` 回 `STAGE_NOT_ALLOWED`，沒有題目時回 `NO_QUESTIONS`） | `ROUND_OPEN`，新增 `Round` |
 | `CloseRound` | `ROUND_OPEN`；目前輪次已關時（`RESULT_PENDING`、`RESULT_FINAL`）視為冪等 | `RESULT_PENDING`，`closed = True`；目前輪次已經關過時，回傳成功但沒有變化（`changed=False`，HTTP `alreadyClosed: true`） |

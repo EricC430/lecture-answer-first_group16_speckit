@@ -204,8 +204,9 @@ def _describe_group_rejection(
         number = _parse_number(command.number_raw, activity.max_groups)
         if number is not None:
             return (
-                f"第 {number} 組已有同學加入；若你是這一組的成員，"
-                "請向同組同學查看本組加入憑證，否則請確認組號。"
+                f"第 {number} 組已有同學加入或已有作答紀錄；若你是這一組的成員，"
+                "請向同組同學查看本組加入憑證（沒有同學在線時請老師查看），"
+                "否則請確認組號。"
             )
     if reason is RejectionReason.GROUP_NOT_FOUND and isinstance(command, DeleteGroup):
         number = _parse_number(command.number_raw, activity.max_groups)

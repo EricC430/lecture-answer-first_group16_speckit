@@ -252,6 +252,10 @@ description: "002-guided-notes-import 任務清單"
 
 - [X] T060 [US5] 在 `<static>/js/import.js` 顯示預覽（題號清單、各題空格數、總題數、總空格數）、頁面重新整理時以 #8 恢復、準備中可改選並重新匯入。
 
+**給 003 的介面（PR #11 審查追加，編號接在 T079 之後以免重編既有任務）**
+
+- [ ] T083 [US5] 在 `src/lecture_quiz/app/guided_notes_import/service.py` 的 `ImportService` 新增 `blanks_per_question(code) -> Mapping[int, int] | None`，實作 [contracts/service-interfaces.md](contracts/service-interfaces.md)「給 003」一節：由最後一次成功匯入的 `ImportRecord.blanks` 依題號計數（單題為 1），沒有成功匯入（或活動不存在）回 `None`；回傳新字典、唯讀、不需要請求者身分、不呼叫 Google；不得匯入 003 的任何型別。**先寫測試**於 `tests/unit/app/guided_notes_import/test_blanks_per_question.py` 並確認紅燈：未匯入回 `None`；單題與題組混合（4 題 6 格 → `{1: 2, 2: 2, 3: 1, 4: 1}`）；重新匯入成功後格數更新；重新匯入失敗（整份被拒）時維持舊格數；回傳字典被修改不影響下次結果。（依賴 T040、T058）
+
 **Checkpoint**: 老師可核對匯入結果，005 可取得來源映射與結構
 
 ---

@@ -244,7 +244,7 @@
 - 新增階段 `JOINING`（開放加入）。建立活動後停在 `PREPARING`，學生不能加入；老師已匯入題目後按「開放加入」（`OpenJoining`，HTTP #12）才進入 `JOINING`。
 - 開輪改成只能從 `JOINING`（第一輪）或 `RESULT_FINAL`（之後各輪）；`PREPARING` 沒有題目時仍回 `NO_QUESTIONS`，有題目時回 `STAGE_NOT_ALLOWED` 並提示先開放加入。
 - 第一輪開始前（`PREPARING`、`JOINING`）都可以重新匯入題目與取消活動（本組判斷：這兩段都還沒有任何結果，理由與原本的準備中相同）。
-- 加入組別：`PREPARING` 回 `JOIN_NOT_OPEN`；組別沒有任何裝置時免憑證。
+- 加入組別：`PREPARING` 回 `JOIN_NOT_OPEN`；既有組號一律要憑證。離開本組：最後一台裝置離開且該組從未提交時釋放組號（2026-11-24 修訂原「沒有任何裝置時免憑證」）。
 - 刪除組別：`JOINING`、`RESULT_PENDING`、`RESULT_FINAL` 允許（即使還有裝置）；`ROUND_OPEN` 回 `GROUP_DELETE_DURING_ROUND`。
 
 **理由**：

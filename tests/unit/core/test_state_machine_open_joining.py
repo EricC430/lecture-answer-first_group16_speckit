@@ -1,7 +1,8 @@
 """T102：開放加入階段、空組免憑證與刪除組別的新規則（alignment 2026-11-23 後的決議）。
 
 - 準備中拆成「準備中」與「開放加入」：老師按「開放加入」（須已匯入題目）後學生才能加入。
-- 該組沒有任何裝置時，不需憑證就能加入。
+- 最後一台裝置主動離開且從未提交：釋放組號；已有提交則保留組別與憑證
+  （2026-11-24 修訂）。
 - 老師在開放加入或結果階段可刪除從未提交的組別（即使還有裝置）；搶答中禁止刪除。
 """
 
@@ -17,13 +18,14 @@ from lecture_quiz.core.activity.commands import (
     EndActivity,
     JoinGroup,
     LeaveGroup,
+    MarkGroupSubmitted,
     OpenJoining,
     OpenRound,
     ReplaceQuestions,
     System,
     Teacher,
 )
-from lecture_quiz.core.activity.models import Stage
+from lecture_quiz.core.activity.models import Stage, freeze
 from lecture_quiz.core.activity.results import (
     IssuedSecrets,
     RejectionReason,
@@ -184,32 +186,84 @@ def test_end_activity_before_first_round_says_cancel_instead():
         )
 
 
-# ── 空組免憑證 ───────────────────────────────────────
+# ── 最後一台裝置離開與重新加入（alignment 2026-11-24 修訂「空組免憑證」）──
 
 
-def test_group_without_devices_can_be_joined_without_credential():
+def _submitted(activity, number):
+    """讓指定組別有提交紀錄（搶答中標記），再回到結果未定案。"""
+    opened = dataclasses.replace(activity, stage=Stage.ROUND_OPEN)
+    marked = apply(opened, MarkGroupSubmitted(System(), number), NOW).activity
+    return dataclasses.replace(marked, stage=Stage.RESULT_PENDING)
+
+
+def test_last_device_leaving_unsubmitted_group_releases_number():
     """Scenario: US2-AS10
 
-    該組沒有任何裝置時，不需憑證就能加入，並共用原本的組別與憑證。
+    最後一台裝置主動離開、該組從未提交：釋放組號，舊憑證失效；下一位不需憑證，
+    直接建立同組號並取得新憑證。
     """
     activity = joining_activity(3)
-    original = activity.groups[3]
-    activity = apply(activity, LeaveGroup(Device("1" * 64)), NOW).activity
-    assert not activity.devices
-    t = _join(activity, Y, 3)
+    t = apply(activity, LeaveGroup(Device(X)), NOW)
     assert t.ok and t.changed
+    assert 3 not in t.activity.groups
+    rejoined = _join(t.activity, Y, 3, new_cred="NEW003")
+    assert rejoined.ok
+    assert rejoined.activity.groups[3].join_credential == "NEW003"
+    late = _join(rejoined.activity, "3" * 64, 3, "CRED03")
+    assert late.rejection is RejectionReason.BAD_CREDENTIAL
+
+
+def test_group_with_submissions_keeps_credential_after_all_devices_leave():
+    """Scenario: US2-AS10
+
+    已有提交紀錄的組，所有裝置都離開後仍保留組別、憑證、提交與成功次數；
+    重新加入必須附原憑證。
+    """
+    activity = _submitted(joining_activity(3), 3)
+    groups = dict(activity.groups)
+    groups[3] = dataclasses.replace(groups[3], success_count=1)
+    activity = dataclasses.replace(activity, groups=groups)
+    original = activity.groups[3]
+    left = apply(activity, LeaveGroup(Device(X)), NOW).activity
+    assert not left.devices
+    assert left.groups[3] == original
+    for credential in (None, "WRONG1"):
+        t = _join(left, Y, 3, credential)
+        assert t.rejection is RejectionReason.BAD_CREDENTIAL
+        assert t.activity == left
+    message = describe_rejection(
+        RejectionReason.BAD_CREDENTIAL,
+        left.stage,
+        JoinGroup(Anonymous(), 3, None),
+        left,
+    )
+    assert "老師" in message
+    t = _join(left, Y, 3, "cred03")
+    assert t.ok
     assert t.activity.groups[3] == original
     assert t.activity.devices[Y].group_number == 3
 
 
-def test_group_without_devices_ignores_a_wrong_credential():
+def test_leaving_with_other_devices_keeps_group_and_credential():
     """Scenario: US2-AS10
 
-    空組不檢查憑證：附上錯誤憑證也能加入。
+    還有其他裝置留在組內：保留原組與憑證，新裝置仍須提供憑證。
     """
+    activity = _join(joining_activity(3), Y, 3, "CRED03").activity
+    left = apply(activity, LeaveGroup(Device(X)), NOW).activity
+    assert left.groups[3] == activity.groups[3]
+    newcomer = "3" * 64
+    assert _join(left, newcomer, 3).rejection is RejectionReason.BAD_CREDENTIAL
+    assert _join(left, newcomer, 3, "CRED03").ok
+
+
+def test_unsubmitted_group_without_devices_is_recreated_on_join():
+    """防禦：從未提交且沒有裝置的組別（不經離開產生的狀態）也視為已釋放。"""
     activity = joining_activity(3)
-    activity = apply(activity, LeaveGroup(Device("1" * 64)), NOW).activity
-    assert _join(activity, Y, 3, "WRONG1").ok
+    empty = dataclasses.replace(activity, devices=freeze({}))
+    t = _join(empty, Y, 3, "CRED03", new_cred="NEW003")
+    assert t.ok
+    assert t.activity.groups[3].join_credential == "NEW003"
 
 
 def test_group_with_a_device_still_requires_credential():
