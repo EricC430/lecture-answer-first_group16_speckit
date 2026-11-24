@@ -174,15 +174,15 @@ description: "004-ranking-review 任務清單"
 
 ### Tests for User Story 5（先寫、確認失敗）⚠️
 
-- [ ] T053 [P] [US5] 在 `tests/unit/core/ranking_review/test_recompute.py` 用 `CROSS_QUESTION` 測試：公平結果題一甲勝、題二乙勝；判錯題一甲後重算為題一乙勝、題二甲勝，兩題都在受影響集合，各組本輪暫算次數仍各為 1（`Scenario: US5-AS1` ↔ OpenSpec「判錯造成跨題勝者改變」）；撤銷後回到判錯前逐項完全相同（`Scenario: US5-AS2`）；某題所有候選被判錯 → 該題 `success_group is None`、不增加任何組次數（`Scenario: US5-AS3` ↔ OpenSpec「全部被判錯」）；對不同題連續判錯、撤銷數次再回到最初判錯集合 → 與最初結果逐題完全相同（`Scenario: US5-AS4`，SC-003）；同一輸入連續重算 100 次逐項相等（SC-002）
-- [ ] T054 [P] [US5] 在同一檔案加入**負對照**：以測試內定義的 `accumulating_recompute`（在舊暫算次數上累加／扣減的錯誤實作）驗證 SC-003 的比較函式「會失敗」——跑完 T053 的操作序列後，`accumulating_recompute` 的結果與初始結果不同、`RankingCalculator.recompute` 相同；證明這組測試有鑑別力（憲章：評測要分得出好壞）
-- [ ] T056 [P] [US5] 在 `tests/unit/app/ranking_review/test_marks_concurrency.py` 測試：兩個判錯請求以 `asyncio.gather` 同時到達（不同提交），依鎖的取得順序逐一套用，結果版本各遞增一次（版本 = 初始 + 2），最終結果等同兩筆判錯都生效後的整輪重算，且與順序無關（`Scenario: US5-AS7`）
-- [ ] T057 [P] [US5] 在 `tests/integration/test_us5_recalc.py` 端對端測試（HTTP + 快照）：先判錯造成題一、題二的 `affectedQuestions == [1, 2]`，再判錯只影響題三的一筆 → `affectedQuestions == [3]`，題一、題二的標示消失；定案後 `affectedQuestions == []`；晚開啟的頁面（新的 `GET /snapshot`）與早開啟頁面看到相同的標示（`Scenario: US5-AS6`）；搶答成功者被判錯後次一名遞補、原搶答成功者 `WRONG`（`Scenario: US5-AS8`）；`resultVersion` 嚴格單調遞增，且連續多次讀取 `GET /snapshot` 永遠不出現較小的版本
+- [X] T053 [P] [US5] 在 `tests/unit/core/ranking_review/test_recompute.py` 用 `CROSS_QUESTION` 測試：公平結果題一甲勝、題二乙勝；判錯題一甲後重算為題一乙勝、題二甲勝，兩題都在受影響集合，各組本輪暫算次數仍各為 1（`Scenario: US5-AS1` ↔ OpenSpec「判錯造成跨題勝者改變」）；撤銷後回到判錯前逐項完全相同（`Scenario: US5-AS2`）；某題所有候選被判錯 → 該題 `success_group is None`、不增加任何組次數（`Scenario: US5-AS3` ↔ OpenSpec「全部被判錯」）；對不同題連續判錯、撤銷數次再回到最初判錯集合 → 與最初結果逐題完全相同（`Scenario: US5-AS4`，SC-003）；同一輸入連續重算 100 次逐項相等（SC-002）
+- [X] T054 [P] [US5] 在同一檔案加入**負對照**：以測試內定義的 `accumulating_recompute`（在舊暫算次數上累加／扣減的錯誤實作）驗證 SC-003 的比較函式「會失敗」——跑完 T053 的操作序列後，`accumulating_recompute` 的結果與初始結果不同、`RankingCalculator.recompute` 相同；證明這組測試有鑑別力（憲章：評測要分得出好壞）
+- [X] T056 [P] [US5] 在 `tests/unit/app/ranking_review/test_marks_concurrency.py` 測試：兩個判錯請求以 `asyncio.gather` 同時到達（不同提交），依鎖的取得順序逐一套用，結果版本各遞增一次（版本 = 初始 + 2），最終結果等同兩筆判錯都生效後的整輪重算，且與順序無關（`Scenario: US5-AS7`）
+- [X] T057 [P] [US5] 在 `tests/integration/test_us5_recalc.py` 端對端測試（HTTP + 快照）：先判錯造成題一、題二的 `affectedQuestions == [1, 2]`，再判錯只影響題三的一筆 → `affectedQuestions == [3]`，題一、題二的標示消失；定案後 `affectedQuestions == []`；晚開啟的頁面（新的 `GET /snapshot`）與早開啟頁面看到相同的標示（`Scenario: US5-AS6`）；搶答成功者被判錯後次一名遞補、原搶答成功者 `WRONG`（`Scenario: US5-AS8`）；`resultVersion` 嚴格單調遞增，且連續多次讀取 `GET /snapshot` 永遠不出現較小的版本
 
 ### Implementation for User Story 5
 
-- [ ] T058 [US5] 確認 `<core>/review.py` 的 `RoundReviewRules.mark` 以**保存的** `RoundResult.order`、開輪基準與完整判錯集合重算（絕不使用 `RoundReview.result.group_counts` 當起點），`affected` 每次實際變更時整個覆蓋、不累計；`ResultView` 在 `final=true` 輸出空 `affectedQuestions`（本任務為驗證與補測：整輪重算與 `mark` 已在 T031、T041、T049 實作，T053～T054 在寫成時可能就通過，不要求先失敗；負對照 T054 證明這組測試有鑑別力）
-- [ ] T059 [US5] 前端：`ranking-review-teacher.js` 與 `ranking-review.js` 對 `affectedQuestions` 內的題目加標示文字「結果已更新」（其他題不標）；在 `ranking-review.js` 實作並匯出 `acceptRankingVersion(roundNumber, resultVersion)`：為每輪記住已收過的最大 `resultVersion`，收到較小者回傳 `false`，兩個前端模組都用它決定是否更新結果區塊（研究 R3，FR-016；其他區塊照常更新）
+- [X] T058 [US5] 確認 `<core>/review.py` 的 `RoundReviewRules.mark` 以**保存的** `RoundResult.order`、開輪基準與完整判錯集合重算（絕不使用 `RoundReview.result.group_counts` 當起點），`affected` 每次實際變更時整個覆蓋、不累計；`ResultView` 在 `final=true` 輸出空 `affectedQuestions`（本任務為驗證與補測：整輪重算與 `mark` 已在 T031、T041、T049 實作，T053～T054 在寫成時可能就通過，不要求先失敗；負對照 T054 證明這組測試有鑑別力）
+- [X] T059 [US5] 前端：`ranking-review-teacher.js` 與 `ranking-review.js` 對 `affectedQuestions` 內的題目加標示文字「結果已更新」（其他題不標）；在 `ranking-review.js` 實作並匯出 `acceptRankingVersion(roundNumber, resultVersion)`：為每輪記住已收過的最大 `resultVersion`，收到較小者回傳 `false`，兩個前端模組都用它決定是否更新結果區塊（研究 R3，FR-016；其他區塊照常更新）
 
 **Checkpoint**: 重算可重現、受影響題目標示正確、版本單調
 

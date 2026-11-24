@@ -3,7 +3,9 @@
 
 import { onStudentSnapshot } from "./student.js";
 import { el } from "./submission.js";
-import { STATUS_LABELS, acceptRankingRounds } from "./ranking-common.js";
+import { STATUS_LABELS, acceptRankingRounds, acceptRankingVersion } from "./ranking-common.js";
+
+export { acceptRankingVersion };
 
 const $ = (id) => document.getElementById(id);
 
@@ -22,8 +24,9 @@ function render(snapshot) {
     const list = el("ul", "", "ranking-own");
     for (const question of round.questions) {
       const mine = question.entries.find((e) => e.groupNumber === own);
-      if (mine) list.append(el("li", `第 ${question.questionNumber} 題：${STATUS_LABELS[mine.displayStatus]}`));
-      else if (question.successGroup === null) list.append(el("li", `第 ${question.questionNumber} 題：未成功`));
+      const updated = round.affectedQuestions.includes(question.questionNumber) ? "（結果已更新）" : "";
+      if (mine) list.append(el("li", `第 ${question.questionNumber} 題：${STATUS_LABELS[mine.displayStatus]}${updated}`));
+      else if (question.successGroup === null) list.append(el("li", `第 ${question.questionNumber} 題：未成功${updated}`));
     }
     wrapper.append(list);
     container.append(wrapper);
