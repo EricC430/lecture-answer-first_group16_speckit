@@ -44,3 +44,29 @@ Claude 實際打開的 12 張：`index-375`、`index-1440`、`teacher-joining-37
 ## 真實 Google 路徑（T096）
 
 006 只改 HTML、CSS 與前端呈現模組，沒有新增或修改任何 Google 匯入、授權或寫回路徑（後端未修改，`git diff` 中 `src/lecture_quiz/` 只有 `adapters/static/`）。真實 Google 路徑驗證不適用；002（T028、T071）與 005（T094）的真實路徑驗證仍以各自的紀錄為準。
+
+## 本次 UI refresh 增量確認（2026-11-25）
+
+| 日期 | 任務 | 指令 | 結果 |
+|---|---|---|---|
+| 2026-11-25 | speckit-implement 前置檢查 | `.specify/scripts/powershell/check-prerequisites.ps1 -Json -RequireTasks -IncludeTasks` | FEATURE_DIR 正確指向 `specs/006-ui-refresh`；requirements checklist 19/19 checked |
+| 2026-11-25 | 本次 UI 靜態檢查 | `node -e ...`（檢查首頁主圖存在、HTML 引用正確、CSS 大括號平衡）；`git diff --check` | `static-ui-check-ok`；diff check 通過 |
+| 2026-11-25 | 本次截圖 | Edge headless `--window-size=1440,1000` 首頁與老師頁；`--window-size=375,900` 學生頁 | 產生並實際打開 `screenshots/home-current.png`、`teacher-current.png`、`student-current.png`；首頁主圖載入，窄版學生表單確認 |
+
+這三張是本次修改後的增量截圖，不取代 T086 要求的完整尺寸與各活動階段矩陣。虛擬環境目前指向不存在的 Python 3.14，因此本回合未宣稱 pytest／ruff／mypy 通過。
+
+## taste-skill redesign confirmation（2026-11-25）
+
+- kind: software，主要產品為課堂搶答學習單；主要動作為「建立活動」。
+- copy lint: `node C:\Users\chent\.codex\plugins\cache\taste-skill\taste-skill\2.5.1\skills\taste-skill\scripts\copy-lint.mjs src/lecture_quiz/adapters/static/index.html --kind software` → 0 FAIL、0 WARN。
+- taste gate: 已以 `gate.mjs --start` 啟動檢查，結果為 `GATE: ERROR`。`consistency.mjs` 無法走訪 1440／390，`check.mjs` 以 exit 2 timeout。依技能規則未重跑 gate。
+- Edge 實際截圖：`screenshots/home-taste-current.png`，使用 `--virtual-time-budget=3000 --window-size=1440,1000`，圖片載入、文字與兩個入口可見。
+- 本次變更：補上 software metadata、改為直接描述產品的標題與說明、移除圖片 caption、移除主圖傾斜、加入一次性的 `data-enter` entrance。
+
+## taste-skill 全頁重做（2026-11-25）
+
+- `teacher.html`、`student.html`、`projection.html` 全部補上 `data-type="software"`、`page-type`、`site-kind` metadata。
+- 老師頁改為控制台 rail + 工作區，學生頁改為加入／作答優先的單一流程，投影頁改為深色播送畫面。
+- 四頁以 Edge headless 實際截圖：`index-taste-current.png`、`teacher-taste-current.png`、`student-taste-current.png`、`projection-taste-current.png`。學生窄版另加 `calc(100vw - 32px)` 容器限制並重新截圖。
+- `copy-lint` 仍為 0 FAIL、0 WARN。`git diff --check` 通過。
+- gate 仍維持前次 `GATE: ERROR`，未重跑，因技能規則要求 timeout 後停止重跑。

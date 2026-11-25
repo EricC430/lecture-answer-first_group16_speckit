@@ -6,30 +6,30 @@
 
 :root {
   /* 面 */
-  --color-canvas: #f2f8f7;
-  --color-surface: #ffffff;
-  --color-card: #e4f0f1;
-  --color-band: #f2e8e2;
+  --color-canvas: #f4f0e6;
+  --color-surface: #fffdf7;
+  --color-card: #e4eee5;
+  --color-band: #f8d8c4;
 
   /* 文字 */
-  --color-text: #283338;
-  --color-text-muted: #4a5a60;
+  --color-text: #142b46;
+  --color-text-muted: #536273;
 
   /* 動作 */
-  --color-primary: #1c5d5f;
-  --color-primary-hover: #156152;
+  --color-primary: #b63d2b;
+  --color-primary-hover: #963022;
   --color-on-primary: #ffffff;
-  --color-secondary: #16325a;
-  --color-outline: #0e4749;
+  --color-secondary: #143a63;
+  --color-outline: #143a63;
 
   /* 裝飾（不承載文字或資訊） */
-  --color-accent: #65b8a2;
-  --color-rose: #d6aec1;
-  --color-border: #a2cbcd;
+  --color-accent: #5cae9a;
+  --color-rose: #f08a67;
+  --color-border: #b9c8c5;
 
   /* 介面元件邊界與焦點 */
-  --color-border-strong: #5b7c80;
-  --color-focus: #16325a;
+  --color-border-strong: #6c7d8f;
+  --color-focus: #b63d2b;
 
   /* 狀態 */
   --color-success: #1b6b3a;
@@ -71,8 +71,8 @@
 
   /* 圓角 */
   --radius-pill: 999px;
-  --radius-card: 12px;
-  --radius-field: 8px;
+  --radius-card: 4px;
+  --radius-field: 3px;
 
   /* 尺寸 */
   --tap-min: 44px;
