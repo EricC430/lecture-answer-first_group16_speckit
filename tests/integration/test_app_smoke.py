@@ -13,7 +13,7 @@ from tests.conftest import FAKE_CLOCK_START, FakeClock
 @pytest.mark.parametrize(
     ("path", "marker"),
     [
-        ("/", "老師頁"),
+        ("/", 'href="teacher.html"'),  # 006 首頁改為角色卡片，不再有「老師頁」字樣
         ("/teacher.html", 'id="sync-banner"'),
         ("/student.html", 'id="sync-status"'),
         ("/js/api.js", "Idempotency-Key"),

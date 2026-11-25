@@ -1,0 +1,59 @@
+@startuml 006-ui-refresh-component
+!pragma layout smetana
+skinparam defaultFontName "Microsoft JhengHei"
+skinparam componentStyle rectangle
+title 006 介面改版 — 組件圖（只改呈現層；001～005 的畫面邏輯與後端不變）
+
+actor "老師" as Teacher
+actor "學生" as Student
+
+package "瀏覽器：呈現層（本功能改動範圍）" {
+  [首頁\n（系統名稱、說明、主插圖、\n老師／學生入口）] as IndexPage
+  [老師頁版面\n（左欄：活動資訊、階段進度、操作；\n右欄：分頁標籤 匯入／作答看板／\n順位與判錯／寫回，依階段自動切換）] as TeacherPage
+  [學生頁版面\n（本組資訊列、倒數、題號導覽列、\n作答卡片、本輪結果）] as StudentPage
+  [投影畫面（唯讀，新分頁）\n（搶答中：代碼、階段、題號、倒數；\n關輪後：每題各組答案、順位、\n判錯與遞補；不含理由與成功次數）] as Projection
+  [共用元件樣式\n（按鈕四種＋三種狀態、輸入、卡片、\n表格、狀態標籤、訊息、同步中斷橫幅、\n階段進度、空狀態）] as Components
+  [設計基準值\n（色彩、字體角色、字級、間距、\n圓角、動畫時間；淺色主題）] as Tokens
+  [互動回饋\n（送出中／已送出／失敗、新資料提示、\n倒數接近截止、減少動態效果）] as Feedback
+  [本機字體與插圖\n（開源字體、手繪線稿插圖；\n離線可用）] as Assets
+}
+
+package "瀏覽器：既有畫面邏輯（不改行為）" {
+  [001～005 子功能畫面腳本\n（決定顯示哪些資訊、何時可操作；\n不可信文字一律以純文字呈現）] as FeatureJs
+  [共用同步與 API 腳本\n（WebSocket 推送、HTTP 操作、\n同步中斷狀態）] as SyncJs
+}
+
+package "後端（不改動）" {
+  [FastAPI 靜態檔與 HTTP／WebSocket\n（001～005 的服務與核心純函式）] as Backend
+}
+
+Teacher --> IndexPage
+Student --> IndexPage
+Teacher --> TeacherPage
+Teacher --> Projection : 開啟投影\n（全班觀看）
+Student --> StudentPage
+
+IndexPage ..> Components
+TeacherPage ..> Components
+StudentPage ..> Components
+Projection ..> Components
+Projection ..> SyncJs : 沿用老師同步通道，\n以白名單只留公開欄位\n（不新增後端資料或權限）
+Components ..> Tokens
+Feedback ..> Tokens
+Components ..> Assets
+IndexPage ..> Assets
+
+TeacherPage ..> FeatureJs : 保留既有區塊與\n元素識別
+StudentPage ..> FeatureJs : 保留既有區塊與\n元素識別
+FeatureJs ..> Feedback : 套用狀態樣式
+SyncJs ..> Feedback : 同步中斷時\n隱藏成功提示
+FeatureJs ..> SyncJs
+SyncJs --> Backend : HTTP／WebSocket
+Backend ..> Assets : 提供靜態檔
+
+note bottom of Backend
+  相依方向不變：呈現層 → 畫面邏輯 → 後端轉接層 → 核心。
+  本功能不新增 API、不改後端資料；老師頁與學生頁可見的資訊不變（FR-001、FR-002），
+  投影畫面只呈現 OpenSpec 公開範圍內的資料（FR-031、FR-032）。
+end note
+@enduml

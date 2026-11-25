@@ -28,6 +28,11 @@ dev = [
     "ruff>=0.6",
     "mypy>=1.10",
 ]
+# 006：只在重新產生字型子集時安裝（scripts/build_font_subset.py；tests/unit/ui/test_font_subset.py）。
+fonts = [
+    "fonttools>=4.50",
+    "brotli>=1.1",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/lecture_quiz"]

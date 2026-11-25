@@ -41,6 +41,9 @@ export function renderAnswers(answers) {
 export function renderAnswerForm({ questionNumber, blanks, onSubmit }) {
   const form = el("form", "", "answer-form");
   form.noValidate = true;
+  // 006：只供樣式與題號導覽讀取的狀態屬性（contracts/ui-dom.md），不影響送出流程
+  form.dataset.question = String(questionNumber);
+  form.dataset.submitState = "idle";
   form.append(el("h4", blanks > 1 ? `第 ${questionNumber} 題（${blanks} 格）` : `第 ${questionNumber} 題`));
   const inputs = [];
   for (let i = 1; i <= blanks; i += 1) {
@@ -77,6 +80,8 @@ export function renderAnswerForm({ questionNumber, blanks, onSubmit }) {
     element: form,
     setBusy(busy) {
       button.disabled = busy || locked;
+      if (busy) form.dataset.submitState = "busy";
+      else if (!locked && form.dataset.submitState === "busy") form.dataset.submitState = "idle";
       if (busy) {
         status.textContent = "送出中…";
         status.className = "submit-status";
@@ -88,6 +93,7 @@ export function renderAnswerForm({ questionNumber, blanks, onSubmit }) {
       for (const input of inputs) input.disabled = disabled;
     },
     showError(message, action = null) {
+      form.dataset.submitState = "error";
       status.textContent = message;
       status.className = "submit-status error-message";
       if (action) {
@@ -99,6 +105,7 @@ export function renderAnswerForm({ questionNumber, blanks, onSubmit }) {
     },
     showSubmitted(submission, message = "已送出") {
       lock();
+      form.dataset.submitState = "done";
       status.textContent = `${message}（${formatTime(submission.receivedAt)}）`;
       status.className = "submit-status";
       result.replaceChildren(renderAnswers(submission.answers));

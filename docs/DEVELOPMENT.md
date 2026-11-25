@@ -154,6 +154,16 @@ def create_router(app: FastAPI) -> APIRouter:
 - 不可信的文字（組名、學習單內容、學生答案）一律用 `textContent` 輸出，不得用 `innerHTML`（原則 V）。
 - 「成功」類提示加上 `class="success-hint"`；同步中斷時會自動隱藏（FR-028）。
 
+#### 006 介面改版後的版面與樣式約定
+
+006（`specs/006-ui-refresh/`，研究 R11）把老師頁改成左右兩欄、右欄分頁，並集中管理設計基準值。新增畫面時：
+
+- **老師頁的新區塊放進右欄的分頁面板**：`teacher.html` 的 `#panel-import`、`#panel-board`、`#panel-ranking`、`#panel-export`，依該區塊在哪個階段使用來選。不要放在兩欄版面之外，否則窄螢幕會出現整頁水平捲動。
+- **需要新分頁時**：在 `teacher.html` 的 `role="tablist"` 加一個 `<button role="tab" id="tab-…" aria-controls="panel-…" hidden>` 和對應的 `<div id="panel-…" role="tabpanel" hidden>`，再到 `js/teacher-layout.js` 的 `TABS`（分頁清單）登記；若某階段要自動切到這個分頁，同步修改 `TAB_FOR_STAGE`。分頁標籤是否出現由面板內區塊的 `hidden` 決定，子功能腳本照舊只控制自己的區塊。
+- **樣式只能用 `css/tokens.css` 的基準值**：顏色、字級、間距、圓角都寫 `var(--…)`，不得寫死色碼。`tests/unit/ui/test_no_hardcoded_colors.py` 會擋下 `app.css`、`projection.css` 裡的寫死色碼；新增基準值時要更新 `specs/006-ui-refresh/contracts/design-tokens.md`，並確認 `tests/unit/ui/test_contrast.py` 的對比度仍然通過。
+- **投影畫面只能顯示白名單內的欄位**：`js/projection-view.js` 的 `toProjectionView` 是純函式白名單，決定哪些快照欄位會出現在投影畫面。要增減欄位時，同步修改 `specs/006-ui-refresh/contracts/projection-view.md` 與 `tests/browser/test_ui_projection.py`，並確認搶答中不會露出答案（FR-031、FR-032）。
+- **新增中文字後重建字型子集**：首頁與標題使用的襯線字型只收錄 `static/` 裡出現過的字。新增文字後 `tests/unit/ui/test_font_subset.py` 會失敗並列出缺字，依 `scripts/build_font_subset.py` 開頭的說明重新產生。
+
 ### 3.5 快照擴充（003 起）
 
 子功能要把自己的資料放進 001 的快照時，不改 001 的快照程式，改為註冊擴充函式：

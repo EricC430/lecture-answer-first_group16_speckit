@@ -4,19 +4,33 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Vibe Coding 課堂搶答系統</title>
+  <link rel="stylesheet" href="css/tokens.css">
   <link rel="stylesheet" href="css/app.css">
 </head>
-<body>
-  <header>
-    <h1>Vibe Coding 課堂搶答系統</h1>
-  </header>
-  <main>
-    <section>
-      <ul>
-        <li><a href="teacher.html">老師頁</a></li>
-        <li><a href="student.html">學生頁</a></li>
-      </ul>
+<body class="home">
+  <!-- 006 首頁（spec US5；FR-021）。主插圖由組員以 AI 生成後換成 img/hero.webp（tasks T082、T083）；
+       交付前使用手寫的暫代圖（illustrations.svg#hero-placeholder）。 -->
+  <main class="home-main">
+    <section class="home-intro">
+      <p class="eyebrow">Classroom quiz · Guided Notes</p>
+      <h1>Vibe Coding 課堂搶答</h1>
+      <p class="home-lead">老師匯入 Google 試算表學習單，各組用手機搶答；結束後把搶答成功的答案寫回原學習單。</p>
+      <nav class="home-roles" aria-label="選擇身分">
+        <a id="role-teacher" class="home-role home-role--teacher" href="teacher.html">
+          <span class="home-role-title">我是老師</span>
+          <span class="home-role-desc">建立活動、匯入學習單、開輪與判錯</span>
+        </a>
+        <a id="role-student" class="home-role" href="student.html">
+          <span class="home-role-title">我是學生</span>
+          <span class="home-role-desc">輸入活動代碼與組號，加入搶答</span>
+        </a>
+      </nav>
     </section>
+    <figure class="home-hero">
+      <svg role="img" aria-label="幾組學生圍著桌子舉手搶答，旁邊有一個大計時器" viewBox="0 0 400 260">
+        <use href="img/illustrations.svg#hero-placeholder"></use>
+      </svg>
+    </figure>
   </main>
 </body>
 </html>

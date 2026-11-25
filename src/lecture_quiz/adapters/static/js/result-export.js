@@ -116,6 +116,8 @@ function renderAttempt(attempt) {
   ui.attempt = attempt;
   $("export-status").hidden = attempt === null;
   if (attempt === null) return;
+  // 006：只供樣式讀取的狀態屬性（contracts/ui-dom.md），不影響寫回流程
+  $("export-status-text").dataset.status = attempt.status;
   $("export-status-text").textContent =
     `第 ${attempt.attemptId} 次${attempt.kind === "RETRY" ? "（重試）" : ""}：${STATUS_LABELS[attempt.status] ?? attempt.status}`;
   $("export-status-counts").textContent =

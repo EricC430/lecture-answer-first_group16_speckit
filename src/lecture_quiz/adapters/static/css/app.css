@@ -1,122 +1,1198 @@
-/* 共用樣式：版面、狀態列、「同步中斷」橫幅、錯誤訊息。各子功能的樣式可追加在檔案最後。 */
+/*
+ * 共用樣式（006 介面改版：specs/006-ui-refresh/）。
+ * 只能引用 css/tokens.css 的基準值，不得寫死色碼（tests/unit/ui/test_no_hardcoded_colors.py）。
+ * 既有類別名稱（contracts/ui-dom.md）全部保留；各子功能的樣式在檔案後段，依子功能分節。
+ */
 
-:root {
-  --color-text: #1f2328;
-  --color-muted: #59636e;
-  --color-border: #d1d9e0;
-  --color-danger-bg: #ffebe9;
-  --color-danger-text: #82071e;
-  --color-banner-bg: #fff8c5;
-  --color-banner-text: #6b4b00;
+/* ── 字型（本機，離線可用；OFL 授權見 fonts/OFL-*.txt） ── */
+@font-face {
+  font-family: "Noto Serif TC 600";
+  src: url("../fonts/NotoSerifTC-600-subset.woff2") format("woff2");
+  font-weight: 400 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Inter";
+  src: url("../fonts/Inter-latin.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  src: url("../fonts/IBMPlexMono-400-latin.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  src: url("../fonts/IBMPlexMono-600-latin.woff2") format("woff2");
+  font-weight: 600;
+  font-display: swap;
+}
+
+/* ── 基礎 ── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
   margin: 0;
-  font-family: system-ui, "Microsoft JhengHei", "Noto Sans TC", sans-serif;
+  background: var(--color-canvas);
   color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
   line-height: 1.6;
+  overflow-wrap: anywhere;
 }
 
-header,
-main {
-  max-width: 960px;
-  margin: 0 auto;
-  padding: 1rem;
+h1,
+h2,
+h3,
+h4 {
+  margin: 0 0 var(--space-2);
+  font-family: var(--font-heading);
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--color-text);
 }
 
-header h1 {
-  margin: 0;
-  font-size: 1.5rem;
+h1 {
+  font-size: var(--text-2xl);
 }
 
-main > section {
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  padding: 1rem;
-  margin-bottom: 1rem;
+h2 {
+  font-size: var(--text-xl);
+}
+
+h3 {
+  font-size: var(--text-lg);
+  margin-top: var(--space-4);
+}
+
+h4 {
+  font-size: var(--text-base);
+}
+
+p {
+  margin: 0 0 var(--space-2);
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
 }
 
 [hidden] {
   display: none !important;
 }
 
-/* 「同步中斷」橫幅（sync.js 控制） */
+:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.eyebrow {
+  margin: 0 0 var(--space-1);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.muted {
+  color: var(--color-text-muted);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ── 頁首與版面 ── */
+.site-header {
+  max-width: var(--layout-max);
+  margin: 0 auto;
+  padding: var(--space-4) var(--space-3) var(--space-3);
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.site-header h1 {
+  margin: 0;
+}
+
+.brand {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+main {
+  max-width: var(--layout-max);
+  margin: 0 auto;
+  padding: 0 var(--space-3) var(--space-8);
+}
+
+/* 子功能區塊＝卡片（無陰影，以底色分隔） */
+section[data-feature],
+.card {
+  background: var(--color-card);
+  border-radius: var(--radius-card);
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+/* ── 按鈕 ── */
+button,
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--tap-min);
+  min-width: var(--tap-min);
+  padding: 0 var(--space-4);
+  margin: 0 var(--space-2) var(--space-2) 0;
+  border: 1.5px solid var(--color-outline);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-outline);
+  font: inherit;
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+
+button:hover:not(:disabled),
+.button:hover {
+  background: var(--color-surface);
+}
+
+button:disabled {
+  cursor: not-allowed;
+  border-color: var(--color-border-strong);
+  color: var(--color-text-muted);
+  background: var(--color-neutral-bg);
+}
+
+button[aria-busy="true"] {
+  cursor: progress;
+}
+
+.btn-primary,
+.btn-primary:hover:not(:disabled) {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
+}
+
+.btn-secondary,
+.btn-secondary:hover:not(:disabled) {
+  background: var(--color-secondary);
+  border-color: var(--color-secondary);
+  color: var(--color-on-primary);
+}
+
+.btn-danger {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: var(--color-danger);
+  color: var(--color-on-primary);
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0;
+}
+
+/* ── 表單 ── */
+label {
+  display: block;
+  margin: 0 0 var(--space-3);
+  font-weight: 500;
+}
+
+input[type="text"],
+input[type="number"],
+select,
+textarea {
+  display: block;
+  width: 100%;
+  max-width: 28rem;
+  min-height: var(--tap-min);
+  margin-top: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border: 1.5px solid var(--color-border-strong);
+  border-radius: var(--radius-field);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+}
+
+textarea {
+  max-width: none;
+  resize: vertical;
+}
+
+input:disabled,
+textarea:disabled {
+  background: var(--color-neutral-bg);
+  color: var(--color-text-muted);
+}
+
+input[aria-invalid="true"],
+textarea[aria-invalid="true"] {
+  border-color: var(--color-danger);
+}
+
+input[type="checkbox"] {
+  width: 22px;
+  height: 22px;
+  margin: 0 var(--space-2) 0 0;
+  vertical-align: middle;
+  accent-color: var(--color-primary);
+}
+
+label:has(> input[type="checkbox"]) {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap-min);
+  margin-right: var(--space-4);
+}
+
+fieldset {
+  margin: 0 0 var(--space-3);
+  padding: var(--space-3);
+  border: 1.5px solid var(--color-border-strong);
+  border-radius: var(--radius-field);
+}
+
+legend {
+  padding: 0 var(--space-2);
+  font-weight: 600;
+}
+
+/* ── 表格 ── */
+.table-scroll {
+  overflow-x: auto;
+  margin-bottom: var(--space-3);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--color-surface);
+  border-radius: var(--radius-field);
+  overflow: hidden;
+}
+
+caption {
+  text-align: left;
+  font-weight: 600;
+  padding: var(--space-2) 0;
+}
+
+th,
+td {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  vertical-align: top;
+}
+
+th {
+  background: var(--color-band);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* ── 狀態標籤（FR-015；data-model.md「狀態標籤對照」） ── */
+.status-label,
+.success-hint,
+.ranking-entry > strong {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-3) 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: 1.6;
+}
+
+.status-label::before,
+.success-hint::before,
+.ranking-entry > strong::before,
+.error-message::before,
+.error::before,
+#sync-banner::before {
+  content: "";
+  flex: none;
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  background: currentColor;
+  -webkit-mask: var(--icon) center / contain no-repeat;
+  mask: var(--icon) center / contain no-repeat;
+}
+
+.status-label--success,
+.success-hint,
+.ranking-entry.status-success > strong,
+.ranking-entry.status-correct > strong {
+  --icon: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M4 12.5l5 5L20 6.5' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.status-label--danger,
+.ranking-entry.status-wrong > strong {
+  --icon: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M6 6l12 12M18 6L6 18' fill='none' stroke='black' stroke-width='3' stroke-linecap='round'/></svg>");
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+
+.status-label--warning {
+  --icon: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M7 3h10M7 21h10M8 3c0 5 8 5 8 9s-8 4-8 9M16 3c0 5-8 5-8 9s8 4 8 9' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round'/></svg>");
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+}
+
+.status-label--neutral,
+.ranking-entry.status-failed > strong,
+.ranking-entry > strong {
+  --icon: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M5 12h14' fill='none' stroke='black' stroke-width='3' stroke-linecap='round'/></svg>");
+  background: var(--color-neutral-bg);
+  color: var(--color-neutral);
+}
+
+/* 優先序：上面的 .ranking-entry > strong 是預設（中性），帶狀態類別者覆蓋 */
+.ranking-entry.status-success > strong,
+.ranking-entry.status-correct > strong {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.ranking-entry.status-wrong > strong {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+
+/* ── 訊息 ── */
+.error-message,
+.error {
+  --icon: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><circle cx='12' cy='12' r='9' fill='none' stroke='black' stroke-width='2.4'/><path d='M12 7v6M12 16.5v.5' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round'/></svg>");
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-field);
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+
+.error-message::before,
+.error::before {
+  margin-top: 0.3em;
+}
+
+.error ul {
+  margin: 0;
+}
+
+.notice {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-field);
+  background: var(--color-band);
+}
+
+/* ── 同步中斷橫幅與狀態列（001 FR-028；006 FR-012） ── */
 #sync-banner {
+  --icon: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 3L2 20h20L12 3z' fill='none' stroke='black' stroke-width='2.2' stroke-linejoin='round'/><path d='M12 9v5M12 17v.5' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round'/></svg>");
   position: sticky;
   top: 0;
-  z-index: 10;
-  padding: 0.5rem 1rem;
-  background: var(--color-banner-bg);
-  color: var(--color-banner-text);
-  font-weight: bold;
+  z-index: 30;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+  font-weight: 700;
   text-align: center;
 }
 
-/* 同步中斷時隱藏所有「成功」提示（FR-028） */
+/* 同步中斷時隱藏所有「成功」提示（001 FR-028） */
 body.sync-broken .success-hint {
   display: none !important;
 }
 
-/* 右下角狀態列：v{version}｜延遲 */
 #sync-status {
   position: fixed;
-  right: 0.5rem;
-  bottom: 0.5rem;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  background: rgba(0, 0, 0, 0.65);
-  color: #fff;
-  font: 12px/1.4 ui-monospace, Consolas, monospace;
+  right: var(--space-2);
+  bottom: var(--space-2);
+  z-index: 20;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-field);
+  background: var(--color-text);
+  color: var(--color-canvas);
+  font: 12px/1.4 var(--font-mono);
+  opacity: 0.85;
+  pointer-events: none;
 }
 
 #sync-status:empty {
   display: none;
 }
 
-.error-message {
-  padding: 0.5rem 0.75rem;
-  border-radius: 4px;
-  background: var(--color-danger-bg);
-  color: var(--color-danger-text);
+/* ── 空狀態（FR-022） ── */
+.empty-state {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-field);
+  background: var(--color-band);
+  color: var(--color-text-muted);
 }
 
-.muted {
-  color: var(--color-muted);
+.empty-state p {
+  margin: 0;
 }
+
+.empty-state svg {
+  flex: none;
+  width: 88px;
+  height: 72px;
+  color: var(--color-text);
+}
+
+/* ── 新資料提示（FR-020；js/feedback.js） ── */
+.is-new {
+  animation: highlight-new var(--duration-highlight) var(--ease-out);
+}
+
+@keyframes highlight-new {
+  from {
+    background-color: var(--color-warning-bg);
+  }
+
+  to {
+    background-color: transparent;
+  }
+}
+
+/* ══ 子功能樣式 ══ */
 
 /* ── 001 活動 ── */
 .activity-code {
-  font: bold 1.5rem/1.2 ui-monospace, Consolas, monospace;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xl);
+  font-weight: 600;
   letter-spacing: 0.15em;
+  color: var(--color-primary);
 }
 
 .countdown {
-  margin-left: 0.5rem;
-  font-weight: bold;
+  margin-left: var(--space-2);
+  font-family: var(--font-mono);
+  font-weight: 600;
 }
 
-.controls button {
-  margin-right: 0.5rem;
+/* ── 003 作答 ── */
+.answer-form {
+  margin: 0 0 var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  border-left: 6px solid var(--color-border);
 }
 
-/* 003 老師作答看板 */
-.submission-board { border-collapse: collapse; width: 100%; }
-.submission-board caption { text-align: left; font-weight: bold; padding: 0.25rem 0; }
-.submission-board th, .submission-board td { border: 1px solid #ccc; padding: 0.25rem 0.5rem; vertical-align: top; text-align: left; }
-.answer-text { white-space: pre-wrap; overflow-wrap: anywhere; }
-.published-round { border-top: 1px solid #ccc; padding-top: 0.5rem; }
-.published-questions, .published-entries { padding-left: 1.25rem; }
+.answer-form[data-submit-state="busy"] {
+  border-left-color: var(--color-warning);
+}
 
-/* 004 順位與判錯 */
-.ranking-round { margin-bottom: 1rem; }
-.ranking-entries { list-style: none; padding-left: 0; }
-.ranking-entry { margin: 0.25rem 0; }
-.ranking-answer { white-space: pre-wrap; margin: 0.25rem 0; }
-.ranking-entry.status-wrong strong { color: #b00020; }
-.ranking-entry.status-success strong, .ranking-entry.status-correct strong { color: #1b7f3b; }
+.answer-form[data-submit-state="done"] {
+  border-left-color: var(--color-success);
+}
 
-/* 005 寫回與匯出 */
-.export-table { border-collapse: collapse; width: 100%; }
-.export-table th, .export-table td { border: 1px solid #ccc; padding: 0.25rem 0.5rem; vertical-align: top; text-align: left; }
-.export-answer { white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; }
-.export-impact-replace { color: #b00020; }
+.answer-form[data-submit-state="error"] {
+  border-left-color: var(--color-danger);
+}
+
+.answer-form button[type="submit"] {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.answer-form button[type="submit"]:disabled {
+  background: var(--color-neutral-bg);
+  border-color: var(--color-border-strong);
+  color: var(--color-text-muted);
+}
+
+.submit-status {
+  margin: var(--space-2) 0 0;
+  font-weight: 600;
+}
+
+.answer-form[data-submit-state="busy"] .submit-status {
+  color: var(--color-warning);
+}
+
+.answer-form[data-submit-state="done"] .submit-status {
+  color: var(--color-success);
+}
+
+/* 同步中斷時，連「已送出」這種成功文字也隱藏（006 FR-012） */
+body.sync-broken .answer-form[data-submit-state="done"] .submit-status {
+  visibility: hidden;
+}
+
+.answer-list {
+  margin: var(--space-2) 0 0;
+  padding-left: var(--space-4);
+}
+
+.answer-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.submission-board {
+  display: block;
+  overflow-x: auto;
+  width: 100%;
+}
+
+.submission-board th,
+.submission-board td {
+  border: 1px solid var(--color-border);
+}
+
+.published-round {
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-2);
+}
+
+.published-questions,
+.published-entries {
+  padding-left: var(--space-4);
+}
+
+/* ── 004 順位與判錯 ── */
+.ranking-round {
+  margin-bottom: var(--space-4);
+}
+
+.ranking-entries {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+}
+
+.ranking-entry {
+  margin: 0 0 var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-field);
+  background: var(--color-surface);
+}
+
+.ranking-entry button {
+  margin: var(--space-2) var(--space-2) 0 0;
+}
+
+.ranking-answer {
+  white-space: pre-wrap;
+  margin: var(--space-1) 0;
+}
+
+.ranking-finalize {
+  margin-top: var(--space-2);
+}
+
+/* ── 005 寫回與匯出 ── */
+.export-table th,
+.export-table td {
+  border: 1px solid var(--color-border);
+}
+
+.export-answer {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 0;
+}
+
+.export-impact-replace {
+  color: var(--color-danger);
+  font-weight: 600;
+}
+
+/* ══ 006 學生頁（US2；FR-007～FR-012） ══ */
+
+/* 點擊目標至少 44×44（FR-027） */
+.brand,
+#question-nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap-min);
+}
+
+/* 作答區上方的固定列：本組、階段、倒數＋題號導覽（FR-008、FR-008a） */
+.answer-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  margin: 0 calc(-1 * var(--space-4)) var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-card);
+  border-bottom: 1px solid var(--color-border);
+}
+
+body.sync-broken .answer-sticky {
+  top: var(--banner-height, 44px);
+}
+
+.answer-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+}
+
+.answer-group {
+  font-weight: 700;
+}
+
+.answer-stage {
+  color: var(--color-text-muted);
+}
+
+.answer-countdown,
+#student-countdown,
+#round-countdown {
+  font-family: var(--font-mono);
+  font-size: var(--text-xl);
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.answer-countdown {
+  margin-left: auto;
+}
+
+/* 接近截止：顏色＋粗框，不閃爍（FR-010） */
+.answer-countdown[data-urgent],
+#student-countdown[data-urgent],
+#round-countdown[data-urgent] {
+  padding: 0 var(--space-2);
+  border: 2px solid var(--color-warning);
+  border-radius: var(--radius-field);
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+  animation: none;
+}
+
+#question-nav {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  margin-top: var(--space-1);
+  max-height: 56px;
+}
+
+#question-nav a {
+  flex: none;
+  padding: 0 var(--space-3);
+  border: 1.5px solid var(--color-outline);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-outline);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+#question-nav a[data-state="done"] {
+  border-color: var(--color-success);
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+#question-nav a[data-state="busy"] {
+  border-color: var(--color-warning);
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+}
+
+#question-nav a[data-state="done"]::before {
+  content: "✓ ";
+}
+
+/* 題號導覽跳轉時，標題不被固定列擋住 */
+.answer-form h4 {
+  scroll-margin-top: 140px;
+}
+
+@media (max-width: 480px) {
+  .site-header {
+    padding: var(--space-3) var(--space-3) var(--space-2);
+  }
+
+  section[data-feature],
+  .card {
+    padding: var(--space-3);
+  }
+
+  .answer-sticky {
+    margin: 0 calc(-1 * var(--space-3)) var(--space-3);
+    padding: var(--space-2) var(--space-3);
+  }
+
+  .activity-code {
+    font-size: var(--text-xl);
+  }
+}
+
+/* ══ 006 老師頁（US3；FR-017～FR-020） ══ */
+
+.teacher-layout {
+  display: grid;
+  gap: var(--space-4);
+  align-items: start;
+}
+
+@media (min-width: 1024px) {
+  .teacher-layout {
+    grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  }
+
+  #teacher-sidebar {
+    position: sticky;
+    top: var(--space-3);
+    max-height: calc(100vh - var(--space-5));
+    overflow-y: auto;
+  }
+}
+
+#teacher-sidebar > section[data-feature] {
+  margin-bottom: var(--space-3);
+}
+
+#teacher-sidebar .activity-code {
+  font-size: var(--text-xl);
+}
+
+/* 階段進度（FR-017：文字＋粗體＋標記，不只靠顏色） */
+#stage-progress {
+  list-style: none;
+  margin: 0 0 var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  counter-reset: stage;
+}
+
+#stage-progress li {
+  counter-increment: stage;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 2px 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+#stage-progress li::before {
+  content: counter(stage);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: 1.5px solid var(--color-border-strong);
+  border-radius: var(--radius-pill);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+#stage-progress li[aria-current="step"] {
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+#stage-progress li[aria-current="step"]::before {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+#stage-progress li[aria-current="step"]::after {
+  content: "目前";
+  margin-left: auto;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--color-card);
+  color: var(--color-primary);
+  font-size: var(--text-xs);
+}
+
+#open-projection {
+  width: 100%;
+  margin-top: var(--space-3);
+}
+
+/* 分頁列 */
+#teacher-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+#teacher-tabs [role="tab"] {
+  margin: 0;
+  border-color: var(--color-border-strong);
+  color: var(--color-text);
+  background: var(--color-surface);
+}
+
+#teacher-tabs [role="tab"][aria-selected="true"] {
+  border-color: var(--color-primary);
+  background: var(--color-card);
+  color: var(--color-primary);
+  box-shadow: inset 0 -3px 0 var(--color-primary);
+}
+
+.tab-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+  font-size: var(--text-xs);
+}
+
+.tab-badge::before {
+  content: "●";
+}
+
+#workspace-empty {
+  min-height: 120px;
+}
+
+/* 每個階段只有一個主要操作（FR-018；body[data-stage] 由 teacher-layout.js 設定） */
+body[data-stage="PREPARING"] #open-joining,
+body[data-stage="JOINING"] #open-round-panel button[type="submit"],
+body[data-stage="ROUND_OPEN"] #close-round,
+body[data-stage="RESULT_PENDING"] .ranking-finalize,
+body[data-stage="RESULT_FINAL"] #open-round-panel button[type="submit"],
+body[data-stage="ENDED"] #export-preview-button,
+#create-activity {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+body[data-stage="PREPARING"] #open-joining:hover:not(:disabled),
+body[data-stage="JOINING"] #open-round-panel button[type="submit"]:hover:not(:disabled),
+body[data-stage="ROUND_OPEN"] #close-round:hover:not(:disabled),
+body[data-stage="RESULT_PENDING"] .ranking-finalize:hover:not(:disabled),
+body[data-stage="RESULT_FINAL"] #open-round-panel button[type="submit"]:hover:not(:disabled),
+body[data-stage="ENDED"] #export-preview-button:hover:not(:disabled),
+#create-activity:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
+}
+
+#cancel-activity,
+#end-activity {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}
+
+#cancel-activity:hover:not(:disabled),
+#end-activity:hover:not(:disabled) {
+  background: var(--color-danger);
+  color: var(--color-on-primary);
+}
+
+/* 減少動態效果：新資料提示改為靜態外框（FR-016） */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .is-new {
+    outline: 2px solid var(--color-warning);
+    outline-offset: -2px;
+  }
+}
+
+/* 表格欄位不被擠成一字一行：表頭與組別表不換行，寬度不夠時在 .table-scroll 內水平捲動（FR-019） */
+th,
+#groups-table td {
+  white-space: nowrap;
+  overflow-wrap: normal;
+}
+
+#teacher-sidebar th,
+#teacher-sidebar td {
+  padding: var(--space-2);
+}
+
+/* 網格欄位可縮小，讓寬表格在 .table-scroll 內捲動，而不是撐出整頁水平捲動 */
+.teacher-layout {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.teacher-layout > * {
+  min-width: 0;
+}
+
+@media (min-width: 1024px) {
+  .teacher-layout {
+    grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  }
+}
+
+/* ══ 006 狀態標籤一致化（US4；FR-015） ══ */
+
+/* 學生頁的 004 結果列（ranking-review.js 的 .ranking-line）與老師頁同一套外觀 */
+.ranking-own {
+  list-style: none;
+  margin: 0;
+  padding-left: 0;
+}
+
+.ranking-line {
+  margin: 0 0 var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-field);
+  background: var(--color-surface);
+}
+
+.ranking-line > strong {
+  --icon: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M5 12h14' fill='none' stroke='black' stroke-width='3' stroke-linecap='round'/></svg>");
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-3) 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--color-neutral-bg);
+  color: var(--color-neutral);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.ranking-line > strong::before {
+  content: "";
+  flex: none;
+  width: 1em;
+  height: 1em;
+  background: currentColor;
+  -webkit-mask: var(--icon) center / contain no-repeat;
+  mask: var(--icon) center / contain no-repeat;
+}
+
+.ranking-line.status-success > strong,
+.ranking-line.status-correct > strong {
+  --icon: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M4 12.5l5 5L20 6.5' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.ranking-line.status-wrong > strong {
+  --icon: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M6 6l12 12M18 6L6 18' fill='none' stroke='black' stroke-width='3' stroke-linecap='round'/></svg>");
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+
+/* 「未成功」：老師頁是題目區塊內的段落，學生頁是沒有狀態類別的結果列 */
+.ranking-question > p.muted,
+.ranking-line:not([class*="status-"]) {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--color-neutral-bg);
+  color: var(--color-neutral);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.ranking-updated {
+  display: inline-block;
+  margin-left: var(--space-2);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
+/* 005 寫回狀態（result-export.js 的 data-status） */
+#export-status-text[data-status] {
+  display: inline-flex;
+  padding: 2px var(--space-3);
+  border-radius: var(--radius-pill);
+  font-weight: 600;
+}
+
+#export-status-text[data-status="SUCCESS"] {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+#export-status-text[data-status="FAILED"] {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+
+#export-status-text[data-status="PENDING"],
+#export-status-text[data-status="IN_PROGRESS"] {
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+}
+
+/* ══ 006 首頁與空狀態（US5；FR-021、FR-022） ══ */
+
+.home-main {
+  display: grid;
+  gap: var(--space-5);
+  align-items: center;
+  min-height: 100vh;
+  padding-top: var(--space-6);
+}
+
+@media (min-width: 900px) {
+  .home-main {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
+.home-intro h1 {
+  font-size: clamp(var(--text-2xl), 5vw, var(--text-display));
+  margin-bottom: var(--space-3);
+}
+
+.home-lead {
+  max-width: 34rem;
+  font-size: var(--text-lg);
+  color: var(--color-text-muted);
+}
+
+.home-roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+}
+
+.home-role {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 15rem;
+  padding: var(--space-3) var(--space-5);
+  border: 1.5px solid var(--color-outline);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  color: var(--color-outline);
+  text-decoration: none;
+}
+
+.home-role--teacher {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.home-role-title {
+  font-family: var(--font-heading);
+  font-size: var(--text-xl);
+  font-weight: 600;
+}
+
+.home-role-desc {
+  font-size: var(--text-sm);
+}
+
+.home-hero {
+  margin: 0;
+  padding: var(--space-4);
+  border-radius: var(--radius-card);
+  background: var(--color-band);
+  color: var(--color-text);
+}
+
+.home-hero svg,
+.home-hero img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* 空狀態只在對應內容不存在時出現（用既有元素的 hidden 判斷，不改子功能腳本） */
+#import-section:has(#import-preview:not([hidden])) #import-empty,
+#import-section:has(#import-issues:not([hidden])) #import-empty,
+body:has(#round-submission-section:not([hidden])) #student-waiting,
+body:has(#ranking-review-student-section:not([hidden])) #student-waiting,
+body:has(#student-ended:not([hidden])) #student-waiting,
+body:has(#student-cancelled:not([hidden])) #student-waiting {
+  display: none;
+}
+
+#groups-empty.empty-state {
+  margin-bottom: var(--space-3);
+}

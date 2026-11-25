@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg">
+  <!--
+    006 空狀態與首頁暫代插圖（Claude 手寫，research.md R9；specs/006-ui-refresh/illustrations.md）。
+    手繪單線條：輪廓用 currentColor，平塗用 tokens.css 的兩個插圖填色自訂屬性（illus-fill-1、illus-fill-2），
+    檔內不寫色碼，顏色跟著設計基準值。以 svg 的 use 元素引用本檔的 symbol id。
+    注意：XML 註解內不可出現連續兩個連字號，否則整個檔案解析失敗、所有插圖都不會顯示。
+  -->
+
+  <!-- 尚未有組別：三個人圍著桌子，等待加入 -->
+  <symbol id="empty-groups" viewBox="0 0 120 100">
+    <g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <ellipse cx="60" cy="74" rx="40" ry="10" style="fill: var(--illus-fill-1)"/>
+      <circle cx="30" cy="34" r="8" style="fill: var(--illus-fill-2)"/>
+      <path d="M17 66c1-12 6-20 13-20s12 8 13 20"/>
+      <circle cx="60" cy="26" r="8"/>
+      <path d="M47 60c1-12 6-20 13-20s12 8 13 20"/>
+      <circle cx="90" cy="34" r="8" style="fill: var(--illus-fill-2)"/>
+      <path d="M77 66c1-12 6-20 13-20s12 8 13 20"/>
+      <path d="M96 12q4 -4 8 0M100 8v-4" stroke-width="1.8"/>
+      <path d="M14 14l3 3M20 10v4" stroke-width="1.8"/>
+    </g>
+  </symbol>
+
+  <!-- 尚未匯入：一張學習單與往下的箭頭 -->
+  <symbol id="empty-import" viewBox="0 0 120 100">
+    <g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M34 12h38l14 14v62H34z" style="fill: var(--illus-fill-1)"/>
+      <path d="M72 12v14h14"/>
+      <path d="M42 36h30M42 46h36M42 56h22M42 66h32"/>
+      <rect x="66" y="52" width="14" height="8" rx="2" style="fill: var(--illus-fill-2)"/>
+      <path d="M100 30v34M92 56l8 8 8-8"/>
+      <path d="M16 22q6-6 12 0" stroke-width="1.8"/>
+    </g>
+  </symbol>
+
+  <!-- 尚未開輪：沙漏與舉起的手 -->
+  <symbol id="empty-round" viewBox="0 0 120 100">
+    <g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M26 14h28M26 86h28"/>
+      <path d="M30 14c0 20 20 22 20 36S30 66 30 86M50 14c0 20-20 22-20 36s20 16 20 36"/>
+      <path d="M33 80c3-6 11-6 14 0z" style="fill: var(--illus-fill-2)"/>
+      <path d="M72 88V52c0-4 6-4 6 0V30c0-4 6-4 6 0v18-24c0-4 6-4 6 0v26-20c0-4 6-4 6 0v34c0 14-8 24-20 24"/>
+      <path d="M72 58c-4-6-10-4-8 2l8 14" style="fill: var(--illus-fill-1)"/>
+      <path d="M100 18l4-4M104 26h6M94 12v-6" stroke-width="1.8"/>
+    </g>
+  </symbol>
+
+  <!-- 尚無結果：頒獎台與星星 -->
+  <symbol id="empty-results" viewBox="0 0 120 100">
+    <g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M44 48h32v40H44z" style="fill: var(--illus-fill-1)"/>
+      <path d="M14 62h30v26H14zM76 70h30v18H76z" style="fill: var(--illus-fill-2)"/>
+      <path d="M60 14l5 10 11 1-8 7 3 11-11-6-11 6 3-11-8-7 11-1z"/>
+      <path d="M56 66h8M60 62v12M27 76h4M89 80h4"/>
+      <path d="M10 88h100"/>
+    </g>
+  </symbol>
+
+  <!-- 首頁主插圖交付前的暫代圖：幾組學生圍桌舉手搶答，旁邊一個大計時器 -->
+  <symbol id="hero-placeholder" viewBox="0 0 400 260">
+    <g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+      <ellipse cx="170" cy="200" rx="140" ry="30" style="fill: var(--illus-fill-1)"/>
+      <circle cx="80" cy="110" r="18" style="fill: var(--illus-fill-2)"/>
+      <path d="M50 182c2-30 14-48 30-48s28 18 30 48"/>
+      <path d="M96 140l20-46M112 96l8-8M116 94l-2-12"/>
+      <circle cx="170" cy="96" r="18"/>
+      <path d="M140 170c2-30 14-48 30-48s28 18 30 48"/>
+      <circle cx="260" cy="110" r="18" style="fill: var(--illus-fill-2)"/>
+      <path d="M230 182c2-30 14-48 30-48s28 18 30 48"/>
+      <path d="M244 140l-20-46M228 96l-8-8M224 94l2-12"/>
+      <circle cx="340" cy="70" r="44" style="fill: var(--illus-fill-1)"/>
+      <path d="M340 40v30l18 12M326 20h28M340 20v6"/>
+      <path d="M300 30l-8-8M380 30l8-8" stroke-width="2.4"/>
+      <path d="M30 40q10-10 20 0M190 30q8-8 16 0" stroke-width="2.4"/>
+    </g>
+  </symbol>
+</svg>

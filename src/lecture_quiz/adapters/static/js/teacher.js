@@ -11,16 +11,10 @@ import {
 } from "./identity.js";
 import { startCountdown } from "./countdown.js";
 import { connectSync } from "./sync.js";
+import { STAGE_LABELS } from "./stage-labels.js";
 
-export const STAGE_LABELS = {
-  PREPARING: "準備中",
-  JOINING: "開放加入",
-  ROUND_OPEN: "搶答中",
-  RESULT_PENDING: "結果未定案",
-  RESULT_FINAL: "結果已定案",
-  ENDED: "已結束",
-  CANCELLED: "已取消",
-};
+// 006：階段文字搬到無副作用的 stage-labels.js（投影畫面也要用），這裡重新匯出，名稱與內容不變
+export { STAGE_LABELS };
 
 const $ = (id) => document.getElementById(id);
 

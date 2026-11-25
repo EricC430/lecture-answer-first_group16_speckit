@@ -4,13 +4,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>學生｜Vibe Coding 課堂搶答系統</title>
+  <link rel="stylesheet" href="css/tokens.css">
   <link rel="stylesheet" href="css/app.css">
 </head>
 <body>
   <!-- 共用：同步中斷橫幅與右下角狀態列，由 js/sync.js 控制 -->
   <div id="sync-banner" role="status" hidden></div>
-  <header>
-    <h1>學生頁</h1>
+  <header class="site-header">
+    <a class="brand" href="index.html">Vibe Coding 課堂搶答</a>
+    <h1>學生作答</h1>
   </header>
   <main id="student-main">
     <!--
@@ -20,14 +22,15 @@
     -->
     <!-- ── 子功能區塊開始 ── -->
     <section id="activity-section" data-feature="001-activity-session">
+      <p class="eyebrow">Your group</p>
       <h2>活動</h2>
       <p id="student-error" class="error-message" role="alert" hidden></p>
       <form id="student-join" novalidate>
         <h3>加入組別</h3>
-        <label>活動代碼：<input type="text" id="join-code" autocomplete="off" maxlength="12"></label>
-        <label>組號：<input type="text" id="join-number" inputmode="numeric" autocomplete="off" maxlength="8"></label>
+        <label>活動代碼：<input type="text" id="join-code" autocomplete="off" maxlength="12" aria-describedby="student-error"></label>
+        <label>組號：<input type="text" id="join-number" inputmode="numeric" autocomplete="off" maxlength="8" aria-describedby="student-error"></label>
         <label>本組加入憑證（加入已存在的組別時需要；請看同組同學的畫面，同學都不在時請老師查看）：
-          <input type="text" id="join-credential" autocomplete="off" maxlength="12"></label>
+          <input type="text" id="join-credential" autocomplete="off" maxlength="12" aria-describedby="student-error"></label>
         <button type="submit">加入</button>
       </form>
       <div id="student-info" hidden>
@@ -45,15 +48,27 @@
         <p id="student-ended" hidden>活動已結束。未成功題：<span id="student-unsolved"></span></p>
         <p id="student-cancelled" hidden>活動已取消。</p>
         <p><button type="button" id="new-join" hidden>加入其他活動</button></p>
+        <div id="student-waiting" class="empty-state"><svg aria-hidden="true" viewBox="0 0 120 100"><use href="img/illustrations.svg#empty-round"></use></svg><p>等老師開始搶答。開始後，作答區會出現在下方。</p></div>
       </div>
     </section>
     <section id="round-submission-section" data-feature="003-round-submission" hidden>
+      <p class="eyebrow">Answer</p>
       <h2>作答</h2>
       <p class="muted">同一組每一題每一輪只算第一次送出；題組要填滿每一格才能送出。</p>
       <p id="round-deadline-note" class="muted" role="status"></p>
+      <!-- 006：作答區上方的固定列（本組、階段、倒數的唯讀鏡像＋題號導覽），由 js/question-nav.js 維護 -->
+      <div id="answer-sticky" class="answer-sticky">
+        <p class="answer-status" aria-hidden="true">
+          <span id="answer-group" class="answer-group"></span>
+          <span id="answer-stage" class="answer-stage"></span>
+          <span id="answer-countdown" class="answer-countdown"></span>
+        </p>
+        <nav id="question-nav" aria-label="題號導覽" hidden></nav>
+      </div>
       <div id="answer-forms"></div>
     </section>
     <section id="ranking-review-student-section" data-feature="004-ranking-review" hidden>
+      <p class="eyebrow">Results</p>
       <h2>本輪結果</h2>
       <div id="ranking-review-student-list"></div>
     </section>
@@ -64,6 +79,7 @@
   <script type="module" src="js/student.js"></script>
   <script type="module" src="js/round-submission.js"></script>
   <script type="module" src="js/ranking-review.js"></script>
+  <script type="module" src="js/question-nav.js"></script>
   <!-- ── 子功能 script 結束 ── -->
 </body>
 </html>

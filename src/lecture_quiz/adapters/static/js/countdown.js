@@ -13,10 +13,13 @@ export function startCountdown(getElement) {
     if (!element) return;
     if (!deadline) {
       element.textContent = "";
+      element.removeAttribute("data-urgent");
       return;
     }
     const remaining = Math.max(0, Math.ceil((Date.parse(deadline) - Date.now()) / 1000));
     element.textContent = remaining > 0 ? `剩餘 ${remaining} 秒` : "已到截止時間";
+    // 006 FR-010：剩 10 秒內只加屬性給樣式使用，倒數計算不變
+    element.toggleAttribute("data-urgent", remaining <= 10);
   }
 
   return {

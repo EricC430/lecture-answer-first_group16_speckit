@@ -8,6 +8,7 @@
 （不跳過、不假裝通過）。
 """
 
+import base64
 import json
 import os
 import re
@@ -54,6 +55,7 @@ class Page:
         self.session_id = session_id
         self.target_id = target_id
         self.errors: list[str] = []
+        self.requests: list[str] = []
 
     def call(self, method: str, **params: Any) -> dict[str, Any]:
         """呼叫這個分頁的 CDP 方法。"""
@@ -118,6 +120,47 @@ class Page:
         """點擊元素。"""
         self.eval(f"document.querySelector({json.dumps(selector)}).click(), true")
 
+    def set_viewport(self, width: int, height: int, scale: float = 1) -> None:
+        """設定視窗大小與裝置像素比（`scale=2` 模擬 200% 縮放）。"""
+        self.call(
+            "Emulation.setDeviceMetricsOverride",
+            width=width,
+            height=height,
+            deviceScaleFactor=scale,
+            mobile=False,
+        )
+
+    def emulate_media(self, reduced_motion: bool) -> None:
+        """模擬（或取消模擬）作業系統的「減少動態效果」設定。"""
+        value = "reduce" if reduced_motion else ""
+        self.call(
+            "Emulation.setEmulatedMedia",
+            features=[{"name": "prefers-reduced-motion", "value": value}],
+        )
+
+    def track_network(self) -> None:
+        """開始記錄這個分頁發出的每個請求網址（之後用 `network_urls()` 讀取）。"""
+        self.call("Network.enable")
+
+    def network_urls(self) -> list[str]:
+        """目前為止記錄到的請求網址。
+
+        先送一個空命令來回一趟：同一條連線上，這之前送出的事件一定先於回應抵達，
+        所以回傳時已收齊。
+        """
+        self.call("Runtime.evaluate", expression="0")
+        return list(self.requests)
+
+    def screenshot(self, path: str) -> None:
+        """把目前視窗截成 PNG 存到 `path`。
+
+        先把分頁帶到前景：同時開著多個分頁時，背景分頁不會產生畫格，
+        `Page.captureScreenshot` 會一直等不到回應。
+        """
+        self.call("Page.bringToFront")
+        data = self.call("Page.captureScreenshot", format="png")["data"]
+        Path(path).write_bytes(base64.b64decode(data))
+
 
 class Browser:
     """一個無頭瀏覽器程序。"""
@@ -144,6 +187,7 @@ class Browser:
         endpoint = self._read_endpoint()
         self.ws = connect(endpoint, max_size=None)
         self._next_id = 0
+        self._pages: dict[str, Page] = {}
 
     def _read_endpoint(self) -> str:
         deadline = time.time() + 20
@@ -165,7 +209,11 @@ class Browser:
         session_id: str | None = None,
         page: Page | None = None,
     ) -> dict[str, Any]:
-        """送出 CDP 命令並等待回應；沿途收集頁面的 console 錯誤與例外。"""
+        """送出 CDP 命令並等待回應；沿途收集各分頁的 console 錯誤、例外與請求網址。
+
+        事件依它的 `sessionId` 交給所屬分頁，而不是交給目前發命令的分頁；
+        同時開著老師、學生、投影分頁時，才不會把別頁的錯誤或請求算錯對象。
+        """
         self._next_id += 1
         message: dict[str, Any] = {
             "id": self._next_id,
@@ -181,8 +229,9 @@ class Browser:
                 if "error" in reply:
                     raise AssertionError(f"{method} 失敗：{reply['error']}")
                 return reply.get("result", {})
-            if page is not None:
-                self._collect(reply, page)
+            owner = self._pages.get(reply.get("sessionId", ""), page)
+            if owner is not None:
+                self._collect(reply, owner)
 
     @staticmethod
     def _collect(event: dict[str, Any], page: Page) -> None:
@@ -200,6 +249,8 @@ class Browser:
             )
         elif method == "Log.entryAdded" and params["entry"].get("level") == "error":
             page.errors.append(params["entry"].get("text", ""))
+        elif method == "Network.requestWillBeSent":
+            page.requests.append(params["request"]["url"])
 
     def new_page(self) -> Page:
         """開一個新分頁。"""
@@ -208,6 +259,7 @@ class Browser:
             "Target.attachToTarget", {"targetId": target, "flatten": True}
         )["sessionId"]
         page = Page(self, session, target)
+        self._pages[session] = page
         page.call("Page.enable")
         page.call("Runtime.enable")
         page.call("Log.enable")

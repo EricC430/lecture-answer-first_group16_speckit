@@ -1,0 +1,65 @@
+@startuml 006-ui-refresh-sequence
+!pragma layout smetana
+skinparam defaultFontName "Microsoft JhengHei"
+title 006 介面改版 — 時序圖（學生送出答案的畫面回饋、同步中斷，以及投影畫面的判錯遞補）
+
+actor "學生" as Student
+participant "學生頁版面\n（作答卡片、狀態標籤）" as Page
+participant "互動回饋" as Feedback
+participant "003 畫面腳本\n（既有）" as Js
+participant "共用同步與 API\n（既有）" as Sync
+participant "後端\n（不改動）" as Backend
+participant "老師頁版面\n（作答看板）" as TeacherPage
+
+Student -> Page : 填寫答案並按「送出」
+Page -> Feedback : 按鈕切換為「送出中」
+Feedback --> Page : 停用按鈕，避免重複送出
+Page -> Js : 送出事件（行為不變）
+Js -> Sync : HTTP 提交
+Sync -> Backend : POST 提交
+
+alt 後端接受
+  Backend --> Sync : 成功回應
+  Sync --> Js
+  Js -> Feedback : 套用「已送出」
+  Feedback --> Page : 狀態標籤「已送出」（文字＋顏色）
+  Backend -> Sync : WebSocket 推送新快照（老師）
+  Sync -> TeacherPage : 更新作答看板
+  TeacherPage -> Feedback : 新資料短暫提示（<= 2 秒，不搶焦點）
+else 後端拒絕（截止、重複、驗證失敗）
+  Backend --> Sync : 錯誤回應（使用者看得懂的訊息）
+  Sync --> Js
+  Js -> Feedback : 套用「送出失敗」
+  Feedback --> Page : 欄位旁顯示錯誤訊息（純文字），按鈕恢復可操作
+else 連線中斷（沒有收到回應）
+  Sync -> Feedback : 同步中斷
+  Feedback --> Page : 頂端顯示中斷橫幅，隱藏所有成功提示\n（不得顯示「已送出」）
+  ... 連線恢復 ...
+  Sync -> Backend : 取得最新完整快照
+  Backend --> Sync : 快照（含本組已送出狀態）
+  Sync -> Feedback : 移除中斷橫幅
+  Feedback --> Page : 直接顯示最新狀態，不閃回舊資料
+end
+
+== 關輪後：老師判錯，投影畫面顯示遞補 ==
+actor "老師" as Teacher2
+participant "投影畫面\n（唯讀）" as Projection
+Teacher2 -> TeacherPage : 對目前搶答成功者按「判錯」
+TeacherPage -> Sync : HTTP 判錯（004 既有行為）
+Sync -> Backend : POST 判錯（帶結果版本）
+Backend --> Sync : 成功，結果版本 +1
+Backend -> Sync : WebSocket 推送老師快照\n（與老師頁同一通道，不新增後端資料）
+Sync -> Projection : 新快照（舊版本晚到則忽略）
+Projection -> Projection : 以白名單轉成投影檢視\n（只留公開欄位，toProjectionView）\n並更新結果卡片
+Projection -> Feedback : 原成功者標「答錯」、下一組標「搶答成功」
+Feedback --> Projection : 顯示「第 N 組遞補」，短暫過場\n（減少動態效果時直接切換）
+note right of Projection
+  2 秒內完成（FR-034）。
+  搶答中投影畫面不顯示任何組的作答資訊（FR-032）。
+end note
+
+note over Feedback
+  使用者開啟「減少動態效果」時，
+  所有切換都直接完成，沒有位移、縮放或閃爍。
+end note
+@enduml
