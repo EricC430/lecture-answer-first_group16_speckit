@@ -33,9 +33,9 @@ description: "007-browser-identity-sync 的任務清單"
 
 **Purpose**: 確認工作環境，並記下改動前的測試基準，供之後比對。
 
-- [ ] T001 建立 GitHub Issue「007 同一瀏覽器共用學生身分與跨分頁同步」，把本機分支 `feature/007-browser-identity-sync` 改名為 `feature/<issue>-007-browser-identity-sync`，並更新 `specs/007-browser-identity-sync/spec.md` 與 `plan.md` 開頭的 Feature Branch。
-- [ ] T002 記錄改動前的基準：在 repo 根目錄執行 `.venv\Scripts\pytest`（預設排除 perf、real_google），把日期、指令與通過／失敗／略過數寫進 `specs/007-browser-identity-sync/quickstart.md` 的「驗證紀錄」表（新增一列「改動前基準」）。
-- [ ] T003 [P] 確認 `pyproject.toml` 已有 Ruff 與 mypy 設定（憲章技術限制 2；001 已設定，沿用）。執行 `ruff check .`、`ruff format --check .`、`mypy` 確認改動前就是全部通過；沒有通過的項目要先記下來，以免之後誤算成 007 的回歸。
+- [x] T001 建立 GitHub Issue「007 同一瀏覽器共用學生身分與跨分頁同步」，把本機分支 `feature/007-browser-identity-sync` 改名為 `feature/<issue>-007-browser-identity-sync`，並更新 `specs/007-browser-identity-sync/spec.md` 與 `plan.md` 開頭的 Feature Branch。
+- [x] T002 記錄改動前的基準：在 repo 根目錄執行 `.venv\Scripts\pytest`（預設排除 perf、real_google），把日期、指令與通過／失敗／略過數寫進 `specs/007-browser-identity-sync/quickstart.md` 的「驗證紀錄」表（新增一列「改動前基準」）。
+- [x] T003 [P] 確認 `pyproject.toml` 已有 Ruff 與 mypy 設定（憲章技術限制 2；001 已設定，沿用）。執行 `ruff check .`、`ruff format --check .`、`mypy` 確認改動前就是全部通過；沒有通過的項目要先記下來，以免之後誤算成 007 的回歸。
 
 ---
 
@@ -45,19 +45,19 @@ description: "007-browser-identity-sync 的任務清單"
 
 ### 測試（先寫、先看到失敗）
 
-- [ ] T004 [P] 單元測試 `tests/unit/app/test_browser_key.py`，驗證 `new_browser_key()` 與 `is_browser_key(value)`：
+- [x] T004 [P] 單元測試 `tests/unit/app/test_browser_key.py`，驗證 `new_browser_key()` 與 `is_browser_key(value)`：
   - 新金鑰長度 43、字元集符合 `[A-Za-z0-9_-]`，連續 1000 次不重複。
   - 空字串、`None`、42 或 44 字元、含 `.`、`=`、空白或中文時，`is_browser_key` 回 False。
-- [ ] T005 [P] 契約測試 `tests/contract/test_http_browser_session.py`，對應 contracts §1：
+- [x] T005 [P] 契約測試 `tests/contract/test_http_browser_session.py`，對應 contracts §1：
   - (a) 沒帶 cookie 時回 204、本文為空，`Set-Cookie` 含 `lq_browser=`、`HttpOnly`、`SameSite=Strict`、`Path=/`、`Max-Age=86400`，且不含 `Secure`、`Domain`。
   - (b) 帶格式正確的 cookie 再呼叫，回 204 且沒有 `Set-Cookie`。
   - (c) 帶格式錯誤的 cookie，回 204 並發新金鑰。
   - (d) 同一個 client 連續呼叫 3 次，cookie 值不變。
-- [ ] T006 [P] 契約測試 `tests/contract/test_http_request_token.py`，驗證 `request_token` 的優先順序（research R4）：
+- [x] T006 [P] 契約測試 `tests/contract/test_http_request_token.py`，驗證 `request_token` 的優先順序（research R4）：
   - 同時帶 Bearer（老師 token）與 cookie（某組學生）時，以老師身分處理：老師專用操作成功。
   - 只有 cookie 時是學生身分。
   - cookie 格式錯誤時視為匿名。
-- [ ] T007 修改 `tests/contract/test_http_join.py`，對應 contracts §3：
+- [x] T007 修改 `tests/contract/test_http_join.py`，對應 contracts §3：
   - 成功回應的 key 只有 `groupNumber`、`credential`、`version`，不含 `deviceToken`。
   - 沒有 cookie 也沒有 Bearer 時回 `400 BROWSER_SESSION_REQUIRED`，訊息為「瀏覽器沒有保存身分，請允許本網站儲存資料後重新整理頁面。」，而且老師快照的組別數不變（FR-013）。
   - 帶 cookie、代碼不存在時回 `404 ACTIVITY_NOT_FOUND`，不是 410。
@@ -65,41 +65,41 @@ description: "007-browser-identity-sync 的任務清單"
 
 ### 實作
 
-- [ ] T008 [P] 在 `src/lecture_quiz/app/activity/secrets_gen.py` 新增 `new_browser_key() -> str`（`secrets.token_urlsafe(32)`）與 `is_browser_key(value: object) -> bool`（長度 43、字元集 `[A-Za-z0-9_-]`），附型別提示與 Google 風格 docstring（data-model「瀏覽器金鑰」）。
-- [ ] T009 新增 `src/lecture_quiz/adapters/web/browser_session.py`：
+- [x] T008 [P] 在 `src/lecture_quiz/app/activity/secrets_gen.py` 新增 `new_browser_key() -> str`（`secrets.token_urlsafe(32)`）與 `is_browser_key(value: object) -> bool`（長度 43、字元集 `[A-Za-z0-9_-]`），附型別提示與 Google 風格 docstring（data-model「瀏覽器金鑰」）。
+- [x] T009 新增 `src/lecture_quiz/adapters/web/browser_session.py`：
   - 常數 `COOKIE_NAME = "lq_browser"`、`COOKIE_MAX_AGE = 86400`。
   - `browser_key_from(cookies: Mapping[str, str]) -> str | None`：格式不符時回 None。
   - `create_router() -> APIRouter`，提供 `POST /browser-session`：已有合法金鑰時回 204、不設 cookie；否則以 `response.set_cookie(COOKIE_NAME, new_browser_key(), max_age=86400, httponly=True, samesite="strict", path="/")` 設定，不設 `secure` 與 `domain`，本文為空。
   - 只用 `annotate_request_log` 記錄結果，不記錄 cookie（research R10）。
-- [ ] T010 在 `src/lecture_quiz/main.py` 把 `browser_session.create_router()` 掛在 `/api` 之下，位置與 001 的 router 相同，必須在 `app.mount("/", NoCacheStaticFiles(...))` 之前。
-- [ ] T011 在 `src/lecture_quiz/adapters/web/common.py` 新增 dependency `request_token(authorization: Header, request: Request) -> str | None`：
+- [x] T010 在 `src/lecture_quiz/main.py` 把 `browser_session.create_router()` 掛在 `/api` 之下，位置與 001 的 router 相同，必須在 `app.mount("/", NoCacheStaticFiles(...))` 之前。
+- [x] T011 在 `src/lecture_quiz/adapters/web/common.py` 新增 dependency `request_token(authorization: Header, request: Request) -> str | None`：
   - 先用 `bearer_token` 的結果；沒有時才用 `browser_key_from(request.cookies)`。
   - `bearer_token` 保留不動，給只接受 Bearer 的用途。
   - 在 `src/lecture_quiz/adapters/web/http_api.py` 把 `Token = Annotated[str | None, Depends(bearer_token)]` 改成 `Depends(request_token)`。002～005 import 同一個 `Token`，會一起改變，確認它們不需要再改。
-- [ ] T012 修改 `src/lecture_quiz/app/activity/service.py` 的 `join()`：
+- [x] T012 修改 `src/lecture_quiz/app/activity/service.py` 的 `join()`：
   - 新增必填參數 `browser_key: str`。
   - 刪除 `token = new_token()`，改成 `IssuedSecrets(device_token_hash=hash_token(browser_key), group_credential=new_credential())`，並以 `JoinGroup(requester, number_raw, credential_raw, device_token_hash=hash_token(browser_key))` 建立指令（欄位由 T022 新增；T022 完成前先以預設值 None 呼叫也可）。
   - `build` 改用 `hash_token(browser_key)` 找裝置。
   - `JoinedDevice` 移除 `device_token` 欄位，並更新 docstring。
-- [ ] T013 修改 `src/lecture_quiz/adapters/web/http_api.py` 的 `join_group` 路由（contracts §3）：
+- [x] T013 修改 `src/lecture_quiz/adapters/web/http_api.py` 的 `join_group` 路由（contracts §3）：
   - 金鑰取 `bearer_token(...)`，沒有時取 cookie；兩者都沒有時拋 `ApiError(400, "BROWSER_SESSION_REQUIRED", "瀏覽器沒有保存身分，請允許本網站儲存資料後重新整理頁面。")`，不呼叫服務層。
   - 把金鑰傳給 `service().join(..., browser_key=...)`。
   - 回應本文移除 `deviceToken`。
   - 呼叫 `unwrap` 時第三個參數只傳 Bearer，不傳 cookie，所以活動不存在時回 404。
-- [ ] T014 新增測試輔助函式 `new_browser(client: TestClient) -> str`，放在 `tests/conftest.py`（research R8）：
+- [x] T014 新增測試輔助函式 `new_browser(client: TestClient) -> str`，放在 `tests/conftest.py`（research R8）：
   1. `client.cookies.clear()`。
   2. `POST /api/browser-session`。
   3. 從 `response.cookies["lq_browser"]` 取值並回傳。
 
   `join_group()` 改成先呼叫 `new_browser(client)`，再以 `headers={"Authorization": f"Bearer {key}"}` 加入，回傳該金鑰。docstring 註明「Bearer 路徑，學生實際的 cookie 路徑另由 007 測試涵蓋」。
-- [ ] T015 依 T014 的模式，改寫其餘直接讀 `deviceToken` 的測試，以 `grep -rn --include=*.py "deviceToken" tests` 列出全部位置後逐一處理（改動前共 12 個檔案、31 處）。涵蓋：
+- [x] T015 依 T014 的模式，改寫其餘直接讀 `deviceToken` 的測試，以 `grep -rn --include=*.py "deviceToken" tests` 列出全部位置後逐一處理（改動前共 12 個檔案、31 處）。涵蓋：
   - `tests/integration/conftest.py`、`tests/integration/ranking_world.py`、`tests/unit/app/ranking_review/conftest.py`
   - `tests/browser/conftest.py`（`World.join`）
   - `tests/perf/test_sync_latency.py`、`test_submission_latency.py`、`test_ranking_latency.py`、`test_export_latency.py`
   - 各個 `tests/integration/test_*.py`、`tests/contract/test_http_join.py`
 
   改完後 `grep -rn --include=*.py "deviceToken" tests` 只能剩下 T007「回應不含 deviceToken」的斷言。
-- [ ] T016 執行 `.venv\Scripts\pytest`，與 T002 的基準比對，並把結果記入 quickstart 驗證紀錄：
+- [x] T016 執行 `.venv\Scripts\pytest`，與 T002 的基準比對，並把結果記入 quickstart 驗證紀錄（2026-11-26 03:04：1387 passed、4 failed；4 個失敗皆屬 US1 尚未實作的 T023 訊息與 T026 前端，於 T030 再驗證；過程中發現並修正 P-01，見 verification.md）：
   - 通過數不少於基準（另加新增測試的數量）。
   - 失敗數為 0，或與基準相同且逐一說明原因。
   - 有新的失敗時，先修正再往下做，不得放寬斷言（AI 開發守則「測試不能是假綠燈」）。

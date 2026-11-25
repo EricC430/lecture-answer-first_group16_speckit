@@ -9,6 +9,7 @@
 import asyncio
 
 from lecture_quiz.app.activity.registry import ActivityRegistry
+from lecture_quiz.app.activity.secrets_gen import new_browser_key
 from lecture_quiz.app.activity.service import ActivityService
 from tests.conftest import FakeClock, ManualScheduler
 
@@ -63,8 +64,12 @@ def test_dedupe_lookup_and_record_happen_inside_lock():
         code = created.value.code
         teacher = service.resolve_requester(code, created.value.teacher_token)
         await service.replace_questions(code, teacher, (1, 2))
+        key = new_browser_key()  # 同一個瀏覽器以同一個 Idempotency-Key 重送
         joined = await asyncio.gather(
-            *(service.join(code, 1, None, None, "join-key") for _ in range(3))
+            *(
+                service.join(code, 1, None, None, "join-key", browser_key=key)
+                for _ in range(3)
+            )
         )
         assert all(j == joined[0] for j in joined)
         opened = await asyncio.gather(

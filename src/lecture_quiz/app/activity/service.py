@@ -95,9 +95,8 @@ class CreatedActivity:
 
 @dataclass(frozen=True)
 class JoinedDevice:
-    """加入組別的結果；`device_token` 只在這裡出現一次。"""
+    """加入組別的結果；瀏覽器金鑰不在其中（007 FR-008，只存在 cookie）。"""
 
-    device_token: str
     group_number: int
     credential: str
     version: int
@@ -161,6 +160,17 @@ def _identity(actor: Actor) -> str:
     if isinstance(actor, Teacher | Device):
         return actor.token_hash
     return "system" if isinstance(actor, System) else "anonymous"
+
+
+def _idempotency_identity(command: Command) -> str:
+    """Idempotency-Key 的身分範圍。
+
+    加入組別以瀏覽器雜湊為範圍（007 verification P-01）：同一瀏覽器第一次加入時是匿名，
+    重送時已是組員；若以請求者區分，重送會查不到快取而回 409。
+    """
+    if isinstance(command, JoinGroup) and command.device_token_hash:
+        return command.device_token_hash
+    return _identity(command.actor)
 
 
 class ActivityService:
@@ -453,8 +463,13 @@ class ActivityService:
         credential_raw: object = None,
         requester: Requester | None = None,
         idempotency_key: str | None = None,
+        *,
+        browser_key: str,
     ) -> Outcome[JoinedDevice]:
         """以組號加入組別（US2）；新組號建立組別並發憑證，既有組號比對憑證。
+
+        007 起裝置 token 就是瀏覽器金鑰（research R2）：由呼叫端從 cookie（或 Bearer）
+        取得後傳入，`hash_token(browser_key)` 即這個瀏覽器在本活動的裝置雜湊。
 
         Args:
             code: 活動代碼。
@@ -462,25 +477,29 @@ class ActivityService:
             credential_raw: 組別加入憑證的原始輸入。
             requester: 已解析的身分；已是某組成員的裝置會被拒絕。
             idempotency_key: 前端送來的 key。
+            browser_key: 這個瀏覽器的金鑰。
 
         Returns:
-            裝置 token（只出現這一次）、組號、該組憑證與版本。
+            組號、該組憑證與版本（金鑰不回傳）。
         """
-        token = new_token()
+        device_hash = hash_token(browser_key)
         issued = IssuedSecrets(
-            device_token_hash=hash_token(token), group_credential=new_credential()
+            device_token_hash=device_hash, group_credential=new_credential()
         )
 
         def build(t: Transition, activity: Activity) -> JoinedDevice:
-            device = activity.devices[hash_token(token)]
+            device = activity.devices[device_hash]
             group = activity.groups[device.group_number]
-            return JoinedDevice(
-                token, group.number, group.join_credential, activity.version
-            )
+            return JoinedDevice(group.number, group.join_credential, activity.version)
 
         return await self._execute(
             code,
-            JoinGroup(requester or Anonymous(), number_raw, credential_raw),
+            JoinGroup(
+                requester or Anonymous(),
+                number_raw,
+                credential_raw,
+                device_token_hash=device_hash,
+            ),
             idempotency_key,
             build,
             issued=issued,
@@ -870,7 +889,7 @@ class ActivityService:
         if self._registry.get(code) is None:
             return _gone()
         key = (
-            ProcessedKey(_identity(command.actor), idempotency_key)
+            ProcessedKey(_idempotency_identity(command), idempotency_key)
             if idempotency_key
             else None
         )

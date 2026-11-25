@@ -1,6 +1,6 @@
 """004 整合測試共用：以真 app 建立「已開輪」的活動、提交與讀取快照。"""
 
-from tests.conftest import create_activity, seed_questions, submit
+from tests.conftest import create_activity, join_json, seed_questions, submit
 
 
 def snapshot(client, code, token):
@@ -27,10 +27,8 @@ def open_ranking_round(client, groups=(1, 2, 3), questions=3, fair=False):
     assert post(client, teacher, "/open-joining").status_code == 200
     devices = {}
     for group in groups:
-        joined = client.post(
-            f"/api/activities/{teacher.code}/groups/join", json={"groupNumber": group}
-        ).json()
-        devices[group] = joined["deviceToken"]
+        joined = join_json(client, teacher.code, {"groupNumber": group})
+        devices[group] = joined["browserKey"]
     body = {"fairMode": True} if fair else {}
     assert post(client, teacher, "/rounds", body).status_code == 201
     return teacher, devices

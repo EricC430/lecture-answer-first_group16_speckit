@@ -87,11 +87,14 @@ class JoinGroup:
         actor: 操作者；已是某組成員的 `Device` 會被拒絕。
         number_raw: 組號的原始輸入，由 `InputRules.normalize_group_number` 正規化。
         credential_raw: 組別加入憑證的原始輸入（加入既有組時必填）。
+        device_token_hash: 服務層計算的瀏覽器金鑰雜湊（007）；核心以它判斷這個瀏覽器
+            是否已在本活動（INV-1），並在拒絕訊息中帶出所屬組號。
     """
 
     actor: Actor
     number_raw: object
     credential_raw: object = None
+    device_token_hash: str | None = None
 
 
 @dataclass(frozen=True)

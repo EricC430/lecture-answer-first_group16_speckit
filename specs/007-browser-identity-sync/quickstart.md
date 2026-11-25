@@ -64,6 +64,9 @@
 
 | 項目 | 日期 | 執行者 | 指令／操作 | 結果 |
 |---|---|---|---|---|
+| 改動前基準（T002） | 2026-11-26 02:53 | Claude（實作者） | `.venv\Scripts\python -m pytest -q`（commit `ba020af`，Python 3.14.7） | 1371 passed、8 deselected（perf、real_google）、0 failed |
+| 改動前 lint（T003） | 2026-11-26 | Claude（實作者） | `ruff check .`、`ruff format --check .`、`mypy` | All checks passed；412 files already formatted；no issues in 83 source files |
+| Phase 2 完成（T016） | 2026-11-26 03:04 | Claude（實作者） | `.venv\Scripts\python -m pytest -q` | 1387 passed、4 failed、8 deselected。失敗：`test_http_join::test_device_already_in_group_gets_409`、`test_us2_join::test_member_device_cannot_join_again`（新訊息屬 T023）、`browser/test_pages::test_student_joining_new_activity_does_not_keep_previous_answers`、`browser/test_teacher_restore::test_student_leaving_in_same_browser_keeps_teacher_identity`（學生頁尚未呼叫 browser-session，屬 T026）|
 | ruff／format／mypy | | | | |
 | pytest（預設） | | | | |
 | perf（SC-006） | | | | |

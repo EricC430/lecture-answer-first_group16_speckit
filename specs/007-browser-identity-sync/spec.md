@@ -1,6 +1,6 @@
 # Feature Specification: 同一瀏覽器共用學生身分與跨分頁同步（Browser Identity Sync）
 
-**Feature Branch**: `feature/007-browser-identity-sync`（本機分支，從 `origin/main` 開出；Issue 建立後依 PROJECT_WORKFLOW 改名為 `feature/<issue>-007-browser-identity-sync`）
+**Feature Branch**: `feature/36-007-browser-identity-sync`（Issue #36，從 `origin/main` 開出）
 
 **Created**: 2026-11-26
 

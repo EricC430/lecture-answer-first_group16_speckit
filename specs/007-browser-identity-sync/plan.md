@@ -1,6 +1,6 @@
 # Implementation Plan: 同一瀏覽器共用學生身分與跨分頁同步
 
-**Branch**: `feature/007-browser-identity-sync`（Issue 建立後改名為 `feature/<issue>-007-browser-identity-sync`） | **Date**: 2026-11-26 | **Spec**: [spec.md](spec.md)
+**Branch**: `feature/36-007-browser-identity-sync`（Issue #36） | **Date**: 2026-11-26 | **Spec**: [spec.md](spec.md)
 
 **Input**: Feature specification from `/specs/007-browser-identity-sync/spec.md`
 
@@ -111,10 +111,10 @@ src/lecture_quiz/
 │   └── results.py              # 修改：ALREADY_IN_GROUP 訊息改為「這個瀏覽器已是第 N 組成員…」，從 command.device_token_hash 找組號
 ├── app/activity/
 │   ├── secrets_gen.py          # 新增：new_browser_key()、is_browser_key(value)（格式檢查）
-│   └── service.py              # 修改：join() 改收 browser_key，不再 new_token()；JoinedDevice 移除 token
+│   └── service.py              # 修改：join() 改收 browser_key，不再 new_token()；JoinedDevice 移除 token；加入的冪等範圍改用瀏覽器雜湊（verification P-01）
 ├── adapters/web/
-│   ├── browser_session.py      # 新增：POST /api/browser-session、cookie 常數與 browser_key_from(request)
-│   ├── common.py               # 修改：新增 request_token dependency（Bearer 優先，否則 cookie）
+│   ├── browser_session.py      # 新增：POST /api/browser-session
+│   ├── common.py               # 修改：cookie 常數、browser_key_from、request_token dependency（Bearer 優先，否則 cookie；verification P-02）
 │   ├── http_api.py             # 修改：Token 改用 request_token；加入時要求金鑰、回應移除 deviceToken、404/410 只看 Bearer
 │   └── ws_sync.py              # 修改：auth 的 token 可省略或為 null，這時改讀 websocket.cookies
 ├── adapters/static/js/

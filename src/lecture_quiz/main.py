@@ -27,6 +27,7 @@ from lecture_quiz.adapters.countdown import AsyncioCountdownScheduler
 from lecture_quiz.adapters.google.auth import GoogleAuthGateway
 from lecture_quiz.adapters.google.sheets_writer import GoogleSheetsWriter
 from lecture_quiz.adapters.web import (
+    browser_session,
     guided_notes_import,
     http_api,
     ranking_review,
@@ -192,6 +193,7 @@ def create_app(
     # ── 子功能 router：每個子功能只加一行（順序不限）──
     api.include_router(system.create_router(app))
     api.include_router(http_api.create_router(app))  # 001
+    api.include_router(browser_session.create_router())  # 007（001 的延伸）
     # 002 先建立 import_service，003 的格數來源才能指向它
     api.include_router(guided_notes_import.create_router(app))  # 002
     _wire_submission(app, question_shape_source)  # 003 的格數來源依賴 002，須在其後

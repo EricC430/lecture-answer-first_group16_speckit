@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 
 from lecture_quiz.app.activity.registry import ActivityRegistry
+from lecture_quiz.app.activity.secrets_gen import new_browser_key
 from lecture_quiz.app.activity.service import ActivityService
 from lecture_quiz.app.round_submission.service import SubmissionService
 from lecture_quiz.app.round_submission.store import SubmissionStore
@@ -57,11 +58,14 @@ async def open_world(
     assert (await activities.open_joining(code, teacher)).ok
     devices: dict[int, list[str]] = {}
     for group in groups:
-        first = (await activities.join(code, group)).value
-        tokens = [first.device_token]
+        first_key = new_browser_key()
+        first = (await activities.join(code, group, browser_key=first_key)).value
+        tokens = [first_key]
         for _ in range(devices_per_group - 1):
-            more = await activities.join(code, group, first.credential)
-            tokens.append(more.value.device_token)
+            key = new_browser_key()
+            more = await activities.join(code, group, first.credential, browser_key=key)
+            assert more.ok, more
+            tokens.append(key)
         devices[group] = tokens
     assert (await activities.open_round(code, teacher, None, False, countdown)).ok
     publisher.published.clear()

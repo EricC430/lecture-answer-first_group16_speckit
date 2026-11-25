@@ -11,6 +11,7 @@ import uvicorn
 
 from lecture_quiz.main import create_app
 from tests.browser.cdp import Browser, Page
+from tests.conftest import post_join
 from tests.fixtures.guided_notes_layouts import layout_a, layout_b
 from tests.unit.app.guided_notes_import.fakes import FakeAuthGateway, FakeSheetsReader
 from tests.unit.app.result_export.fakes import FakeSheetsWriter
@@ -92,11 +93,10 @@ class World:
 
     def join(self, *groups: int) -> None:
         for group in groups:
-            joined = self.http.post(
-                f"/api/activities/{self.code}/groups/join", json={"groupNumber": group}
-            )
+            # 每組一個新瀏覽器；金鑰之後由 test_pages 以 cookie 注入該組的分頁（007）
+            joined, key = post_join(self.http, self.code, {"groupNumber": group})
             assert joined.status_code == 200, joined.text
-            self.devices[group] = joined.json()["deviceToken"]
+            self.devices[group] = key
 
     def open_round(self, questions: list[int] | None = None) -> None:
         body = {} if questions is None else {"questionNumbers": questions}

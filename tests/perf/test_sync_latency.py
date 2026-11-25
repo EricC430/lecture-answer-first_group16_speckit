@@ -17,6 +17,7 @@ import uvicorn
 from websockets.asyncio.client import connect
 from websockets.exceptions import ConnectionClosed
 
+from lecture_quiz.app.activity.secrets_gen import new_browser_key
 from lecture_quiz.main import create_app
 
 logger = logging.getLogger("perf")
@@ -84,10 +85,13 @@ async def _run() -> dict[str, list[float]]:
                 for g in range(GROUPS):
                     credential = None
                     for _ in range(DEVICES_PER_GROUP):
-                        joined = await service.join(code, g + 1, credential)
+                        key = new_browser_key()  # 每條連線各一個瀏覽器
+                        joined = await service.join(
+                            code, g + 1, credential, browser_key=key
+                        )
                         assert joined.ok, joined
                         credential = joined.value.credential
-                        tokens.append(joined.value.device_token)
+                        tokens.append(key)
                 listeners = []
                 for token in tokens:
                     ws = await connect(f"ws://127.0.0.1:{port}/ws/activities/{code}")

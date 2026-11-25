@@ -16,6 +16,7 @@ from tests.conftest import (
     finalize_current,
     make_app,
     open_joining,
+    post_join,
 )
 from tests.integration.ranking_world import close_round, post
 from tests.unit.app.guided_notes_import.fakes import FakeAuthGateway, FakeSheetsReader
@@ -47,9 +48,7 @@ def drive_to(client: TestClient, teacher: TeacherSession, stage: str) -> None:
     open_joining(client, teacher)
     if stage == "JOINING":
         return
-    joined = client.post(
-        f"/api/activities/{teacher.code}/groups/join", json={"groupNumber": 1}
-    )
+    joined, _ = post_join(client, teacher.code, {"groupNumber": 1})
     assert joined.status_code == 200, joined.text
     assert post(client, teacher, "/rounds").status_code == 201
     if stage == "ROUND_OPEN":

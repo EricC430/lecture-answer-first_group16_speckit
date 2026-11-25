@@ -52,6 +52,7 @@
   - 這條檢查在鎖內執行，是純函式，第二個請求一定會被拒絕。
   - 拒絕訊息的函式 `_describe_group_rejection(reason, command, activity)` 拿不到 `issued`，所以改從 `command.device_token_hash`（沒有時才用 `command.actor.token_hash`）找出所屬組別，訊息為「這個瀏覽器已是第 N 組成員，請先離開本組。」（spec US1-AS3）。同時加入的落敗者也能看到組號。
   - `issued.device_token_hash` 仍保留，與 `command.device_token_hash` 相同；`_join_group` 在兩者不一致時拋 `ValueError`（服務層的程式錯誤，不是使用者輸入）。
+- **冪等範圍**（2026-11-26 實作時發現，verification P-01）：加入的 Idempotency-Key 以瀏覽器雜湊為範圍，而不是請求者身分；否則第一次加入成功後的重送，會因為請求者已變成組員而查不到快取。
 - **仍存在的競爭**：同一瀏覽器第一次載入時，若兩個分頁在同一個往返時間內同時呼叫 `browser-session`，可能各拿一把金鑰，後到的覆蓋先到的。學生頁要等這個呼叫完成才啟用加入按鈕，而人輸入組號需要好幾秒，所以實際上不會在加入前互相覆蓋。這列為已知限制，不影響 SC-002：SC-002 量的是頁面載入完成後的同時加入。
 - **Alternatives considered**：
   - 由頁面產生金鑰：頁面讀得到金鑰，違反 FR-008。

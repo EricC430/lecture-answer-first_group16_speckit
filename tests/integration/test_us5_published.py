@@ -4,7 +4,13 @@ import json
 
 import pytest
 
-from tests.conftest import create_activity, join_group, seed_questions, submit
+from tests.conftest import (
+    create_activity,
+    join_group,
+    join_json,
+    seed_questions,
+    submit,
+)
 
 
 def _connect(client, code, token):
@@ -30,16 +36,12 @@ def round1(client):
     teacher = create_activity(client)
     seed_questions(client, teacher, 4, blanks=[2, 2, 1, 1])
     _post(client, teacher, "/open-joining")
-    a = client.post(
-        f"/api/activities/{teacher.code}/groups/join", json={"groupNumber": 1}
-    ).json()
-    b = client.post(
-        f"/api/activities/{teacher.code}/groups/join", json={"groupNumber": 2}
-    ).json()
+    a = join_json(client, teacher.code, {"groupNumber": 1})
+    b = join_json(client, teacher.code, {"groupNumber": 2})
     _post(client, teacher, "/rounds")
     return teacher, {
-        "a": a["deviceToken"],
-        "b": b["deviceToken"],
+        "a": a["browserKey"],
+        "b": b["browserKey"],
         "b_credential": b["credential"],
     }
 

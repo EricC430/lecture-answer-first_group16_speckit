@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from datetime import timedelta
 
 from lecture_quiz.app.activity.registry import ActivityRegistry
+from lecture_quiz.app.activity.secrets_gen import new_browser_key
 from lecture_quiz.app.activity.service import ActivityService
 from lecture_quiz.app.ranking_review.service import RankingService
 from lecture_quiz.app.ranking_review.store import ReviewStore
@@ -132,8 +133,9 @@ async def ranking_world(
     assert (await activities.open_joining(code, teacher)).ok
     devices: dict[int, str] = {}
     for group in groups:
-        joined = (await activities.join(code, group)).value
-        devices[group] = joined.device_token
+        key = new_browser_key()
+        assert (await activities.join(code, group, browser_key=key)).ok
+        devices[group] = key
     assert (await activities.open_round(code, teacher, None, fair, None)).ok
     publisher.published.clear()
     return RankingWorld(

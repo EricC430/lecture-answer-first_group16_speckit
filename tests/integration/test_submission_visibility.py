@@ -8,7 +8,13 @@ import json
 
 import pytest
 
-from tests.conftest import create_activity, join_group, seed_questions, submit
+from tests.conftest import (
+    create_activity,
+    join_group,
+    join_json,
+    seed_questions,
+    submit,
+)
 
 
 def _connect(client, code, token):
@@ -26,16 +32,14 @@ def opened(client):
     client.post(
         f"/api/activities/{teacher.code}/open-joining", json={}, headers=teacher.headers
     )
-    joined = client.post(
-        f"/api/activities/{teacher.code}/groups/join", json={"groupNumber": 1}
-    ).json()
+    joined = join_json(client, teacher.code, {"groupNumber": 1})
     b = join_group(client, teacher.code, 1, joined["credential"])
     other = join_group(client, teacher.code, 2)
     response = client.post(
         f"/api/activities/{teacher.code}/rounds", json={}, headers=teacher.headers
     )
     assert response.status_code == 201
-    return teacher, {"a": joined["deviceToken"], "b": b, "other": other}
+    return teacher, {"a": joined["browserKey"], "b": b, "other": other}
 
 
 def test_student_gets_nothing_from_other_groups(client, opened):
