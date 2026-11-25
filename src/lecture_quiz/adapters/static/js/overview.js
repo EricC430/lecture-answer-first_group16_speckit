@@ -7,6 +7,7 @@ import { onTeacherReset, onTeacherSnapshot, STAGE_LABELS } from "./teacher.js";
 import { el } from "./submission.js";
 import { glyph, renderStageTrack } from "./glyph.js";
 import { startCountdown } from "./countdown.js";
+import { acceptRankingRounds } from "./ranking-common.js";
 
 const $ = (id) => document.getElementById(id);
 const countdown = startCountdown(() => $("overview-countdown"));
@@ -130,12 +131,14 @@ function render(snapshot) {
     ? snapshot.deadline ? "" : "本輪沒有倒數，由老師關輪"
     : STAGE_HINTS[snapshot.stage] ?? "";
   countdown.set(open ? snapshot.deadline : null);
+  renderGroups(snapshot);
+  // 與 004 相同的結果版本守衛：較舊的 resultVersion 不覆蓋已顯示的題目狀態（OpenSpec「關輪公開結果與版本一致」）
+  if (!acceptRankingRounds(snapshot.ranking?.rounds ?? [])) return;
   const states = renderTiles(snapshot, questionStates(snapshot));
   const total = states.size;
   const solved = [...states.values()].filter((info) => info.state === "solved").length;
   $("overview-score").textContent = `${solved}／${total}`;
   $("overview-score-label").textContent = total ? "題已有搶答成功者（已定案）" : "尚未匯入學習單";
-  renderGroups(snapshot);
 }
 
 onTeacherSnapshot(render);

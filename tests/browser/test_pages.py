@@ -192,7 +192,10 @@ def test_static_files_are_revalidated_not_cached_blindly(world):
 
 
 def test_teacher_overview_shows_stage_winners_and_solved_count(page, world):
-    """006：老師頁的本輪總覽依快照顯示階段、各題勝出組別與已定案的成功題數。"""
+    """006：老師頁的本輪總覽依快照顯示階段、各題勝出組別與已定案的成功題數。
+
+    Scenario: US1-AS1、US1-AS2、US1-AS3、US1-AS4、US1-AS5
+    """
     world.create()
     world.join(1, 2)
     world.open_round([3, 4])
@@ -204,6 +207,7 @@ def test_teacher_overview_shows_stage_winners_and_solved_count(page, world):
     )
     tiles = page.text("#overview-questions")
     assert "Q3" in tiles and "作答中・1 組送出" in tiles, tiles
+    assert tiles.count("未出題") == 2, tiles  # 題 1、題 2 還沒開過
 
     world.close_round()
     page.wait_for(
@@ -228,3 +232,111 @@ def test_teacher_overview_shows_stage_winners_and_solved_count(page, world):
     )
     assert shape == "2"
     assert_no_script_errors(page)
+
+
+def test_group_glyphs_accompany_group_numbers_on_both_pages(page, world):
+    """006：組別表、作答看板、順位列與學生頁本組都有幾何記號，且文字仍寫「第 N 組」。
+
+    Scenario: US2-AS1、US2-AS2
+    """
+    world.create()
+    world.join(1, 2)
+    world.open_round([3])
+    world.submit(1, 3, 2, ["乙的答案"])
+    open_teacher(page, world)
+    page.wait_for("document.querySelectorAll('#groups-body .gl').length === 2")
+    page.wait_for("document.querySelectorAll('#submission-board th .gl').length === 2")
+    assert "第 2 組" in page.text("#groups-body")
+    world.close_round()
+    page.wait_for(
+        "document.querySelector('#ranking-review-list .ranking-entry .gl') !== null"
+    )
+    entry = page.eval(
+        "(() => { const li = document.querySelector("
+        "'#ranking-review-list .ranking-entry');"
+        " return { shape: li.querySelector('.gl').dataset.shape,"
+        " text: li.innerText }; })()"
+    )
+    assert entry["shape"] == "2" and "第 2 組" in entry["text"], entry
+
+    student = page.browser.new_page()
+    open_student(student, world, 2)
+    student.wait_for("document.querySelector('#student-glyph .gl') !== null")
+    assert (
+        student.eval("document.querySelector('#student-glyph .gl').dataset.shape")
+        == "2"
+    )
+    assert student.text("#student-group") == "第 2 組"
+    assert_no_script_errors(page)
+    assert_no_script_errors(student)
+
+
+def test_student_countdown_ring_follows_deadline_only_while_round_is_open(page, world):
+    """006：有倒數的輪次顯示圓環與剩餘秒數；沒有倒數或不在搶答中時隱藏。
+
+    Scenario: US3-AS1、US3-AS2
+    """
+    world.create()
+    world.join(1)
+    response = world.api(
+        "POST", "/rounds", {"questionNumbers": [3], "countdownSeconds": 120}
+    )
+    assert response.status_code == 201, response.text
+    open_student(page, world, 1)
+    page.wait_for("!document.getElementById('student-pie').hidden")
+    seconds = int(page.text("#student-pie-number"))
+    assert 100 <= seconds <= 120, seconds
+    left = page.eval(
+        "parseFloat(document.getElementById('student-pie').style.getPropertyValue('--left'))"
+    )
+    assert 80 <= left <= 100, left
+
+    world.close_round()
+    page.wait_for("document.getElementById('student-pie').hidden")
+    world.finalize()
+    world.open_round([4])  # 沒有倒數
+    page.wait_for(
+        "document.getElementById('student-stage').textContent.includes('搶答中')"
+    )
+    assert page.eval("document.getElementById('student-pie').hidden") is True
+    assert_no_script_errors(page)
+
+
+def test_pages_fit_phone_width_without_horizontal_scroll(page, world):
+    """006：375 寬的手機畫面，首頁、老師頁、學生頁都沒有整頁水平捲動。
+
+    Scenario: US4-AS3
+    """
+    world.create()
+    world.join(1, 2, 3, 4, 5, 6)
+    world.open_round([1, 3])
+    world.submit(1, 1, 2, ["需求規格", "驗收測試"])
+    world.close_round()
+    page.call(
+        "Emulation.setDeviceMetricsOverride",
+        width=375,
+        height=812,
+        deviceScaleFactor=1,
+        mobile=True,
+    )
+    overflow = (
+        "document.documentElement.scrollWidth - document.documentElement.clientWidth"
+    )
+    page.goto(f"{world.server.base}/index.html")
+    assert page.eval(overflow) <= 0
+    open_teacher(page, world)
+    page.wait_for("!document.getElementById('ranking-review-section').hidden")
+    assert page.eval(overflow) <= 0
+    student = page.browser.new_page()
+    student.call(
+        "Emulation.setDeviceMetricsOverride",
+        width=375,
+        height=812,
+        deviceScaleFactor=1,
+        mobile=True,
+    )
+    open_student(student, world, 2)
+    student.wait_for(
+        "!document.getElementById('ranking-review-student-section').hidden"
+    )
+    assert student.eval(overflow) <= 0

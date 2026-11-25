@@ -1,0 +1,73 @@
+@startuml 006-ui-refresh-class
+skinparam defaultFontName "Microsoft JhengHei"
+hide empty members
+title 006 介面改版（huashu-design dir-3）— 類別圖（前端模組與函式）
+
+class "glyph.js" as Glyph <<module>> {
+  - SHAPES = 6
+  - TONES = 2
+  + STAGE_ORDER : string[]
+  + glyphKind(groupNumber) : {shape: 1..6, tone: "a"|"b"}
+  + glyph(groupNumber, size) : HTMLSpanElement
+  + renderStageTrack(track, stage) : void
+}
+
+class "overview.js" as Overview <<module>> {
+  - STAGE_HINTS : Map<stage, string>
+  + questionStates(snapshot) : Map<題號, QuestionState>
+  - tileCaption(info, shapes, q) : string
+  - renderTiles(snapshot, states)
+  - renderGroups(snapshot)
+  - render(snapshot)
+}
+
+class "QuestionState" as QS <<value>> {
+  state : "idle"|"open"|"pending"|"solved"|"missed"
+  group : 組號 | null
+  round : 輪次 | null
+  submitted : 送出組數
+}
+
+class "student-face.js" as Face <<module>> {
+  - deadline : string | null
+  - total : 秒（第一次看到截止時間時的剩餘秒數）
+  - tick() : 更新 --left 與秒數
+  - setDeadline(value)
+  - render(snapshot)
+}
+
+class "teacher.js" as TeacherJs <<module, 001>> {
+  + STAGE_LABELS
+  + onTeacherSnapshot(render)
+  + onTeacherReset(reset)
+}
+class "student.js" as StudentJs <<module, 001>> {
+  + onStudentSnapshot(render)
+  + onStudentReset(reset)
+}
+class "countdown.js" as Countdown <<module, 001>> {
+  + startCountdown(getElement)
+}
+class "submission.js" as Submission <<module, 003>> {
+  + el(tag, text, className)
+  + renderBoard(...)
+}
+class "ranking-common.js" as RankCommon <<module, 004>> {
+  + acceptRankingRounds(rounds) : boolean
+}
+class "ranking-review(-teacher).js" as Ranking <<module, 004>> {
+  - entryRow(...) / line(...)
+}
+
+Overview ..> QS : 產生
+Overview --> Glyph : glyph()、renderStageTrack()
+Overview --> TeacherJs : 註冊渲染與重設
+Overview --> Countdown
+Overview --> RankCommon : 結果版本守衛
+Overview --> Submission : el()
+Face --> Glyph
+Face --> StudentJs : 註冊渲染與重設
+TeacherJs --> Glyph : 組別表記號
+Submission --> Glyph : 看板表頭記號
+Ranking --> Glyph : 順位列記號
+@enduml

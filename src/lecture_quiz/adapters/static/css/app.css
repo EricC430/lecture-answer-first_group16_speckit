@@ -3,6 +3,8 @@
 
 :root {
   --bg: #ffffff;
+  --on-color: #ffffff; /* 色塊上的文字 */
+  --danger-bg: #fbe9e6;
   --ink: #141414;
   --grey: #5e5e5e;
   --line: #dadada;
@@ -56,7 +58,7 @@ body.sync-broken .success-hint { display: none !important; }
 #sync-status {
   position: fixed; right: 12px; bottom: 12px; z-index: 20;
   padding: 3px 10px;
-  background: var(--ink); color: #fff;
+  background: var(--ink); color: var(--on-color);
   font: 12px/1.5 var(--num);
 }
 #sync-status:empty { display: none; }
@@ -64,7 +66,7 @@ body.sync-broken .success-hint { display: none !important; }
 .error-message, .error {
   padding: 10px 14px;
   border-left: 4px solid var(--red);
-  background: #fbe9e6;
+  background: var(--danger-bg);
   color: var(--red-ink);
 }
 
@@ -72,16 +74,16 @@ body.sync-broken .success-hint { display: none !important; }
 button {
   min-height: 44px; padding: 6px 18px;
   border: 1.5px solid var(--ink); border-radius: 0;
-  background: #fff; color: var(--ink);
+  background: var(--bg); color: var(--ink);
   font-weight: 700; cursor: pointer;
 }
 button:hover:not(:disabled) { background: var(--wash); }
 button:disabled { opacity: .45; cursor: not-allowed; }
 button.primary, button[type="submit"] {
-  border-color: var(--red); background: var(--red); color: #fff;
+  border-color: var(--red); background: var(--red); color: var(--on-color);
 }
 button.primary:hover:not(:disabled), button[type="submit"]:hover:not(:disabled) { background: var(--red-ink); }
-button.danger, #cancel-activity { border-color: var(--red); color: var(--red-ink); background: #fff; }
+button.danger, #cancel-activity { border-color: var(--red); color: var(--red-ink); background: var(--bg); }
 .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 14px 0; }
 
 label { display: block; margin: 0 0 14px; font-size: 14px; color: var(--grey); }
@@ -159,7 +161,7 @@ caption { text-align: left; padding: 0 0 6px; }
 .stage-track li { display: flex; align-items: center; gap: 6px; }
 .stage-track li::before {
   content: ""; width: 10px; height: 10px; border-radius: 50%;
-  border: 2px solid var(--ink); background: #fff;
+  border: 2px solid var(--ink); background: var(--bg);
 }
 .stage-track li.done { color: var(--ink); }
 .stage-track li.done::before { background: var(--ink); }
@@ -191,14 +193,14 @@ body[data-stage]:not([data-stage=""]):not([data-stage="PREPARING"]) #import-sect
 }
 .ov-round {
   grid-column: 1 / 3; grid-row: 1 / 3;
-  background: var(--ink); color: #fff; border-radius: 0 0 0 100%;
+  background: var(--ink); color: var(--on-color); border-radius: 0 0 0 100%;
   display: flex; flex-direction: column; align-items: flex-end; padding: 22px 26px;
 }
 .ov-round b { font: 700 clamp(72px, 14vw, 132px)/0.9 var(--num); }
 .ov-round span { font-size: 15px; margin-top: 10px; text-align: right; }
 .ov-stage {
   grid-column: 3 / 5; grid-row: 1 / 2;
-  background: var(--red); color: #fff;
+  background: var(--red); color: var(--on-color);
   display: flex; flex-direction: column; justify-content: flex-end; padding: 14px 20px;
 }
 .ov-stage b { font-size: clamp(22px, 3vw, 32px); line-height: 1.15; }
@@ -208,7 +210,7 @@ body[data-stage="ROUND_OPEN"] .ov-stage { background: var(--yellow); color: var(
 body[data-stage="ENDED"] .ov-stage, body[data-stage="CANCELLED"] .ov-stage { background: var(--wash); color: var(--ink); }
 .ov-score {
   grid-column: 3 / 5; grid-row: 2 / 3;
-  background: var(--blue); color: #fff; border-radius: 100% 0 0 0;
+  background: var(--blue); color: var(--on-color); border-radius: 100% 0 0 0;
   display: flex; flex-direction: column; align-items: flex-end; justify-content: flex-end; padding: 14px 20px;
 }
 .ov-score b { font: 700 clamp(30px, 4vw, 44px)/1 var(--num); }
@@ -225,11 +227,11 @@ body[data-stage="ENDED"] .ov-stage, body[data-stage="CANCELLED"] .ov-stage { bac
 .ov-tile .gl { position: absolute; top: 10px; right: 10px; }
 .ov-qn { font: 700 28px/1 var(--num); }
 .ov-foot { display: flex; align-items: flex-end; justify-content: space-between; gap: 6px; font-size: 13px; line-height: 1.35; }
-.ov-solved { background: #fff; box-shadow: inset 0 0 0 1.5px var(--ink); }
+.ov-solved { background: var(--bg); box-shadow: inset 0 0 0 1.5px var(--ink); }
 .ov-pending { background: var(--yellow); }
-.ov-open { background: var(--ink); color: #fff; }
-.ov-missed { background: #fff; box-shadow: inset 0 0 0 1.5px var(--red); color: var(--red-ink); }
-.ov-idle { background: #fff; box-shadow: inset 0 0 0 1.5px var(--line); color: var(--grey); }
+.ov-open { background: var(--ink); color: var(--on-color); }
+.ov-missed { background: var(--bg); box-shadow: inset 0 0 0 1.5px var(--red); color: var(--red-ink); }
+.ov-idle { background: var(--bg); box-shadow: inset 0 0 0 1.5px var(--line); color: var(--grey); }
 .ov-idle .ov-qn { color: var(--grey); }
 .ov-empty { grid-column: 1 / -1; min-height: 0; color: var(--grey); }
 .ov-bars { display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; margin: 0; padding: 0; list-style: none; }
@@ -280,7 +282,7 @@ body[data-stage="ENDED"] .ov-stage, body[data-stage="CANCELLED"] .ov-stage { bac
 .answer-text { white-space: pre-wrap; overflow-wrap: anywhere; }
 .published-round { padding-top: 8px; }
 .published-questions, .published-entries { padding-left: 1.25rem; }
-.answer-form { margin: 0 0 16px; padding: 14px 16px; border: 1.5px solid var(--ink); background: #fff; }
+.answer-form { margin: 0 0 16px; padding: 14px 16px; border: 1.5px solid var(--ink); background: var(--bg); }
 .answer-form h4 { font: 700 22px var(--num); margin-bottom: 6px; }
 .answer-form label { margin-top: 8px; }
 .answer-form button[type="submit"] { width: 100%; min-height: 52px; font-size: 17px; margin-top: 6px; }
@@ -294,7 +296,7 @@ body[data-stage="ENDED"] .ov-stage, body[data-stage="CANCELLED"] .ov-stage { bac
 .ranking-question h4 { font: 700 22px var(--num); display: inline-block; margin-right: 12px; }
 .ranking-question > button { min-height: 36px; padding: 2px 12px; font-size: 14px; margin: 0 8px 8px 0; }
 .ranking-action { border-color: var(--red); color: var(--red-ink); }
-.ranking-finalize { border-color: var(--red); background: var(--red); color: #fff; min-height: 52px; padding: 0 28px; font-size: 17px; }
+.ranking-finalize { border-color: var(--red); background: var(--red); color: var(--on-color); min-height: 52px; padding: 0 28px; font-size: 17px; }
 .ranking-finalize:hover:not(:disabled) { background: var(--red-ink); }
 .ranking-updated { font-size: 13px; background: var(--yellow); padding: 1px 8px; font-weight: 700; }
 .ranking-final { font-weight: 700; }
@@ -346,8 +348,8 @@ body[data-stage="ENDED"] .ov-stage, body[data-stage="CANCELLED"] .ov-stage { bac
   position: relative; width: 140px; height: 140px; align-self: center; border-radius: 50%;
   background: conic-gradient(var(--red) 0 var(--left), var(--wash) var(--left) 100%);
 }
-.pie::before { content: ""; position: absolute; inset: 22px; border-radius: 50%; background: #fff; }
-.pie.ending { --red: #b8301e; }
+.pie::before { content: ""; position: absolute; inset: 22px; border-radius: 50%; background: var(--bg); }
+.pie.ending { --red: var(--red-ink); }
 .pie b { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font: 700 44px/1 var(--num); color: var(--ink); }
 .pie b::after { content: "秒"; font: 400 13px var(--sans); color: var(--grey); margin: 16px 0 0 2px; }
 .stage-line { margin-top: 14px; font-size: 16px; }
@@ -373,8 +375,8 @@ body[data-stage="ENDED"] .ov-stage, body[data-stage="CANCELLED"] .ov-stage { bac
 .home-link { display: flex; flex-direction: column; padding: 16px 20px; text-decoration: none; border: 1.5px solid var(--ink); }
 .home-link b { font-size: 24px; }
 .home-link span { font-size: 14px; color: var(--grey); }
-.home-teacher { background: var(--red); border-color: var(--red); color: #fff; }
-.home-teacher span { color: #fff; }
+.home-teacher { background: var(--red); border-color: var(--red); color: var(--on-color); }
+.home-teacher span { color: var(--on-color); }
 .home-link:hover { box-shadow: 6px 6px 0 var(--ink); }
 
 /* ── 窄螢幕 ── */

@@ -257,3 +257,25 @@
 | US6-AS3 | `tests/architecture/test_export_static.py::test_no_html_parsing_apis`<br>`tests/architecture/test_export_static.py::test_protection_prefix_note_is_fixed_text`<br>`tests/integration/test_export_us6_safety.py::test_csv_protects_but_nothing_else_is_modified` |
 | US6-AS4 | `tests/unit/core/result_export/test_render_csv.py::test_time_has_timezone_and_millisecond_precision` |
 | US6-AS5 | `tests/integration/test_export_us6_safety.py::test_chinese_header_and_yes_no_columns`<br>`tests/unit/core/result_export/test_render_csv.py::test_none_values_empty_and_booleans_are_yes_no` |
+
+## 006-ui-refresh
+
+依 spec 的 15 個 Acceptance Scenario（US1～US4）整理（2026-11-25，006 T064）。006 不實作 OpenSpec 行為，畫面呈現的 OpenSpec 規定見 spec 的 OpenSpec Traceability 表。
+
+| Scenario | 測試 |
+|---|---|
+| US1-AS1 | `tests/browser/test_pages.py::test_teacher_overview_shows_stage_winners_and_solved_count` |
+| US1-AS2 | `tests/browser/test_pages.py::test_teacher_overview_shows_stage_winners_and_solved_count` |
+| US1-AS3 | `tests/browser/test_pages.py::test_teacher_overview_shows_stage_winners_and_solved_count` |
+| US1-AS4 | `tests/browser/test_pages.py::test_teacher_overview_shows_stage_winners_and_solved_count` |
+| US1-AS5 | `tests/unit/frontend/test_glyph.py::test_stage_track_marks_done_and_current_step`<br>`tests/browser/test_pages.py::test_teacher_overview_shows_stage_winners_and_solved_count` |
+| US2-AS1 | `tests/browser/test_pages.py::test_group_glyphs_accompany_group_numbers_on_both_pages` |
+| US2-AS2 | `tests/unit/frontend/test_glyph.py::test_glyph_is_decorative_and_carries_no_text`<br>`tests/browser/test_pages.py::test_group_glyphs_accompany_group_numbers_on_both_pages` |
+| US2-AS3 | `tests/unit/frontend/test_glyph.py::test_each_group_number_maps_to_a_fixed_shape_and_tone` |
+| US3-AS1 | `tests/browser/test_pages.py::test_student_countdown_ring_follows_deadline_only_while_round_is_open` |
+| US3-AS2 | `tests/browser/test_pages.py::test_student_countdown_ring_follows_deadline_only_while_round_is_open` |
+| US3-AS3 | `tests/architecture/test_static_text_safety.py`（003 倒數歸零停用表單、「由老師結束」，006 未修改）<br>`tests/browser/test_pages.py::test_student_countdown_ring_follows_deadline_only_while_round_is_open` |
+| US4-AS1 | `tests/architecture/test_ui_tokens.py::test_colors_are_defined_only_in_root`<br>`tests/architecture/test_ui_tokens.py::test_pages_have_no_inline_colors` |
+| US4-AS2 | `tests/architecture/test_ui_tokens.py::test_text_contrast_meets_wcag_aa`<br>`tests/architecture/test_ui_tokens.py::test_contrast_check_catches_a_failing_pair`（負對照） |
+| US4-AS3 | `tests/browser/test_pages.py::test_pages_fit_phone_width_without_horizontal_scroll` |
+| US4-AS4 | 001～005 既有全部測試（`pytest -q`）<br>`tests/architecture/test_feature_scripts_loaded.py` |
