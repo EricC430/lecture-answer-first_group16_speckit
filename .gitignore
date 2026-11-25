@@ -39,3 +39,8 @@ Thumbs.db
 *.egg-info/
 build/
 dist/
+
+# 第三方 design skill（本機使用，不追蹤）
+.claude/skills/huashu-design/
+.agents/
+skills-lock.json

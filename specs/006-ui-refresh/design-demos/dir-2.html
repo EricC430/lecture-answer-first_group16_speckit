@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>方向二 名次塔</title>
+<style>
+:root{
+  --bg:#15181B; --panel:#1D2125; --row:#23282D; --line:#30363C;
+  --chalk:#EEF0EC; --dim:#9AA3AA; --go:#5CF29A; --warn:#FF8A3D; --wait:#6B747C;
+  --num:"Bahnschrift","DIN Alternate","Segoe UI",sans-serif;
+  --sans:"Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--chalk);font:15px/1.55 var(--sans)}
+.demo-note{font-size:12px;color:var(--dim);padding:10px 32px;border-bottom:1px solid var(--line)}
+.demo-note b{color:var(--chalk)}
+.num{font-family:var(--num);font-variant-numeric:tabular-nums}
+
+/* 階段軌 */
+.track{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:32px;padding:22px 32px;border-bottom:1px solid var(--line)}
+.code{font:600 15px var(--sans);color:var(--dim)}
+.code strong{display:block;font:700 34px/1 var(--num);letter-spacing:.1em;color:var(--chalk)}
+.steps{display:grid;grid-template-columns:repeat(6,1fr);gap:4px}
+.steps div{padding-top:10px;border-top:4px solid var(--line);font-size:13px;color:var(--wait)}
+.steps div.done{border-color:var(--dim);color:var(--dim)}
+.steps div.now{border-color:var(--go);color:var(--chalk);font-weight:700;font-size:15px}
+.roundbox{text-align:right}
+.roundbox .r{font:700 40px/1 var(--num)}
+.roundbox .r span{font:400 15px var(--sans);color:var(--dim);margin-left:6px}
+.roundbox .m{font-size:13px;color:var(--dim)}
+
+.main{display:grid;grid-template-columns:1fr 300px;gap:0}
+.towers{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;padding:28px 32px}
+.tower{background:var(--panel);border-top:3px solid var(--chalk)}
+.t-head{display:flex;justify-content:space-between;align-items:baseline;padding:14px 16px 10px}
+.t-head .q{font:700 44px/1 var(--num)}
+.t-head .b{font-size:13px;color:var(--dim)}
+.t-cols{display:grid;grid-template-columns:40px 1fr 72px;padding:0 16px 6px;font-size:12px;color:var(--dim);border-bottom:1px solid var(--line)}
+.t-cols span:last-child{text-align:right}
+.row{display:grid;grid-template-columns:40px 1fr 72px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line);position:relative}
+.row .p{font:700 24px var(--num)}
+.row .g{font-size:18px;font-weight:700}
+.row .gap{font:500 17px var(--num);text-align:right;color:var(--dim)}
+.row .ans{grid-column:2/4;font-size:15px;color:var(--chalk);margin-top:4px;word-break:break-all}
+.row .st{grid-column:2/4;display:flex;justify-content:space-between;align-items:center;margin-top:6px;font-size:13px;color:var(--dim)}
+.row.win{background:#1E2A23;box-shadow:inset 4px 0 0 var(--go)}
+.row.win .p,.row.win .gap{color:var(--go)}
+.row.win .st b{color:var(--go)}
+.row.wrong{box-shadow:inset 4px 0 0 var(--warn)}
+.row.wrong .p,.row.wrong .st b{color:var(--warn)}
+.row.wrong .ans{text-decoration:line-through;text-decoration-color:var(--warn);color:var(--dim)}
+button{font:inherit;cursor:pointer;border-radius:3px;min-height:44px}
+.tbtn{min-height:32px;padding:2px 10px;font-size:13px;background:transparent;color:var(--chalk);border:1px solid var(--line)}
+.tbtn.warn{border-color:var(--warn);color:var(--warn)}
+.leader{padding:14px 16px;font-size:13px;color:var(--dim)}
+.leader b{color:var(--chalk)}
+
+.side{border-left:1px solid var(--line);padding:28px 24px;display:flex;flex-direction:column;gap:26px}
+.side h2{font-size:13px;color:var(--dim);font-weight:400;margin:0 0 10px}
+.grid6{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.grid6 div{background:var(--row);padding:8px 10px}
+.grid6 .gn{font-size:12px;color:var(--dim)}
+.grid6 .c{font:700 26px/1.1 var(--num)}
+.grid6 .c.zero{color:var(--wait)}
+.go-btn{width:100%;background:var(--go);color:#0E1512;border:0;font-weight:700;font-size:17px;min-height:56px}
+.go-btn small{display:block;font-weight:400;font-size:12px}
+.ghost{width:100%;background:transparent;color:var(--chalk);border:1px solid var(--line);margin-top:8px}
+.danger{width:100%;background:transparent;border:0;color:var(--warn);min-height:36px;margin-top:4px}
+.unsolved{font-size:14px}
+.unsolved .num{font-size:18px;font-weight:700}
+
+.sync{position:fixed;right:12px;bottom:12px;font:12px var(--num);background:#000;color:var(--go);padding:4px 10px;border:1px solid var(--line)}
+
+/* 學生 */
+.stu{border-top:1px solid var(--line);padding:48px 32px 80px;display:grid;grid-template-columns:375px 1fr;gap:56px;align-items:start}
+.phone{width:375px;min-height:812px;background:var(--bg);border:1px solid var(--line)}
+.ph-top{padding:18px 18px 0;display:flex;justify-content:space-between;align-items:flex-start}
+.ph-top .grp{font-size:13px;color:var(--dim)}
+.ph-top .grp b{display:block;font:700 30px/1.1 var(--num);color:var(--chalk)}
+.ph-clock{text-align:right}
+.ph-clock .t{font:700 56px/1 var(--num);color:var(--go)}
+.ph-clock .l{font-size:12px;color:var(--dim)}
+.bar{height:6px;background:var(--line);margin:14px 18px 0}
+.bar i{display:block;height:100%;width:78%;background:var(--go)}
+.ph-stage{padding:10px 18px;font-size:13px;color:var(--dim)}
+.ph-tabs{display:grid;grid-template-columns:repeat(3,1fr);margin:6px 18px 0;gap:4px}
+.ph-tabs div{padding:10px 8px;background:var(--panel);font:700 20px var(--num);text-align:center;border-bottom:3px solid transparent}
+.ph-tabs div small{display:block;font:400 11px var(--sans);color:var(--dim)}
+.ph-tabs .sent{border-color:var(--go)} .ph-tabs .sent small{color:var(--go)}
+.ph-tabs .cur{border-color:var(--chalk);background:var(--row)}
+.ph-form{margin:0 18px;background:var(--row);padding:16px}
+.ph-form label{display:block;font-size:13px;color:var(--dim);margin-top:10px}
+.ph-form label:first-child{margin-top:0}
+.ph-form input{width:100%;margin-top:4px;background:var(--bg);color:var(--chalk);border:1px solid var(--dim);padding:12px;font:600 18px var(--sans);border-radius:3px}
+.ph-form input:focus{outline:2px solid var(--go);border-color:var(--go)}
+.ph-send{width:100%;margin-top:14px;background:var(--chalk);color:var(--bg);border:0;font-weight:700;font-size:17px;min-height:52px}
+.ph-hint{padding:10px 18px;font-size:13px;color:var(--dim)}
+.note h2{margin:0 0 8px;font-size:20px}
+.note p{margin:0 0 10px;color:var(--dim);max-width:520px}
+</style>
+</head>
+<body>
+<div class="demo-note"><b>方向二・名次塔：投影用深色計時</b>　示範資料（手寫）：活動 K7Q2FM、第 2 輪、速度模式、結果未定案。</div>
+
+<header class="track">
+  <div class="code">活動代碼<strong>K7Q2FM</strong></div>
+  <div class="steps" aria-label="活動階段">
+    <div class="done">準備中</div><div class="done">開放加入</div><div class="done">搶答中</div>
+    <div class="now">結果未定案</div><div>結果已定案</div><div>已結束</div>
+  </div>
+  <div class="roundbox"><div class="r">R2<span>速度模式</span></div><div class="m">結果版本 3・Q3 Q4 Q5</div></div>
+</header>
+
+<div class="main">
+  <section class="towers">
+    <article class="tower">
+      <div class="t-head"><span class="q">Q3</span><span class="b">1 格・3 組送出</span></div>
+      <div class="t-cols"><span>名次</span><span>組別／答案</span><span>差距</span></div>
+      <div class="row win"><span class="p">1</span><span class="g">第 2 組</span><span class="gap">領先</span>
+        <span class="ans">單一職責原則</span>
+        <span class="st"><span><b>搶答成功</b>・提交較早</span><button class="tbtn warn">判答錯</button></span></div>
+      <div class="row"><span class="p">2</span><span class="g">第 5 組</span><span class="gap">+0.84</span>
+        <span class="ans">SRP</span><span class="st"><span>搶答失敗</span></span></div>
+      <div class="row"><span class="p">3</span><span class="g">第 1 組</span><span class="gap">+2.31</span>
+        <span class="ans">開放封閉原則</span><span class="st"><span>搶答失敗</span></span></div>
+    </article>
+
+    <article class="tower">
+      <div class="t-head"><span class="q">Q4</span><span class="b">2 格・3 組送出</span></div>
+      <div class="t-cols"><span>名次</span><span>組別／答案</span><span>差距</span></div>
+      <div class="row wrong"><span class="p">✕</span><span class="g">第 4 組</span><span class="gap">0.00</span>
+        <span class="ans">需求訪談／單元測試</span>
+        <span class="st"><span><b>答錯</b>・老師判定</span><button class="tbtn">撤銷判錯</button></span></div>
+      <div class="row win"><span class="p">1</span><span class="g">第 6 組</span><span class="gap">+1.12</span>
+        <span class="ans">需求規格／驗收測試</span>
+        <span class="st"><span><b>搶答成功</b>・遞補</span><button class="tbtn warn">判答錯</button></span></div>
+      <div class="row"><span class="p">2</span><span class="g">第 1 組</span><span class="gap">+3.05</span>
+        <span class="ans">需求規格／整合測試</span><span class="st"><span>搶答失敗</span></span></div>
+    </article>
+
+    <article class="tower">
+      <div class="t-head"><span class="q">Q5</span><span class="b">3 格・1 組送出</span></div>
+      <div class="t-cols"><span>名次</span><span>組別／答案</span><span>差距</span></div>
+      <div class="row win"><span class="p">1</span><span class="g">第 3 組</span><span class="gap">領先</span>
+        <span class="ans">Model／View／Controller</span>
+        <span class="st"><span><b>搶答成功</b>・唯一候選</span><button class="tbtn warn">判答錯</button></span></div>
+      <div class="leader">其餘 5 組本題沒有送出。</div>
+    </article>
+  </section>
+
+  <aside class="side">
+    <div>
+      <h2>各組暫算成功次數</h2>
+      <div class="grid6">
+        <div><div class="gn">第 1 組</div><div class="c num">1</div></div>
+        <div><div class="gn">第 2 組</div><div class="c num">2</div></div>
+        <div><div class="gn">第 3 組</div><div class="c num">1</div></div>
+        <div><div class="gn">第 4 組</div><div class="c num zero">0</div></div>
+        <div><div class="gn">第 5 組</div><div class="c num">1</div></div>
+        <div><div class="gn">第 6 組</div><div class="c num">1</div></div>
+      </div>
+    </div>
+    <div class="unsolved"><h2>尚未成功的題目</h2><span class="num">Q6</span>　（定案後可在下一輪開出）</div>
+    <div style="margin-top:auto">
+      <button class="go-btn">確認定案<small>定案後才能開下一輪</small></button>
+      <button class="ghost">結束活動</button>
+      <button class="danger">取消活動</button>
+    </div>
+  </aside>
+</div>
+
+<section class="stu">
+  <div class="phone" aria-label="學生手機畫面">
+    <div class="ph-top">
+      <div class="grp">K7Q2FM・憑證 B3X9<b>第 4 組</b></div>
+      <div class="ph-clock"><div class="t num">0:47</div><div class="l">本輪剩餘</div></div>
+    </div>
+    <div class="bar"><i></i></div>
+    <div class="ph-stage">第 2 輪・搶答中・同一題只算第一次送出</div>
+    <div class="ph-tabs">
+      <div class="sent">Q3<small>已送出</small></div>
+      <div class="cur">Q4<small>作答中</small></div>
+      <div>Q5<small>未作答</small></div>
+    </div>
+    <div class="ph-form">
+      <label for="b1">Q4 第 1 格</label><input id="b1" value="需求訪談">
+      <label for="b2">Q4 第 2 格</label><input id="b2">
+      <button class="ph-send">送出 Q4</button>
+    </div>
+    <div class="ph-hint">兩格都填才能送出。</div>
+  </div>
+  <div class="note">
+    <h2>學生端是同一套計時語言</h2>
+    <p>倒數用最大的數字、綠色進度條同步縮短；題號做成分頁，已送出的題目底線轉綠。</p>
+    <p>老師投影的名次塔與學生畫面共用同一組顏色：綠＝成功、橘＝答錯。</p>
+  </div>
+</section>
+
+<div class="sync">v42｜延遲 38 ms</div>
+</body>
+</html>

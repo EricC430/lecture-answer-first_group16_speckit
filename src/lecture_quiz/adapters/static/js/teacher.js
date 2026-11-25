@@ -12,6 +12,7 @@ import {
 } from "./identity.js";
 import { startCountdown } from "./countdown.js";
 import { connectSync } from "./sync.js";
+import { glyph } from "./glyph.js";
 
 export const STAGE_LABELS = {
   PREPARING: "準備中",
@@ -269,8 +270,10 @@ function renderGroups(snapshot) {
   $("groups-table").hidden = groups.length === 0;
   const rows = groups.map((group) => {
     const tr = document.createElement("tr");
+    const name = cell(`第 ${group.number} 組`);
+    name.prepend(glyph(group.number, "sm")); // 006：組別記號（展示用）
     tr.append(
-      cell(`第 ${group.number} 組`),
+      name,
       cell(group.credential),
       cell(String(group.deviceCount)),
       cell(String(group.successCount)),

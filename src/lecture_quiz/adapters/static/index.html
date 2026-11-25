@@ -6,17 +6,21 @@
   <title>Vibe Coding 課堂搶答系統</title>
   <link rel="stylesheet" href="css/app.css">
 </head>
-<body>
-  <header>
-    <h1>Vibe Coding 課堂搶答系統</h1>
-  </header>
-  <main>
-    <section>
-      <ul>
-        <li><a href="teacher.html">老師頁</a></li>
-        <li><a href="student.html">學生頁</a></li>
-      </ul>
-    </section>
+<body data-page="home">
+  <main class="home">
+    <div class="home-art" aria-hidden="true">
+      <span class="ha ha-1"></span><span class="ha ha-2"></span><span class="ha ha-3"></span>
+      <span class="ha ha-4"></span><span class="ha ha-5"></span><span class="ha ha-6"></span>
+    </div>
+    <div class="home-text">
+      <p class="home-kicker">Vibe Coding</p>
+      <h1>課堂<br>搶答</h1>
+      <p class="home-lead">老師匯入 Google 試算表學習單，各組用手機搶答；搶答成功的答案寫回原學習單。每一組都有自己的形狀。</p>
+      <nav class="home-nav" aria-label="選擇身分">
+        <a href="teacher.html" class="home-link home-teacher"><b>老師頁</b><span>建立活動、匯入學習單、開輪、判錯與寫回</span></a>
+        <a href="student.html" class="home-link home-student"><b>學生頁</b><span>輸入活動代碼與組號，加入搶答</span></a>
+      </nav>
+    </div>
   </main>
 </body>
 </html>

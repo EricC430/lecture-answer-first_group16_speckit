@@ -1,0 +1,49 @@
+@startuml 006-ui-refresh-sequence
+skinparam defaultFontName "Microsoft JhengHei"
+skinparam sequenceMessageAlign center
+title 006 介面改版（huashu-design dir-3）— 時序圖（快照到達後的畫面更新）
+
+participant "後端 001 推送" as Push
+participant "sync.js" as Sync
+participant "teacher.js" as T
+participant "overview.js" as O
+participant "glyph.js" as G
+participant "student.js" as S
+participant "student-face.js" as F
+
+== 老師頁 ==
+Push -> Sync : 老師版快照（含 submissions、ranking）
+Sync -> T : onSnapshot(snapshot)
+T -> T : 既有 render（活動資訊、組別表：每列加 glyph）
+T -> O : render(snapshot)（onTeacherSnapshot 註冊）
+O -> G : renderStageTrack(#stage-track, stage)
+O -> O : 輪次、階段與倒數、各組成功次數長條
+O -> O : acceptRankingRounds(ranking.rounds)\n（004 結果版本守衛）
+alt 有較舊的 resultVersion
+  O -> O : 不更新題目方塊與成功題數
+else 正常
+  O -> O : questionStates(snapshot)\n已定案輪的 successGroup → solved／missed\n未定案輪 → pending；搶答中的 openQuestions → open
+  O -> G : glyph(勝出組號)（solved／pending 方塊）
+  O -> O : 已定案成功題數
+end
+note right of O : 只讀快照、只寫自己的 DOM；\n不呼叫 API、不改其他模組的狀態
+
+== 學生頁 ==
+Push -> Sync : 學生版快照
+Sync -> S : onSnapshot(snapshot)
+S -> F : render(snapshot)（onStudentSnapshot 註冊）
+F -> G : renderStageTrack()、glyph(本組組號, "lg")
+alt stage = 搶答中 且有 deadline
+  F -> F : setDeadline(deadline)：記下當時剩餘秒數為分母
+  loop 每 250 ms
+    F -> F : tick()：--left = 剩餘／分母，顯示剩餘秒數
+  end
+else 其他
+  F -> F : 隱藏圓環
+end
+note right of F : 截止判定仍以後端為準；\n003 的表單停用時機不變
+
+== 換活動 ==
+T -> O : onTeacherReset：清掉總覽與階段軌
+S -> F : onStudentReset：清掉記號與圓環
+@enduml

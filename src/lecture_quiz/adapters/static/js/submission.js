@@ -1,6 +1,8 @@
 // 003 多題搶答：作答表單與提交顯示的共用函式（老師頁與學生頁共用）。
 // 所有不可信文字（答案、錯誤訊息）一律用 textContent／createElement，不以 HTML 字串插入（原則 V、FR-031）。
 
+import { glyph } from "./glyph.js";
+
 export const MAX_ANSWER_CHARS = 500; // 只是提示；後端才是準（Q-20）
 
 /** 建立元素並設定純文字內容。 */
@@ -129,7 +131,11 @@ export function renderBoard(container, current, groups, questionShapes) {
   const caption = el("caption", `第 ${current.roundNumber} 輪作答（依送出先後，不是順位）`);
   const head = el("tr");
   head.append(el("th", "題號"));
-  for (const n of columns) head.append(el("th", `第 ${n} 組`));
+  for (const n of columns) {
+    const th = el("th", `第 ${n} 組`);
+    th.prepend(glyph(n, "sm")); // 006：組別記號（展示用）
+    head.append(th);
+  }
   table.append(caption, head);
   for (const q of current.questions) {
     const row = el("tr");

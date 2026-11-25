@@ -4,12 +4,14 @@
 
 import { onTeacherReset, onTeacherSnapshot, STAGE_LABELS, teacherAction } from "./teacher.js";
 import { el } from "./submission.js";
+import { glyph } from "./glyph.js";
 import { REASON_LABELS, STATUS_LABELS, acceptRankingRounds, answerOf, resetRankingVersions } from "./ranking-common.js";
 
 const $ = (id) => document.getElementById(id);
 
 function entryRow(snapshot, round, question, entry) {
   const row = el("li", "", `ranking-entry status-${entry.displayStatus.toLowerCase()}`);
+  row.append(glyph(entry.groupNumber)); // 006：組別記號（展示用）
   const rank = entry.rank === null ? "—" : `第 ${entry.rank} 名`;
   row.append(el("strong", `${rank}・第 ${entry.groupNumber} 組・${STATUS_LABELS[entry.displayStatus]}`));
   const answer = answerOf(snapshot, round.roundNumber, question.questionNumber, entry.groupNumber);

@@ -1,0 +1,47 @@
+@startuml 006-ui-refresh-component
+!pragma layout smetana
+skinparam defaultFontName "Microsoft JhengHei"
+skinparam componentStyle rectangle
+title 006 介面改版（huashu-design dir-3 幾何記號）— 組件圖（只在前端；相依方向：006 → 既有模組）
+
+actor "老師" as Teacher
+actor "學生（各組）" as Student
+
+package "後端（不修改）" {
+  [001 同步推送\n（WebSocket 快照：stage、roundNumber、fairMode、\ndeadline、openQuestions、groups；\n003 submissions、004 ranking 擴充）] as Push
+}
+
+package "前端：既有模組（只加組別記號元素，邏輯不變）" {
+  [sync.js\n（連線、版本、同步中斷）] as Sync
+  [teacher.js\n（onTeacherSnapshot／onTeacherReset、\n組別表）] as TeacherJs
+  [student.js\n（onStudentSnapshot／onStudentReset）] as StudentJs
+  [submission.js\n（作答看板表頭）] as Board
+  [ranking-review-teacher.js\nranking-review.js\n（順位列）] as Ranking
+  [countdown.js\n（剩餘秒數文字）] as Countdown
+  [ranking-common.js\n（004 結果版本守衛）] as RankCommon
+}
+
+package "前端：006 新增（只讀快照、不呼叫 API）" {
+  [glyph.js\n（組號 → 幾何記號；階段軌）] as Glyph
+  [overview.js\n（老師頁本輪總覽構成）] as Overview
+  [student-face.js\n（本組記號、圓環倒數、階段軌）] as Face
+  [app.css\n（:root 色票與排版；\n記號形狀以 data-shape／data-tone 選擇）] as Css
+}
+
+Teacher --> TeacherJs
+Student --> StudentJs
+Push --> Sync : 快照
+Sync --> TeacherJs : onSnapshot
+Sync --> StudentJs : onSnapshot
+TeacherJs --> Overview : 註冊的渲染函式
+StudentJs --> Face : 註冊的渲染函式
+Overview --> Glyph
+Overview --> Countdown
+Overview --> RankCommon : acceptRankingRounds
+Overview --> Board : el()
+Face --> Glyph
+TeacherJs --> Glyph
+Board --> Glyph
+Ranking --> Glyph
+Glyph ..> Css : class／data 屬性
+@enduml
