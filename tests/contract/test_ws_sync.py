@@ -11,6 +11,7 @@ from tests.conftest import (
     create_joinable,
     join_group,
     make_app,
+    new_browser_client,
 )
 
 COMMON_FIELDS = {
@@ -131,3 +132,53 @@ def test_state_change_is_pushed_and_extra_messages_ignored(client, caplog):
     assert [g["number"] for g in snap["groups"]] == [1]
     assert any("多餘訊息" in r.getMessage() for r in caplog.records)
     assert all("ignored-after-auth" not in r.getMessage() for r in caplog.records)
+
+
+# ── 007：auth 不帶 token 時讀握手 cookie（contracts/http-and-sync-changes.md §4）──
+
+
+def _join_by_cookie(browser, code, number):
+    response = browser.post(
+        f"/api/activities/{code}/groups/join", json={"groupNumber": number}
+    )
+    assert response.status_code == 200, response.text
+
+
+@pytest.mark.parametrize("auth", [{"type": "auth"}, {"type": "auth", "token": None}])
+def test_auth_without_token_uses_cookie(client, auth):
+    """Scenario: 007 US1-AS1（同一瀏覽器的新分頁以 cookie 恢復身分）"""
+    teacher = create_joinable(client)
+    browser = new_browser_client(client)
+    _join_by_cookie(browser, teacher.code, 3)
+    with browser.websocket_connect(f"/ws/activities/{teacher.code}") as ws:
+        ws.send_json(auth)
+        snap = ws.receive_json()
+    assert snap["role"] == "student"
+    assert snap["ownGroup"]["number"] == 3
+
+
+def test_auth_without_token_or_cookie_is_unauthorized(client):
+    teacher = create_joinable(client)
+    browser = new_browser_client(client)  # 有金鑰，但沒有加入任何組
+    with browser.websocket_connect(f"/ws/activities/{teacher.code}") as ws:
+        ws.send_json({"type": "auth"})
+        assert ws.receive_json() == {"type": "unauthorized", "reason": "INVALID_TOKEN"}
+        assert _close_code(ws) == 4401
+
+
+def test_auth_with_non_string_token_is_bad_first_message(client):
+    teacher = create_joinable(client)
+    with client.websocket_connect(f"/ws/activities/{teacher.code}") as ws:
+        ws.send_json({"type": "auth", "token": 123})
+        assert _close_code(ws) == 4400
+
+
+def test_teacher_token_still_wins_over_student_cookie(client):
+    """007 US3：同一瀏覽器有學生 cookie 時，老師以 token 驗證仍拿到老師快照。"""
+    teacher = create_joinable(client)
+    browser = new_browser_client(client)
+    _join_by_cookie(browser, teacher.code, 1)
+    with browser.websocket_connect(f"/ws/activities/{teacher.code}") as ws:
+        ws.send_json({"type": "auth", "token": teacher.token})
+        snap = ws.receive_json()
+    assert snap["role"] == "teacher"

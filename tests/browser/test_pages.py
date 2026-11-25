@@ -10,13 +10,25 @@ def assert_no_script_errors(page) -> None:
 
 
 def open_student(page, world, group: int) -> None:
-    """以該組裝置的身分開學生頁（身分放在分頁的 sessionStorage，與人工加入相同）。"""
-    page.add_init_script(
-        f"sessionStorage.setItem('device:{world.code}', "
-        f"{json.dumps(world.devices[group])});"
+    """以該組瀏覽器的身分開學生頁（007：把該組的瀏覽器金鑰寫成 HttpOnly cookie）。
+
+    模擬「這個瀏覽器先前已加入」。不同組要開在不同的瀏覽器 context（見 `student_tab`），
+    否則同一瀏覽器的 cookie 會互相覆蓋（research R8）。
+    """
+    page.browser.set_cookie(
+        page.context_id,
+        world.server.base,
+        "lq_browser",
+        world.devices[group],
+        httponly=True,
     )
     page.goto(f"{world.server.base}/student.html?code={world.code}")
     page.wait_for("document.getElementById('student-info').hidden === false")
+
+
+def student_tab(browser):
+    """在另一個獨立的瀏覽器開分頁（每組學生一個瀏覽器）。"""
+    return browser.new_page(browser.new_context())
 
 
 def open_teacher(page, world) -> None:
@@ -65,7 +77,7 @@ def test_student_sees_latest_winner_answer_and_own_status_while_teacher_judges(
     assert_no_script_errors(page)
 
     # 組 2 的學生頁：本組各題的狀態
-    other = page.browser.new_page()
+    other = student_tab(page.browser)
     open_student(other, world, 2)
     other.wait_for("!document.getElementById('ranking-review-student-section').hidden")
     own = other.text("#ranking-review-student-list")
@@ -259,7 +271,7 @@ def test_group_glyphs_accompany_group_numbers_on_both_pages(page, world):
     )
     assert entry["shape"] == "2" and "第 2 組" in entry["text"], entry
 
-    student = page.browser.new_page()
+    student = student_tab(page.browser)
     open_student(student, world, 2)
     student.wait_for("document.querySelector('#student-glyph .gl') !== null")
     assert (
@@ -327,7 +339,7 @@ def test_pages_fit_phone_width_without_horizontal_scroll(page, world):
     open_teacher(page, world)
     page.wait_for("!document.getElementById('ranking-review-section').hidden")
     assert page.eval(overflow) <= 0
-    student = page.browser.new_page()
+    student = student_tab(page.browser)
     student.call(
         "Emulation.setDeviceMetricsOverride",
         width=375,

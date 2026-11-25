@@ -1,5 +1,6 @@
 // WebSocket 同步的共用前端（contracts/sync-websocket.md「連線流程」「前端行為」）。
 // - 連線後第一則訊息送 {"type":"auth","token":...}；token 不放在網址。
+//   學生頁（007）傳 token = null，送 {"type":"auth"}，後端改讀握手請求的 HttpOnly cookie。
 // - 重連依序等 0.5、1、2、4 秒，之後每次 4 秒。
 // - 超過 25 秒沒收到任何訊息，視為中斷。
 // - 丟棄版本較舊的快照；老師快照在同一 version 內再以 revision 排序。
@@ -37,7 +38,7 @@ function setStatus(version, latencyMs) {
 /**
  * 連線到活動的同步通道。
  * @param {string} code 活動代碼。
- * @param {string} token 老師或裝置 token。
+ * @param {string|null} token 老師 token；學生頁傳 null，身分由 cookie 決定（007）。
  * @param {{
  *   onSnapshot: (snapshot: any) => void,
  *   onGone?: () => void,
@@ -127,7 +128,7 @@ export function connectSync(code, token, handlers) {
     if (stopped) return;
     socket = new WebSocket(url);
     socket.addEventListener("open", () => {
-      socket.send(JSON.stringify({ type: "auth", token }));
+      socket.send(JSON.stringify(token ? { type: "auth", token } : { type: "auth" }));
       resetSilenceTimer();
     });
     socket.addEventListener("message", handleMessage);
