@@ -2,9 +2,9 @@
 // ③ 剛被判錯的前一組（有遞補者時一起顯示）。不逐組列出其他候選，不顯示理由與他組次數。
 // 答案由 003 的 submissions.published 以（輪次、題號、組號）合併；所有文字用 textContent。
 
-import { onStudentSnapshot } from "./student.js";
+import { onStudentReset, onStudentSnapshot } from "./student.js";
 import { el } from "./submission.js";
-import { STATUS_LABELS, acceptRankingRounds, acceptRankingVersion, answerOf } from "./ranking-common.js";
+import { STATUS_LABELS, acceptRankingRounds, acceptRankingVersion, answerOf, resetRankingVersions } from "./ranking-common.js";
 
 export { acceptRankingVersion };
 
@@ -62,3 +62,7 @@ function render(snapshot) {
 }
 
 onStudentSnapshot(render);
+onStudentReset(() => {
+  resetRankingVersions();
+  $("ranking-review-student-list").replaceChildren();
+});

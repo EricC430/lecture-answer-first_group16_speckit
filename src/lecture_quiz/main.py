@@ -13,11 +13,14 @@
 """
 
 import logging
+import os
 import sys
 from pathlib import Path
 
 from fastapi import APIRouter, FastAPI
 from fastapi.staticfiles import StaticFiles
+from starlette.responses import Response
+from starlette.types import Scope
 
 from lecture_quiz.adapters.clock import SupportsNow, SystemClock
 from lecture_quiz.adapters.countdown import AsyncioCountdownScheduler
@@ -98,6 +101,26 @@ def _wire_ranking(app: FastAPI) -> None:
     )
 
 
+class NoCacheStaticFiles(StaticFiles):
+    """靜態檔每次都向伺服器驗證（ETag），避免瀏覽器用舊的腳本或頁面。
+
+    只在本機執行、檔案很小；不這樣做時，更新程式後老師與學生頁會沿用快取的舊 JS，
+    必須強制重新整理才會恢復（人工測試發現）。
+    """
+
+    def file_response(
+        self,
+        full_path: str | os.PathLike[str],
+        stat_result: os.stat_result,
+        scope: Scope,
+        status_code: int = 200,
+    ) -> Response:
+        """回傳檔案並加上 `Cache-Control: no-cache`。"""
+        response = super().file_response(full_path, stat_result, scope, status_code)
+        response.headers["Cache-Control"] = "no-cache"
+        return response
+
+
 def create_app(
     clock: SupportsNow | None = None,
     scheduler: CountdownScheduler | None = None,
@@ -151,7 +174,7 @@ def create_app(
     app.include_router(ws_sync.create_router(app.state.sync_hub))  # 001
 
     # 靜態檔必須最後掛載：它掛在 "/"，會攔下所有尚未匹配的路徑。
-    app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")
+    app.mount("/", NoCacheStaticFiles(directory=STATIC_DIR, html=True), name="static")
     return app
 
 

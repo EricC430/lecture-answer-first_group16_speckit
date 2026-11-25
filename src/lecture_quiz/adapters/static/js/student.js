@@ -37,7 +37,24 @@ export function onStudentSnapshot(render) {
 }
 
 
+const resetters = [];
+
+/** 註冊「換活動或回到加入畫面時清掉舊畫面與狀態」的函式。 */
+export function onStudentReset(reset) {
+  resetters.push(reset);
+}
+
+/** 清掉上一個活動留在畫面與模組裡的內容（作答表單、結果區塊、舊快照）。 */
+function resetStudentPage() {
+  lastSnapshot = null;
+  for (const section of document.querySelectorAll("section[data-feature]")) {
+    if (section.id !== "activity-section") section.hidden = true;
+  }
+  for (const reset of resetters) reset();
+}
+
 function showJoinForm() {
+  resetStudentPage();
   $("student-info").hidden = true;
   $("student-join").hidden = false;
 }
@@ -73,6 +90,7 @@ export function currentIdentity() {
 
 /** 以本分頁的裝置身分開始同步；身分失效時回到加入畫面。 */
 export function startSync(code, token) {
+  if (state.code !== null && state.code !== code) resetStudentPage();
   state.code = code;
   if (state.sync) state.sync.close();
   state.sync = connectSync(code, token, {

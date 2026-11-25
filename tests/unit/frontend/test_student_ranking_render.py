@@ -28,6 +28,7 @@ STUDENT_STUB = """\
 export function onStudentSnapshot(fn) {
   globalThis.__render = fn;
 }
+export function onStudentReset() {}
 """
 
 DRIVER = """\

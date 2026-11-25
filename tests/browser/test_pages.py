@@ -142,3 +142,44 @@ def test_creating_new_activity_clears_previous_activity_screen(page, world):
     assert page.text("#published-list") == ""
     assert "舊活動" not in page.text()
     assert_no_script_errors(page)
+
+
+def test_student_joining_new_activity_does_not_keep_previous_answers(page, world):
+    """學生換到新活動後，作答表單與已輸入的答案不得沿用上一個活動的內容。"""
+    world.create()
+    world.join(1)
+    world.open_round()
+    open_student(page, world, 1)
+    page.wait_for("document.querySelectorAll('#answer-forms textarea').length > 0")
+    page.eval(
+        "document.querySelector('#answer-forms textarea').value = '上一個活動的答案',"
+        " true"
+    )
+    world.close_round()
+    world.finalize()
+    assert world.api("POST", "/end").status_code == 200
+    page.wait_for("document.getElementById('new-join').hidden === false")
+
+    page.click("#new-join")  # 加入其他活動
+    world.create()  # 新活動（老師另開）；第 1 輪、同題號
+    page.eval(
+        f"document.getElementById('join-code').value = {json.dumps(world.code)}, true"
+    )
+    page.eval("document.getElementById('join-number').value = '1', true")
+    page.eval("document.querySelector('#student-join').requestSubmit(), true")
+    page.wait_for("document.getElementById('student-info').hidden === false")
+    world.open_round()
+    page.wait_for("document.querySelectorAll('#answer-forms textarea').length > 0")
+    values = page.eval(
+        "[...document.querySelectorAll('#answer-forms textarea')].map(t => t.value)"
+    )
+    assert all(v == "" for v in values), values
+    assert "上一個活動" not in page.text()
+    assert_no_script_errors(page)
+
+
+def test_static_files_are_revalidated_not_cached_blindly(world):
+    """靜態檔不得被瀏覽器盲目快取（否則更新後要強制重新整理才會換成新腳本）。"""
+    response = world.http.get("/js/student.js")
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-cache"
