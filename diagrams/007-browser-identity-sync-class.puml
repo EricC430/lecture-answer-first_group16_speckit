@@ -52,6 +52,8 @@ class JoinGroup <<core 指令，007 新增欄位>> {
 class ActivityService <<app>> {
   join(code, number_raw, credential_raw, requester, key, browser_key)
   resolve_requester(code, token) : Requester
+  --
+  冪等範圍：JoinGroup 以瀏覽器雜湊（verification P-01）
 }
 
 class StudentTab <<前端 student.js>> {

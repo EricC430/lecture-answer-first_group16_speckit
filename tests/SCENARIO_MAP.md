@@ -279,3 +279,25 @@
 | US4-AS2 | `tests/architecture/test_ui_tokens.py::test_text_contrast_meets_wcag_aa`<br>`tests/architecture/test_ui_tokens.py::test_contrast_check_catches_a_failing_pair`（負對照） |
 | US4-AS3 | `tests/browser/test_pages.py::test_pages_fit_phone_width_without_horizontal_scroll` |
 | US4-AS4 | 001～005 既有全部測試（`pytest -q`）<br>`tests/architecture/test_feature_scripts_loaded.py` |
+
+## 007-browser-identity-sync
+
+依 spec 的 15 個 Acceptance Scenario（US1～US3）整理（2026-11-26，007 T044；掃描測試 docstring 的 `Scenario: 007 USn-ASm`）。學生路徑的測試一律不帶 Bearer，身分只來自 cookie（research R8）。
+
+| Scenario | 測試 |
+|---|---|
+| US1-AS1 | `tests/browser/test_007_tabs.py::test_second_tab_shows_same_group`<br>`tests/contract/test_ws_sync.py::test_auth_without_token_uses_cookie`<br>`tests/integration/test_007_browser_identity.py::test_same_browser_restores_group_in_new_tab` |
+| US1-AS2 | `tests/integration/test_007_browser_identity.py::test_other_browser_joins_same_group_with_credential` |
+| US1-AS3 | `tests/browser/test_007_tabs.py::test_second_tab_join_other_group_shows_message`<br>`tests/integration/test_007_browser_identity.py::test_member_browser_join_other_group_rejected`<br>`tests/integration/test_007_browser_identity.py::test_ten_join_attempts_one_group`<br>`tests/integration/test_007_browser_identity.py::test_concurrent_joins_one_wins`<br>`tests/unit/core/test_state_machine_join.py::test_same_browser_hash_rejected_even_when_actor_is_anonymous`<br>`tests/unit/core/test_state_machine_join.py::test_member_device_message_uses_browser_wording` |
+| US1-AS4 | `tests/integration/test_007_browser_identity.py::test_forged_or_foreign_key_is_anonymous` |
+| US1-AS5 | `tests/browser/test_007_tabs.py::test_reopen_by_entering_code_restores_group`<br>`tests/integration/test_007_browser_identity.py::test_key_persists_without_tab_state` |
+| US1-AS6 | `tests/integration/test_007_browser_identity.py::test_submission_ignores_claimed_group` |
+| US2-AS1 | `tests/browser/test_007_tabs.py::test_join_in_one_tab_switches_other_tabs` |
+| US2-AS2 | `tests/browser/test_007_tabs.py::test_leave_in_one_tab_resets_other_tabs`<br>`tests/integration/test_007_browser_identity.py::test_leave_closes_all_tabs_of_browser` |
+| US2-AS3 | `tests/integration/test_007_browser_identity.py::test_leave_rejected_during_round_keeps_all_tabs` |
+| US2-AS4 | `tests/browser/test_007_tabs.py::test_group_delete_resets_all_tabs`<br>`tests/integration/test_007_browser_identity.py::test_group_delete_closes_all_tabs` |
+| US2-AS5 | `tests/integration/test_007_browser_identity.py::test_submission_state_reaches_other_tab` |
+| US2-AS6 | `tests/integration/test_007_browser_identity.py::test_restart_makes_all_tabs_gone` |
+| US3-AS1 | `tests/browser/test_007_tabs.py::test_teacher_and_student_same_context`<br>`tests/integration/test_007_browser_identity.py::test_student_join_keeps_teacher_control` |
+| US3-AS2 | `tests/browser/test_007_tabs.py::test_teacher_and_student_same_context`<br>`tests/integration/test_007_browser_identity.py::test_student_leave_or_delete_keeps_teacher` |
+| US3-AS3 | `tests/integration/test_007_browser_identity.py::test_cookie_only_cannot_do_teacher_ops` |

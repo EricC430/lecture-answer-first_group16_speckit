@@ -241,31 +241,31 @@ description: "007-browser-identity-sync 的任務清單"
 
 ## Phase 6: Polish & Cross-Cutting Concerns
 
-- [ ] T039 [P] 同步 001 文件，每處都加註「由 007 修訂（2026-11-26）」：
+- [x] T039 [P] 同步 001 文件，每處都加註「由 007 修訂（2026-11-26）」：
   - `specs/001-activity-session/spec.md`：FR-008、FR-009、FR-012、FR-034、US2 敘述、Key Entities「裝置身分」。
   - `specs/001-activity-session/research.md`：R5「每個分頁是一台獨立裝置」。
   - `specs/001-activity-session/contracts/http-api.md`：#3 加入回應移除 `deviceToken`、`ALREADY_IN_GROUP` 訊息、不記錄 `lq_browser` cookie。
   - `specs/001-activity-session/contracts/sync-websocket.md`：auth 的 token 可省略。
-- [ ] T040 [P] 同步 `diagrams/001-activity-session-component.puml`、`diagrams/001-activity-session-sequence.puml`：學生畫面與活動 API 的身分來源改為 cookie，並加註 007。重新執行 `java -jar plantuml.jar "./diagrams/001-*.puml"`，開啟 PNG 確認沒有文字重疊（憲章原則 II 補充規定 3）。
-- [ ] T041 [P] 改寫 `specs/001-activity-session/quickstart.md`、`specs/003-round-submission/quickstart.md`、`specs/004-ranking-review/quickstart.md`、`specs/006-ui-refresh/quickstart.md` 中「以多個分頁模擬多台裝置或多組」的步驟（4 份 quickstart 共 31 處提到「分頁」，逐一判斷是否要改），改成「以不同瀏覽器或瀏覽器設定檔模擬」，網址統一為 `http://127.0.0.1:8000`（research R9）。
+- [x] T040 [P] 同步 `diagrams/001-activity-session-component.puml`、`diagrams/001-activity-session-sequence.puml`：學生畫面與活動 API 的身分來源改為 cookie，並加註 007。重新執行 `java -jar plantuml.jar "./diagrams/001-*.puml"`，開啟 PNG 確認沒有文字重疊（憲章原則 II 補充規定 3）。
+- [x] T041 [P] 改寫 `specs/001-activity-session/quickstart.md`、`specs/003-round-submission/quickstart.md`、`specs/004-ranking-review/quickstart.md`、`specs/006-ui-refresh/quickstart.md` 中「以多個分頁模擬多台裝置或多組」的步驟（4 份 quickstart 共 31 處提到「分頁」，逐一判斷是否要改），改成「以不同瀏覽器或瀏覽器設定檔模擬」，網址統一為 `http://127.0.0.1:8000`（research R9）。
 - [x] T042 [P] 憲章修訂（research R11、analyze D1／D2）：已於 2026-11-26 修訂為 v1.2.0，獨立 commit `ca29a0c`。內容：技術限制 1 改為以多個瀏覽器模擬各組學生；子功能拆分表加入 006、007。CLAUDE.md 的版本已同步。剩下的工作：在 007 的 PR 說明中交代這次修訂（依使用者指示不另開 PR）。
-- [ ] T043 [P] 更新 `CLAUDE.md` 的「專案現況」，加入 007 一段：分支、程式位置（`adapters/web/browser_session.py`、`request_token`、INV-1），以及「學生身分改為同一瀏覽器共用、人工驗證要用不同瀏覽器模擬不同組、一律用 127.0.0.1」。
-- [ ] T044 [P] 更新 `tests/SCENARIO_MAP.md`：
+- [x] T043 [P] 更新 `CLAUDE.md` 的「專案現況」，加入 007 一段：分支、程式位置（`adapters/web/browser_session.py`、`request_token`、INV-1），以及「學生身分改為同一瀏覽器共用、人工驗證要用不同瀏覽器模擬不同組、一律用 127.0.0.1」。
+- [x] T044 [P] 更新 `tests/SCENARIO_MAP.md`：
   - 新增「007-browser-identity-sync」區段，列出 US1-AS1～AS6、US2-AS1～AS6、US3-AS1～AS3 對應的測試（依各測試 docstring 的 `Scenario: 007 USn-ASm` 掃描）。
   - 001 區段中受 T015 改名影響的測試路徑一併更新。
 - [x] T045 日誌與回應檢查（SC-007、FR-008，research R10）：在 `tests/integration/test_007_browser_identity.py` 新增 `test_browser_key_never_logged_or_returned`。
   - 以 `caplog`（INFO）擷取「建立 → 匯入 → 開放加入 → browser-session → 加入 → 開輪 → 提交 → 關輪 → 離開」整個流程。
   - 斷言金鑰字串在日誌中出現 0 次、在所有回應本文中出現 0 次。
   - 用 `grep -rn "print(" src` 確認沒有新增 `print`。
-- [ ] T046 效能驗證（SC-006）：修改 `tests/perf/test_sync_latency.py`，讓每組 2 條連線來自 2 把不同的金鑰（2 個瀏覽器），老師加上 6 組。執行 `.venv\Scripts\pytest -m perf tests/perf/test_sync_latency.py`，記錄最大延遲，必須 ≤ 2 秒，記入 quickstart 驗證紀錄。
-- [ ] T047 程式碼與圖表一致性驗證（憲章原則 II）：逐一比對 `diagrams/007-browser-identity-sync-{component,class,sequence}.puml` 與實作，項目如下：
+- [x] T046 效能驗證（SC-006）：修改 `tests/perf/test_sync_latency.py`，讓每組 2 條連線來自 2 把不同的金鑰（2 個瀏覽器），老師加上 6 組。執行 `.venv\Scripts\pytest -m perf tests/perf/test_sync_latency.py`，記錄最大延遲，必須 ≤ 2 秒，記入 quickstart 驗證紀錄。
+- [x] T047 程式碼與圖表一致性驗證（憲章原則 II）：逐一比對 `diagrams/007-browser-identity-sync-{component,class,sequence}.puml` 與實作，項目如下：
   - 組件名稱：`browser-session`、`request_token`、`WebSocketHub` auth、`ActivityStateMachine._join_group`、`BroadcastChannel lq-identity`。
   - 類別欄位：`BrowserKey`、`DeviceIdentity.token_hash`、`ActivityService.join` 的參數。
   - 時序：先發金鑰 → 加入 → 通知 → 拒絕 → 離開 → 舊身分。
 
   有差異時先改圖，再執行 `java -jar plantuml.jar "./diagrams/007-*.puml"`，並開啟 PNG 檢查。
-- [ ] T048 執行 `ruff check .`、`ruff format --check .`、`mypy`，全部通過，記錄指令與結果（憲章技術限制 2）。
-- [ ] T049 執行完整的 `.venv\Scripts\pytest`（預設排除 perf、real_google），記錄日期、指令與通過／失敗／略過數，與 T002 的基準比對後寫入 quickstart 驗證紀錄（憲章原則 VI）。
+- [x] T048 執行 `ruff check .`、`ruff format --check .`、`mypy`，全部通過，記錄指令與結果（憲章技術限制 2）。
+- [x] T049 執行完整的 `.venv\Scripts\pytest`（預設排除 perf、real_google），記錄日期、指令與通過／失敗／略過數，與 T002 的基準比對後寫入 quickstart 驗證紀錄（憲章原則 VI）。
 - [ ] T050 獨立審查：交給另一個 agent 或 session 審查本分支的差異（例如 `harness:silent-failure-hunter`、`harness:pr-test-analyzer`），重點如下：
   - 加入競爭（INV-1）。
   - cookie 路徑是否真的被測試走到（沒有任何 007 測試帶 Bearer 冒充學生）。

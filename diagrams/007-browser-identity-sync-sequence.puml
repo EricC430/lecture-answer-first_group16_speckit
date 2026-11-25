@@ -53,7 +53,11 @@ end
 == 舊身分（US1-AS4、US2-AS6） ==
 A -> Sync : auth（cookie 被竄改，或後端已重啟）
 alt 活動不存在
-  Sync --> A : gone →「活動已失效」
+  Sync --> A : gone
+  note right of A
+    曾同步成功（後端重啟）→「活動已失效」
+    從未同步成功（網址代碼打錯）→ 加入畫面 +「找不到這個活動代碼」
+  end note
 else 查無此雜湊
   Sync --> A : unauthorized INVALID_TOKEN → 加入畫面
 end

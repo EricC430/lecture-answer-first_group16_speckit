@@ -4,7 +4,7 @@ skinparam sequenceMessageAlign center
 title 001 活動與階段同步 — 時序圖（建立、加入、開輪、關輪、定案、結束、重連與重啟）
 
 actor "老師" as T
-actor "學生 A 組（裝置 1、2）" as SA
+actor "學生 A 組（裝置 1、2；007 起每台裝置是一個瀏覽器）" as SA
 actor "學生 B 組" as SB
 participant "活動 API" as API
 participant "活動服務" as S
@@ -49,11 +49,16 @@ else 沒有題目
 end
 
 == 組別加入 ==
-SA -> API : 加入（代碼, 組號 " ０３ "）
-API -> S : join(code, numberRaw, credentialRaw, requester, key)
+note over SA, API
+  由 007 修訂（2026-11-26）：學生頁載入時先 POST /api/browser-session 取得
+  HttpOnly cookie lq_browser；加入、同步都以 cookie 識別瀏覽器，回應不含 token。
+  細節見 diagrams/007-browser-identity-sync-sequence.puml
+end note
+SA -> API : 加入（代碼, 組號 " ０３ "）（cookie 自動附上）
+API -> S : join(code, numberRaw, credentialRaw, requester, key, browser_key)
 S -> M : apply(加入, 組號正規化為 3，檢查 1～N)
 M --> S : 建立第 3 組、加入憑證
-S --> SA : 裝置 1 身分 + 第 3 組憑證（本組裝置與老師可見）
+S --> SA : 裝置 1（瀏覽器）身分 + 第 3 組憑證（本組裝置與老師可見）
 SA -> API : 裝置 2 加入（代碼, 3, 從裝置 1 畫面看到的憑證）
 API -> S : join
 S -> M : apply(加入既有組, 憑證)

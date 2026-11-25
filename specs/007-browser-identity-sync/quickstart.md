@@ -68,7 +68,7 @@
 | 改動前 lint（T003） | 2026-11-26 | Claude（實作者） | `ruff check .`、`ruff format --check .`、`mypy` | All checks passed；412 files already formatted；no issues in 83 source files |
 | Phase 2 完成（T016） | 2026-11-26 03:04 | Claude（實作者） | `.venv\Scripts\python -m pytest -q` | 1387 passed、4 failed、8 deselected。失敗：`test_http_join::test_device_already_in_group_gets_409`、`test_us2_join::test_member_device_cannot_join_again`（新訊息屬 T023）、`browser/test_pages::test_student_joining_new_activity_does_not_keep_previous_answers`、`browser/test_teacher_restore::test_student_leaving_in_same_browser_keeps_teacher_identity`（學生頁尚未呼叫 browser-session，屬 T026）|
 | US1～US3 完成（T030、T035、T038） | 2026-11-26 03:12 | Claude（實作者） | `ruff check .`、`ruff format --check .`、`mypy`、`.venv\Scripts\python -m pytest -q` | lint 全過、mypy 84 檔無問題；1428 passed、0 failed、8 deselected（含 007 新增：整合 19 項、瀏覽器 10 項、WebSocket 契約 5 項、核心 3 項） |
-| ruff／format／mypy | | | | |
-| pytest（預設） | | | | |
-| perf（SC-006） | | | | |
+| ruff／format／mypy（T048） | 2026-11-26 03:17 | Claude（實作者） | `ruff check .`、`ruff format --check .`、`mypy` | All checks passed；419 files already formatted；84 source files 無問題 |
+| pytest（預設，T049） | 2026-11-26 03:17 | Claude（實作者） | `.venv\Scripts\python -m pytest -q`（commit 前的工作目錄） | 1428 passed、0 failed、8 deselected（基準 T002：1371 passed；新增 57 項） |
+| perf（SC-006，T046） | 2026-11-26 03:14 | Claude（實作者） | `pytest -m perf tests/perf/test_sync_latency.py`（老師 1 + 6 組 × 2 個瀏覽器金鑰 = 13 條連線，各 10 次） | 最大延遲：開輪 12.0 ms、關輪 5.9 ms、定案 7.4 ms、結束 6.1 ms（皆 < 2000 ms）；`pytest -m perf tests/perf` 6 passed |
 | 人工驗證 1～14 | | | | |

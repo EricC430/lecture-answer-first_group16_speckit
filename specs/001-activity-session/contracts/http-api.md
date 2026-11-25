@@ -61,3 +61,4 @@
 
 - **要記錄**：方法、路徑樣板（例如 `/activities/{code}/rounds`）、活動代碼、結果代碼、`version`、耗時。
 - **不記錄**：`Authorization` 標頭、請求本文中的 `credential`、回應中的 `teacherToken`、`deviceToken`、`credential`（技術限制 3）。
+  - **由 007 修訂（2026-11-26）**：#3 的回應移除 `deviceToken`，加入時必須有瀏覽器金鑰（cookie 或 Bearer），沒有時回 `400 BROWSER_SESSION_REQUIRED`；`ALREADY_IN_GROUP` 訊息改為「這個瀏覽器已是第 n 組成員，請先離開本組。」；學生請求的身分取自 `lq_browser` cookie（Bearer 優先）。日誌同樣不記錄 cookie。新增 `POST /api/browser-session`。詳見 `specs/007-browser-identity-sync/contracts/http-and-sync-changes.md`。
