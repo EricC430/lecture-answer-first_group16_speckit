@@ -25,7 +25,7 @@
 - **先發金鑰再加入**（R3）：
   - 新增 `POST /api/browser-session`，學生頁載入時呼叫，只有在沒有金鑰時才發。
   - 加入端點不發金鑰；沒有金鑰時回 `BROWSER_SESSION_REQUIRED`（FR-013）。
-  - 核心 `_join_group` 加一條鎖內檢查：裝置雜湊已存在就回 `ALREADY_IN_GROUP`。同一瀏覽器同時送出的加入請求只會成功一個（FR-007）。
+  - `JoinGroup` 指令新增 `device_token_hash`，核心 `_join_group` 加一條鎖內檢查：裝置雜湊已存在就回 `ALREADY_IN_GROUP`，訊息也從指令取得組號。同一瀏覽器同時送出的加入請求只會成功一個（FR-007）。
 - **身分來源**（R4、R5）：
   - HTTP 是「Bearer 優先，否則 cookie」。老師頁帶 Bearer，所以老師與學生在同一個瀏覽器時互不干擾（US3）。
   - WebSocket 的 auth 訊息可以不帶 token，這時改讀握手請求的 cookie。
@@ -50,14 +50,14 @@
 **Constraints**:
 
 - 金鑰不得出現在網址、畫面、回應本文、錯誤訊息或日誌（FR-008、SC-007）。
-- 核心維持純函式（架構限制）：核心不知道 cookie 的存在，只多一條以 `issued.device_token_hash` 判斷的規則。
+- 核心維持純函式（架構限制）：核心不知道 cookie 的存在，只多一個指令欄位 `JoinGroup.device_token_hash` 與一條以它判斷的規則。
 - 學生端不得自行附上身分（FR-008）。
 
 **Scale/Scope**:
 
 - 改動集中在 001 的轉接層與前端：`common.py`、`http_api.py`、`ws_sync.py`、新增 `browser_session.py`、`student.js`、`identity.js`、`round-submission.js`。
-- 核心改一個函式（`_join_group`）與一則訊息；服務層改 `join` 的參數。
-- 測試輔助函式約 66 處取用 `deviceToken`，改由輔助函式統一處理（R8）。
+- 核心改 `JoinGroup` 指令（新增欄位）、一個函式（`_join_group`）與一則訊息；服務層改 `join` 的參數。
+- 測試共 12 個檔案、31 處取用 `deviceToken`，改由輔助函式統一處理（R8）。
 
 ## Constitution Check
 
@@ -72,7 +72,8 @@
 | V 資料可見性與安全 | 金鑰採 HttpOnly、SameSite=Strict，不進回應本文與日誌（R10，有測試）；錯誤訊息不含金鑰或憑證；竄改、過期的金鑰一律視為匿名；可見性規則（學生只看本組）不變 | 通過 |
 | VI 驗收情境驅動測試 | 每個 Acceptance Scenario 對應至少一個測試，tasks 會更新 `tests/SCENARIO_MAP.md`。cookie 路徑有專門的測試，不帶 Bearer（R8，避免輔助函式走 Bearer 造成假綠燈）。不涉及 Google。合併前由非實作者依 quickstart 人工驗證 14 項並記錄 | 通過（待執行） |
 | VII 簡單與本機運作 | 不新增套件、資料庫或持久化；只在本機執行。新增一個端點與一個瀏覽器內的通知頻道，是滿足 FR-007、FR-010 的最小做法（R3、R6） | 通過 |
-| 技術限制 1「以多個瀏覽器分頁模擬各組學生」 | 與 007 衝突：同一瀏覽器的分頁共用身分。依 R11 做 PATCH 修訂 v1.1.1，改成「以多個瀏覽器（或設定檔、無痕視窗）模擬」 | 通過（含修訂任務） |
+| 技術限制 1「以多個瀏覽器分頁模擬各組學生」 | 原本與 007 衝突。已修訂憲章 v1.2.0（2026-11-26，commit `ca29a0c`），改成「以多個瀏覽器（或設定檔、無痕視窗）模擬」 | 通過 |
+| 子功能拆分表 | 原本只列 001～005，且調整拆分必須走修訂程序。v1.2.0 已把 006、007 列入，007 對應 activity-session、相依 001 | 通過 |
 | 技術限制 2 程式碼風格 | 公開函式要有型別提示與 docstring；ruff、format、mypy 都要通過 | 通過（待執行） |
 | 技術限制 3 日誌 | 只用 `logging`；不記錄金鑰；`browser-session` 只記錄方法、路徑與狀態碼 | 通過 |
 | 技術限制 4 效能與架構 | 2 秒同步沿用 001 的 WebSocket 推送；核心純函式，相依只由外層指向核心（`tests/architecture/test_core_is_pure.py` 持續檢查） | 通過 |
@@ -105,8 +106,9 @@ specs/007-browser-identity-sync/
 ```text
 src/lecture_quiz/
 ├── core/activity/
-│   ├── state_machine.py        # 修改：_join_group 加入 INV-1（issued.device_token_hash 已存在 → ALREADY_IN_GROUP）
-│   └── results.py              # 修改：ALREADY_IN_GROUP 訊息改為「這個瀏覽器已是第 N 組成員…」，改用 issued 雜湊找組號
+│   ├── commands.py             # 修改：JoinGroup 新增 device_token_hash: str | None
+│   ├── state_machine.py        # 修改：_join_group 加入 INV-1（command.device_token_hash 已存在 → ALREADY_IN_GROUP）
+│   └── results.py              # 修改：ALREADY_IN_GROUP 訊息改為「這個瀏覽器已是第 N 組成員…」，從 command.device_token_hash 找組號
 ├── app/activity/
 │   ├── secrets_gen.py          # 新增：new_browser_key()、is_browser_key(value)（格式檢查）
 │   └── service.py              # 修改：join() 改收 browser_key，不再 new_token()；JoinedDevice 移除 token
@@ -135,7 +137,6 @@ tests/
 specs/001-activity-session/{spec.md,research.md,contracts/*.md,quickstart.md}  # 加註「由 007 修訂」
 specs/{003,004,006}-*/quickstart.md          # 多分頁模擬多組的步驟改成多瀏覽器
 diagrams/001-activity-session-*.puml         # 學生畫面與 API 的身分來源加註 007
-.specify/memory/constitution.md              # PATCH v1.1.1：技術限制 1 的措辭（R11）
 CLAUDE.md                                    # 專案現況加入 007 一段
 ```
 
@@ -147,7 +148,7 @@ CLAUDE.md                                    # 專案現況加入 007 一段
 2. **轉接層**（`browser-session`、`request_token`、加入、WebSocket auth）→ 契約測試。
 3. **測試輔助函式**（R8）→ 跑一次既有的完整測試，確認數字與改動前相同。改動前先記下目前 `pytest` 的通過數，作為對照。
 4. **前端**（`student.js`、`identity.js`、`round-submission.js`）→ 瀏覽器端對端測試。
-5. **文件與圖表同步**（001 文件、quickstart、憲章 PATCH、CLAUDE.md）→ 程式碼與圖的一致性檢查。
+5. **文件與圖表同步**（001 文件、quickstart、CLAUDE.md；憲章已於 v1.2.0 修訂）→ 程式碼與圖的一致性檢查。
 
 | 風險 | 影響 | 對策 |
 |---|---|---|

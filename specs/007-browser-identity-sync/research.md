@@ -48,9 +48,10 @@
   - 加入端點**不發**金鑰。請求沒有瀏覽器金鑰（例如瀏覽器封鎖了 cookie）時回 400 `BROWSER_SESSION_REQUIRED`，訊息為「瀏覽器沒有保存身分，請允許本網站儲存資料後重新整理頁面」。這同時滿足 FR-013。
 - **核心的雙重檢查**：
   - 服務層在取得活動鎖**之前**就解析了請求者，所以兩個同時送出的加入請求都會被解析成 `Anonymous`。
-  - 因此核心 `_join_group` 除了原本「請求者已是成員」的檢查，再加一條：`issued.device_token_hash` 已在 `activity.devices` 時，回 `ALREADY_IN_GROUP`。
+  - 因此 `JoinGroup` 指令新增欄位 `device_token_hash: str | None`，由服務層填入 `hash_token(瀏覽器金鑰)`。核心 `_join_group` 除了原本「請求者已是成員」的檢查，再加一條：`command.device_token_hash` 已在 `activity.devices` 時，回 `ALREADY_IN_GROUP`。
   - 這條檢查在鎖內執行，是純函式，第二個請求一定會被拒絕。
-  - 拒絕訊息改用 `issued.device_token_hash` 找出所屬組別，並改成「這個瀏覽器已是第 N 組成員，請先離開本組。」（spec US1-AS3）。
+  - 拒絕訊息的函式 `_describe_group_rejection(reason, command, activity)` 拿不到 `issued`，所以改從 `command.device_token_hash`（沒有時才用 `command.actor.token_hash`）找出所屬組別，訊息為「這個瀏覽器已是第 N 組成員，請先離開本組。」（spec US1-AS3）。同時加入的落敗者也能看到組號。
+  - `issued.device_token_hash` 仍保留，與 `command.device_token_hash` 相同；`_join_group` 在兩者不一致時拋 `ValueError`（服務層的程式錯誤，不是使用者輸入）。
 - **仍存在的競爭**：同一瀏覽器第一次載入時，若兩個分頁在同一個往返時間內同時呼叫 `browser-session`，可能各拿一把金鑰，後到的覆蓋先到的。學生頁要等這個呼叫完成才啟用加入按鈕，而人輸入組號需要好幾秒，所以實際上不會在加入前互相覆蓋。這列為已知限制，不影響 SC-002：SC-002 量的是頁面載入完成後的同時加入。
 - **Alternatives considered**：
   - 由頁面產生金鑰：頁面讀得到金鑰，違反 FR-008。
@@ -68,7 +69,8 @@
 - **活動不存在時回 404 還是 410**（`unwrap` 依「是否帶 token」決定）：
   - 現在學生的每個請求都會帶 cookie，若照原規則，輸入打錯的代碼也會變成 410「活動已失效」。
   - 因此**加入端點**判斷 404／410 時只看 Bearer，打錯代碼仍回 404「找不到這個活動代碼」。
-  - 其他端點與 WebSocket 維持原規則。只有網址帶 `?code=` 恢復身分時才會呼叫它們，這時活動不存在就代表已失效（後端重啟），回 410 正確（spec FR-011）。
+  - 其他端點與 WebSocket 維持原規則：帶 cookie 而活動不存在時回 410／`gone`。
+  - 但網址帶錯誤的 `?code=`（例如貼錯連結）時，學生頁也會收到 `gone`。為了不把「打錯代碼」顯示成「活動已失效」，學生頁依「這個分頁是否曾經同步成功」區分：沒有同步成功過 → 顯示加入畫面與「找不到這個活動代碼，請確認後再輸入。」；同步成功過 → 顯示「活動已失效」（spec Edge Case、FR-011）。判斷只在前端畫面，後端回應不變。
 - **Alternatives considered**：cookie 優先於 Bearer。老師與學生在同一瀏覽器時，老師操作會被當成學生操作，違反 US3。
 
 ## R5：WebSocket 驗證
@@ -104,13 +106,15 @@
   2. 網址帶 `?code=` 時直接以 cookie 開始同步，前端不再判斷自己有沒有 token，因為 cookie 讀不到。
   3. 第一次連線就收到 `unauthorized`（`INVALID_TOKEN`）時，表示這個瀏覽器在該活動沒有身分：安靜地顯示加入畫面，不顯示錯誤。
   4. 之後才收到的 `unauthorized`（例如 `LEFT_GROUP`、`GROUP_DELETED`），維持現在的提示。
-  5. 「加入其他活動」按鈕（活動已結束或取消時）只重設畫面。後端的組別身分保留，因為已結束的活動不需要也不能離開本組，不必清 cookie。
-  6. `identity.js` 移除 `getDeviceToken`、`setDeviceToken`、`clearDeviceToken`。`currentIdentity()` 改成只回傳活動代碼與「是否已連線」。003 的 `round-submission.js` 送出答案時不再附 token。
+  5. 加入時收到 `409 ALREADY_IN_GROUP`，而且送出的活動代碼就是這個活動：顯示該訊息，並以該代碼開始同步，切換到本組畫面（spec US1-AS3、US1-AS5）。代碼不同時（例如另一個活動）不會發生，因為身分以活動為單位。
+  6. 第一次連線就收到 `gone`：見 R4，顯示「找不到這個活動代碼」而不是「活動已失效」。
+  7. 「加入其他活動」按鈕（活動已結束或取消時）只重設畫面。後端的組別身分保留，因為已結束的活動不需要也不能離開本組，不必清 cookie。
+  8. `identity.js` 移除 `getDeviceToken`、`setDeviceToken`、`clearDeviceToken`。`currentIdentity()` 改成只回傳活動代碼與「是否已連線」。003 的 `round-submission.js` 送出答案時不再附 token。
 - **Rationale**：頁面讀不到 cookie，只能把「有沒有身分」交給後端判斷。後端本來就是唯一的事實來源（憲章原則 IV），所以這樣做沒有問題。
 
 ## R8：既有自動化測試的相容做法
 
-- **現況**：測試輔助函式（`tests/conftest.py` 的 `join_group`、`tests/integration/conftest.py`、`ranking_world.py`、`tests/browser/conftest.py`、各 perf 測試，共 66 處）從加入回應取出 `deviceToken`，再以 Bearer 帶入。
+- **現況**：測試輔助函式（`tests/conftest.py` 的 `join_group`、`tests/integration/conftest.py`、`ranking_world.py`、`tests/browser/conftest.py`、各 perf 測試；以 `grep -rn --include=*.py deviceToken tests` 計，共 12 個檔案、31 處）從加入回應取出 `deviceToken`，再以 Bearer 帶入。
 - **Decision**：
   - 輔助函式模擬「一個新瀏覽器」的流程：
     1. 清空 TestClient 的 cookie jar。
@@ -144,7 +148,7 @@
 
 - **問題**：憲章寫「以多個瀏覽器分頁模擬老師與各組學生」。007 之後，同一瀏覽器的分頁共用學生身分，不能再用多個分頁模擬多組。
 - **Decision**：
-  - 憲章做 PATCH 修訂 v1.1.1，措辭改為「以多個瀏覽器（或瀏覽器設定檔、無痕視窗）模擬各組學生；同一瀏覽器的分頁共用同一個學生身分」。
-  - 這是配合已與 OpenSpec 組核對的行為所做的措辭同步，不改變任何原則。
-  - 在 PR 說明中交代，不另外徵求同意（使用者 2026-11-22 指示：淺層憲章變動直接處理）。
+  - 已於 2026-11-26 修訂為 v1.2.0（獨立 commit `ca29a0c`）：技術限制 1 改為「以多個瀏覽器（或瀏覽器設定檔、無痕視窗）模擬各組學生；同一瀏覽器的分頁共用同一個學生身分」。
+  - 同一次修訂也處理 `/speckit-analyze` 的 D2：子功能拆分表原本只有 001～005，且「調整拆分必須走修訂程序」，因此把 006、007 列入表中，並說明 006 起是延伸子功能。新增章節內容屬 MINOR，所以版本為 1.2.0 而不是 1.1.1。
+  - 依使用者 2026-11-26 指示直接處理，不另開 PR，在 007 的 PR 說明中交代。
 - **Rationale**：避免憲章與 007 的行為互相矛盾，影響評分時的一致性檢查。

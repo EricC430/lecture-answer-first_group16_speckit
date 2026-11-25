@@ -32,6 +32,8 @@ B -> Api : 加入第 5 組
 Api -> Svc : join（同一把金鑰）
 Svc --> Api : 拒絕 ALREADY_IN_GROUP\n（hash(金鑰) 已在 devices；同時加入的落敗者亦同）
 Api --> B : 「這個瀏覽器已是第 3 組成員，請先離開本組。」\n（第 5 組未建立、未發憑證）
+B -> Sync : 同一活動 → WebSocket auth（cookie）
+Sync --> B : 第 3 組快照（切換到本組畫面，US1-AS5）
 
 == 離開本組（US2-AS2） ==
 B -> Api : 離開本組

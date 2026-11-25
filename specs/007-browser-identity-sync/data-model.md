@@ -42,7 +42,7 @@
 
 ## 核心不變量（`ActivityStateMachine._join_group`）
 
-- **INV-1（新增）**：`issued.device_token_hash` 已在 `activity.devices` 時，必須拒絕 `ALREADY_IN_GROUP`，而且不建立組別、不發憑證。
+- **INV-1（新增）**：`JoinGroup` 指令新增欄位 `device_token_hash: str | None`，由服務層填入 `hash_token(瀏覽器金鑰)`。`command.device_token_hash` 已在 `activity.devices` 時，必須拒絕 `ALREADY_IN_GROUP`，而且不建立組別、不發憑證。
   - 這條檢查補足「請求者在取得鎖之前就已解析」造成的競爭（research R3），確保同一瀏覽器同時送出的加入請求只會成功一個（FR-007）。
 - **INV-2（沿用）**：`activity.devices` 的鍵不重複。每個瀏覽器在每個活動中最多只有一個組別身分（FR-001、FR-003）。
 - **INV-3（沿用 001 FR-034）**：只有在「組別最後一筆 `DeviceIdentity` 被移除，而且該組從未提交」時，才釋放組號。這裡的「最後一筆」，從 007 起就是「最後一個瀏覽器」。

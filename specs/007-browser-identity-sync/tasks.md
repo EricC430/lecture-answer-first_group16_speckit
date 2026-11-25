@@ -17,7 +17,7 @@ description: "007-browser-identity-sync 的任務清單"
 **Diagrams**: REQUIRED（原則 II）。`diagrams/007-browser-identity-sync-{component,class,sequence}.puml` 與 PNG 已存在（2026-11-26 plan 階段更新）。最後一個 Phase 有「程式碼與圖表一致性驗證」任務。
 
 **Architecture**: REQUIRED（技術限制 4）。
-- 核心只改 `core/activity/state_machine.py` 的 `_join_group` 與 `results.py` 的訊息，以 `issued.device_token_hash` 判斷，不知道 cookie 的存在。
+- 核心只改 `core/activity/commands.py` 的 `JoinGroup`（新增 `device_token_hash`）、`state_machine.py` 的 `_join_group` 與 `results.py` 的訊息，不知道 cookie 的存在。
 - cookie 只出現在 `adapters/web/`。
 
 **路徑**：以下皆相對於 repo 根目錄；Python 套件根目錄為 `src/lecture_quiz/`。
@@ -78,7 +78,7 @@ description: "007-browser-identity-sync 的任務清單"
   - 在 `src/lecture_quiz/adapters/web/http_api.py` 把 `Token = Annotated[str | None, Depends(bearer_token)]` 改成 `Depends(request_token)`。002～005 import 同一個 `Token`，會一起改變，確認它們不需要再改。
 - [ ] T012 修改 `src/lecture_quiz/app/activity/service.py` 的 `join()`：
   - 新增必填參數 `browser_key: str`。
-  - 刪除 `token = new_token()`，改成 `IssuedSecrets(device_token_hash=hash_token(browser_key), group_credential=new_credential())`。
+  - 刪除 `token = new_token()`，改成 `IssuedSecrets(device_token_hash=hash_token(browser_key), group_credential=new_credential())`，並以 `JoinGroup(requester, number_raw, credential_raw, device_token_hash=hash_token(browser_key))` 建立指令（欄位由 T022 新增；T022 完成前先以預設值 None 呼叫也可）。
   - `build` 改用 `hash_token(browser_key)` 找裝置。
   - `JoinedDevice` 移除 `device_token` 欄位，並更新 docstring。
 - [ ] T013 修改 `src/lecture_quiz/adapters/web/http_api.py` 的 `join_group` 路由（contracts §3）：
@@ -92,13 +92,13 @@ description: "007-browser-identity-sync 的任務清單"
   3. 從 `response.cookies["lq_browser"]` 取值並回傳。
 
   `join_group()` 改成先呼叫 `new_browser(client)`，再以 `headers={"Authorization": f"Bearer {key}"}` 加入，回傳該金鑰。docstring 註明「Bearer 路徑，學生實際的 cookie 路徑另由 007 測試涵蓋」。
-- [ ] T015 依 T014 的模式，改寫其餘直接讀 `deviceToken` 的測試，以 `grep -rn "deviceToken" tests` 列出全部位置後逐一處理（改動前共 66 處）。涵蓋：
+- [ ] T015 依 T014 的模式，改寫其餘直接讀 `deviceToken` 的測試，以 `grep -rn --include=*.py "deviceToken" tests` 列出全部位置後逐一處理（改動前共 12 個檔案、31 處）。涵蓋：
   - `tests/integration/conftest.py`、`tests/integration/ranking_world.py`、`tests/unit/app/ranking_review/conftest.py`
   - `tests/browser/conftest.py`（`World.join`）
   - `tests/perf/test_sync_latency.py`、`test_submission_latency.py`、`test_ranking_latency.py`、`test_export_latency.py`
   - 各個 `tests/integration/test_*.py`、`tests/contract/test_http_join.py`
 
-  改完後 `grep -rn "deviceToken" tests` 只能剩下 T007「回應不含 deviceToken」的斷言。
+  改完後 `grep -rn --include=*.py "deviceToken" tests` 只能剩下 T007「回應不含 deviceToken」的斷言。
 - [ ] T016 執行 `.venv\Scripts\pytest`，與 T002 的基準比對，並把結果記入 quickstart 驗證紀錄：
   - 通過數不少於基準（另加新增測試的數量）。
   - 失敗數為 0，或與基準相同且逐一說明原因。
@@ -117,8 +117,9 @@ description: "007-browser-identity-sync 的任務清單"
 ### 測試（先寫、先看到失敗）
 
 - [ ] T017 [P] [US1] 核心單元測試，加在 `tests/unit/core/test_state_machine_join.py`（data-model INV-1）：
-  - `issued.device_token_hash` 已在 `activity.devices`，而請求者為 `Anonymous`（模擬「鎖外解析」的競爭）時，`_join_group` 回 `ALREADY_IN_GROUP`，`groups`、`devices`、`version` 都不變，`issued.group_credential` 沒有被寫入任何組。
-  - 拒絕訊息為「這個瀏覽器已是第 3 組成員，請先離開本組。」
+  - `command.device_token_hash`（與 `issued.device_token_hash` 相同）已在 `activity.devices`，而請求者為 `Anonymous`（模擬「鎖外解析」的競爭）時，`_join_group` 回 `ALREADY_IN_GROUP`，`groups`、`devices`、`version` 都不變，`issued.group_credential` 沒有被寫入任何組。
+  - 拒絕訊息為「這個瀏覽器已是第 3 組成員，請先離開本組。」（組號取自 `command.device_token_hash`）。
+  - `command.device_token_hash` 與 `issued.device_token_hash` 不一致時拋 `ValueError`。
   - 驗證 US1-AS3、FR-007。
 - [ ] T018 [P] [US1] 整合測試 `tests/integration/test_007_browser_identity.py`（新檔），每個「瀏覽器」一個獨立的 `TestClient`，學生請求一律不帶 Bearer。測試函式如下：
   - `test_same_browser_restores_group_in_new_tab`：同一個 client 加入第 3 組後，以 cookie 取快照，`ownGroup.number == 3`（Scenario: 007 US1-AS1）。
@@ -129,7 +130,7 @@ description: "007-browser-identity-sync 的任務清單"
   - `test_submission_ignores_claimed_group`：提交本文自稱第 5 組，仍歸第 3 組（007 US1-AS6）。
 - [ ] T019 [P] [US1] 整合測試，加在 `tests/integration/test_007_browser_identity.py`：
   - `test_ten_join_attempts_one_group`：同一個 client 依序加入組號 1～10（組數上限 10），只有第 1 次成功，其餘 9 次都是 `ALREADY_IN_GROUP`，老師快照的組別數為 1，回應中沒有任何新憑證（SC-001）。
-  - `test_concurrent_joins_one_wins`：同一把金鑰以 `asyncio.gather` 直接呼叫 `ActivityService.join` 兩次（組號 3 與 5），重複 20 次，每次恰好 1 次成功、組別數為 1（SC-002、FR-007）。服務層呼叫需要用 `tests/conftest.py` 的 `call` 輔助函式在事件迴圈內執行。
+  - `test_concurrent_joins_one_wins`：同一把金鑰以 `asyncio.gather` 直接呼叫 `ActivityService.join` 兩次（組號 3 與 5），重複 20 次，每次恰好 1 次成功、組別數為 1，落敗者的訊息含成功者的組號（SC-002、FR-007）。服務層呼叫需要用 `tests/conftest.py` 的 `call` 輔助函式在事件迴圈內執行。docstring 註明「直接呼叫服務層：HTTP 的身分解析在鎖外，競爭點就在服務層」。
 - [ ] T020 [P] [US1] 契約測試，修改 `tests/contract/test_ws_sync.py`（contracts §4）：
   - 送 `{"type":"auth"}` 或 `{"type":"auth","token":null}`，而握手帶第 3 組的 cookie，收到該組快照。
   - 不帶 cookie 時收到 `unauthorized INVALID_TOKEN`。
@@ -137,15 +138,19 @@ description: "007-browser-identity-sync 的任務清單"
   - 老師以 `{"type":"auth","token":"<老師 token>"}` 驗證，行為不變。
 - [ ] T021 [P] [US1] 瀏覽器端對端測試 `tests/browser/test_007_tabs.py`（新檔），在 `tests/browser/cdp.py` 或 conftest 新增「建立獨立 browser context」的輔助函式（CDP `Target.createBrowserContext`，並以 `browserContextId` 開分頁）。學生身分一律由頁面實際加入取得，不注入：
   - `test_second_tab_shows_same_group`：context 甲的分頁 A 從加入畫面加入第 3 組，再開分頁 B 到 `/student.html?code=K`，B 顯示第 3 組且加入表單隱藏（007 US1-AS1）。
-  - `test_second_tab_join_other_group_shows_message`：分頁 B 開 `/student.html`（不帶代碼），輸入 K 與 5 送出，畫面顯示「這個瀏覽器已是第 3 組成員，請先離開本組。」（007 US1-AS3）。
+  - `test_second_tab_join_other_group_shows_message`：分頁 B 開 `/student.html`（不帶代碼），輸入 K 與 5 送出，畫面顯示「這個瀏覽器已是第 3 組成員，請先離開本組。」，接著切換到第 3 組畫面（007 US1-AS3）。
+  - `test_reopen_by_entering_code_restores_group`：關閉 context 甲的所有分頁（context 保留，代表瀏覽器的 cookie 還在），再開 `/student.html`，在加入畫面輸入 K 與任意組號送出，畫面切換到第 3 組；另開 `/student.html?code=K` 也直接顯示第 3 組（007 US1-AS5）。
+  - `test_wrong_code_in_url_shows_not_found`：新的 context 開 `/student.html?code=ZZZZZZ`（不存在的代碼），顯示加入畫面與「找不到這個活動代碼，請確認後再輸入。」，不顯示「活動已失效」（spec Edge Case）。
   - `test_document_cookie_hides_key`：在分頁 A 執行 `document.cookie`，結果不含 `lq_browser`（FR-008）。
 
 ### 實作
 
-- [ ] T022 [US1] 核心：在 `src/lecture_quiz/core/activity/state_machine.py` 的 `_join_group` 中，於既有 `isinstance(actor, Device)` 檢查之後、組號正規化之前加入 INV-1：`issued.device_token_hash in activity.devices` 時回 `_reject(activity, RejectionReason.ALREADY_IN_GROUP)`。docstring 註明「補足請求者在鎖外解析造成的競爭（007 research R3）」。
+- [ ] T022 [US1] 核心：
+  - 在 `src/lecture_quiz/core/activity/commands.py` 的 `JoinGroup` 新增欄位 `device_token_hash: str | None = None`（放在最後，保持既有呼叫相容），docstring 說明它是「服務層計算的瀏覽器金鑰雜湊」。
+  - 在 `src/lecture_quiz/core/activity/state_machine.py` 的 `_join_group` 中：`command.device_token_hash` 不為 None 且與 `issued.device_token_hash` 不同時拋 `ValueError`。於既有 `isinstance(actor, Device)` 檢查之後、組號正規化之前加入 INV-1：`issued.device_token_hash in activity.devices` 時回 `_reject(activity, RejectionReason.ALREADY_IN_GROUP)`。docstring 註明「補足請求者在鎖外解析造成的競爭（007 research R3）」。
 - [ ] T023 [US1] 核心：在 `src/lecture_quiz/core/activity/results.py` 修改兩處：
   - `ALREADY_IN_GROUP` 的預設訊息改為「這個瀏覽器已經在某一組，請先離開本組。」
-  - `JoinGroup` 的專屬訊息改為「這個瀏覽器已是第 {n} 組成員，請先離開本組。」，組號查找改成先用 `command.actor.token_hash`，沒有時用 issued 雜湊。若函式拿不到 issued，就在 `_join_group` 的拒絕路徑以 `Transition` 帶回組號；做法以不改變核心純函式介面為原則，並記錄在 `specs/007-browser-identity-sync/verification.md` 的實作問題紀錄（P-01～，比照 003～005）。
+  - `_describe_group_rejection` 中 `JoinGroup` 的專屬訊息改為「這個瀏覽器已是第 {n} 組成員，請先離開本組。」，組號查找順序為 `command.device_token_hash`，沒有時才用 `command.actor.token_hash`（research R3）。
   - 用 `grep -rn "這台裝置" src tests` 找出並更新其他相依的測試斷言。
 - [ ] T024 [US1] 轉接層：修改 `src/lecture_quiz/adapters/web/ws_sync.py` 的 `_receive_auth`，改為回傳 `str | None | _Invalid`（或等效的區分方式）：
   - `token` 為字串時照舊。
@@ -161,7 +166,8 @@ description: "007-browser-identity-sync 的任務清單"
   - (1) `init()` 先呼叫 `apiRequest("POST", "/api/browser-session")`，完成前停用加入按鈕；失敗時以 `showError` 顯示「無法建立瀏覽器身分，請重新整理頁面」。
   - (2) 網址有 `?code=` 時直接 `startSync(code)`，不帶 token。
   - (3) `connectSync` 以 `token = null` 呼叫。第一次連線就收到 `INVALID_TOKEN` 時，安靜地顯示加入表單、不顯示錯誤；之後收到的 `LEFT_GROUP`、`GROUP_DELETED`，維持原本的提示。
-  - (4) `joinGroup` 成功後不再保存 token，改呼叫 `startSync(code)`。
+  - (4) `joinGroup` 成功後不再保存 token，改呼叫 `startSync(code)`。收到 `409 ALREADY_IN_GROUP` 時，顯示訊息並 `startSync(code)`、把網址改成 `?code=`，切換到本組畫面（spec US1-AS3、US1-AS5；contracts §7）。
+  - (4b) 記錄這個分頁是否曾經同步成功（收到第一份快照）。第一次連線就收到 `gone` 時，改顯示加入畫面與「找不到這個活動代碼，請確認後再輸入。」，不顯示「活動已失效」；同步成功過之後的 `gone` 維持 001 行為（research R4、contracts §7）。
   - (5) `currentIdentity()` 回傳 `{ code, connected }`。
   - (6) `leaveGroup` 不再附 token。
   - (7) `joinAnother` 不清除任何身分，只重設畫面。
@@ -191,8 +197,9 @@ description: "007-browser-identity-sync 的任務清單"
   - `test_restart_makes_all_tabs_gone`：建立新的 app（模擬後端重啟），帶舊 cookie 連線，收到 `gone`；以 HTTP 取快照回 410（007 US2-AS6、FR-011）。
   - `test_stale_tab_action_after_leave_rejected`：離開後，同一把金鑰再送離開本組或提交，都被拒絕，原組別的資料不變（FR-012）。
 - [ ] T032 [P] [US2] 瀏覽器端對端測試，加在 `tests/browser/test_007_tabs.py`：
-  - `test_join_in_one_tab_switches_other_tab`：context 甲的分頁 A、B 都開不帶代碼的 `/student.html`，在 A 加入第 3 組，B 在 2 秒內顯示第 3 組，網址變成 `?code=K`（007 US2-AS1、FR-010）。
-  - `test_leave_in_one_tab_resets_other_tab`：在 B 按「離開本組」，A、B 都在 2 秒內顯示加入表單與「已離開本組」提示（007 US2-AS2）。
+  - `test_join_in_one_tab_switches_other_tabs`：context 甲的分頁 A、B、C 都開不帶代碼的 `/student.html`，在 A 加入第 3 組，B、C 都在 2 秒內顯示第 3 組，網址變成 `?code=K`（007 US2-AS1、FR-010、SC-003）。
+  - `test_leave_in_one_tab_resets_other_tabs`：在 B 按「離開本組」，A、B、C 都在 2 秒內顯示加入表單與「已離開本組」提示（007 US2-AS2、SC-003）。
+  - `test_group_delete_resets_all_tabs`：A、B、C 重新加入第 1 組（從未提交）後，老師以 API 刪除第 1 組，A、B、C 都在 2 秒內顯示加入表單與「此組已被老師刪除」（007 US2-AS4、SC-003）。
   - `test_blocked_cookie_shows_message`：以 CDP `Network.setBlockedURLs` 或 `Emulation`／`Network.setCookieControls` 等方式封鎖 cookie（擇一可行的方式並記錄在測試 docstring），加入時畫面顯示 `BROWSER_SESSION_REQUIRED` 的訊息（FR-013）。若 CDP 無法封鎖 cookie，改在 quickstart 人工步驟 13 驗證，並在測試檔註明原因，不得用 mock 冒充。
 
 ### 實作
@@ -240,11 +247,8 @@ description: "007-browser-identity-sync 的任務清單"
   - `specs/001-activity-session/contracts/http-api.md`：#3 加入回應移除 `deviceToken`、`ALREADY_IN_GROUP` 訊息、不記錄 `lq_browser` cookie。
   - `specs/001-activity-session/contracts/sync-websocket.md`：auth 的 token 可省略。
 - [ ] T040 [P] 同步 `diagrams/001-activity-session-component.puml`、`diagrams/001-activity-session-sequence.puml`：學生畫面與活動 API 的身分來源改為 cookie，並加註 007。重新執行 `java -jar plantuml.jar "./diagrams/001-*.puml"`，開啟 PNG 確認沒有文字重疊（憲章原則 II 補充規定 3）。
-- [ ] T041 [P] 改寫 `specs/001-activity-session/quickstart.md`、`specs/003-round-submission/quickstart.md`、`specs/004-ranking-review/quickstart.md`、`specs/006-ui-refresh/quickstart.md` 中「以多個分頁模擬多台裝置或多組」的步驟（plan 估計約 31 處提到「分頁」，逐一判斷），改成「以不同瀏覽器或瀏覽器設定檔模擬」，網址統一為 `http://127.0.0.1:8000`（research R9）。
-- [ ] T042 [P] 憲章 PATCH v1.1.1（research R11）：
-  - `.specify/memory/constitution.md` 技術限制 1 的「以多個瀏覽器分頁模擬老師與各組學生」改為「以多個瀏覽器（或瀏覽器設定檔、無痕視窗）模擬各組學生；同一瀏覽器的分頁共用同一個學生身分」。
-  - 版本改成 1.1.1，Last Amended 改成實際修改日期，開頭的 Sync Impact Report 註記影響 001、003、004、006 的 quickstart。
-  - 在 PR 說明中交代（淺層變動，依使用者 2026-11-22 指示不另外徵求同意）。
+- [ ] T041 [P] 改寫 `specs/001-activity-session/quickstart.md`、`specs/003-round-submission/quickstart.md`、`specs/004-ranking-review/quickstart.md`、`specs/006-ui-refresh/quickstart.md` 中「以多個分頁模擬多台裝置或多組」的步驟（4 份 quickstart 共 31 處提到「分頁」，逐一判斷是否要改），改成「以不同瀏覽器或瀏覽器設定檔模擬」，網址統一為 `http://127.0.0.1:8000`（research R9）。
+- [x] T042 [P] 憲章修訂（research R11、analyze D1／D2）：已於 2026-11-26 修訂為 v1.2.0，獨立 commit `ca29a0c`。內容：技術限制 1 改為以多個瀏覽器模擬各組學生；子功能拆分表加入 006、007。CLAUDE.md 的版本已同步。剩下的工作：在 007 的 PR 說明中交代這次修訂（依使用者指示不另開 PR）。
 - [ ] T043 [P] 更新 `CLAUDE.md` 的「專案現況」，加入 007 一段：分支、程式位置（`adapters/web/browser_session.py`、`request_token`、INV-1），以及「學生身分改為同一瀏覽器共用、人工驗證要用不同瀏覽器模擬不同組、一律用 127.0.0.1」。
 - [ ] T044 [P] 更新 `tests/SCENARIO_MAP.md`：
   - 新增「007-browser-identity-sync」區段，列出 US1-AS1～AS6、US2-AS1～AS6、US3-AS1～AS3 對應的測試（依各測試 docstring 的 `Scenario: 007 USn-ASm` 掃描）。

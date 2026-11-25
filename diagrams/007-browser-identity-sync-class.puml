@@ -38,7 +38,15 @@ class TeacherIdentity <<001>> {
 class ActivityStateMachine <<core 純函式>> {
   _join_group(activity, JoinGroup, now, issued) : Transition
   --
-  INV-1：issued.device_token_hash 已在 devices → ALREADY_IN_GROUP
+  INV-1：command.device_token_hash 已在 devices → ALREADY_IN_GROUP
+  （拒絕訊息也由它找出組號）
+}
+
+class JoinGroup <<core 指令，007 新增欄位>> {
+  actor: Requester
+  number_raw
+  credential_raw
+  device_token_hash: str | None = hash(BrowserKey)
 }
 
 class ActivityService <<app>> {
@@ -59,6 +67,8 @@ Group "1" o-- "0..*" DeviceIdentity : 成員
 Activity "1" -- "1" TeacherIdentity
 BrowserKey "1" -- "0..*" DeviceIdentity : 每個活動最多一筆
 BrowserKey "1" -- "1..*" StudentTab : 同一瀏覽器共用
+ActivityService ..> JoinGroup : 建立（填入 hash(金鑰)）
+ActivityStateMachine ..> JoinGroup : 讀取
 ActivityService ..> ActivityStateMachine
 ActivityStateMachine ..> DeviceIdentity : 判定
 @enduml
