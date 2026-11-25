@@ -5,44 +5,54 @@ title 007 同一瀏覽器共用學生身分 — 時序圖
 
 participant "分頁 A" as A
 participant "分頁 B" as B
-participant "瀏覽器身分保存" as Store
+participant "cookie lq_browser" as Store
 participant "活動 API" as Api
 participant "活動服務" as Svc
 participant "同步推送" as Sync
 
-== 加入（US1-AS1、US2-AS1） ==
-A -> Api : 加入第 3 組（活動代碼、組號）
-Api -> Svc : join（無瀏覽器身分）
-Svc --> Api : 第 3 組、憑證、新的瀏覽器身分
-Api -> Store : 保存瀏覽器身分
-Api --> A : 第 3 組畫面
-A -> B : 分頁通知「身分已變更」
-B -> Api : 取得目前身分與快照（自動帶瀏覽器身分）
-Api --> B : 第 3 組畫面（2 秒內）
+== 載入：先發金鑰（research R3） ==
+A -> Api : POST /api/browser-session（沒有 cookie）
+Api -> Store : Set-Cookie 新金鑰（HttpOnly）
+Api --> A : 204（本文為空）
+B -> Api : POST /api/browser-session（已有 cookie）
+Api --> B : 204（不動 cookie）
 
-== 同瀏覽器嘗試加入他組（US1-AS3） ==
+== 加入（US1-AS1、US2-AS1） ==
+A -> Api : 加入第 3 組（cookie 自動附上）
+Api -> Svc : join（瀏覽器金鑰）
+Svc -> Svc : 鎖內 _join_group：\nhash(金鑰) 不在 devices → 建立
+Svc --> Api : 第 3 組、憑證
+Api --> A : 第 3 組畫面（回應不含金鑰）
+A -> B : BroadcastChannel {joined, 代碼}
+B -> Sync : WebSocket auth（無 token，握手帶 cookie）
+Sync --> B : 第 3 組快照（2 秒內）
+
+== 同瀏覽器嘗試加入他組（US1-AS3、FR-007） ==
 B -> Api : 加入第 5 組
-Api -> Svc : join（帶第 3 組的瀏覽器身分）
-Svc --> Api : 拒絕：已是第 3 組成員
-Api --> B : 「這個瀏覽器已是第 3 組成員，請先離開本組」\n（第 5 組未建立、未發憑證）
+Api -> Svc : join（同一把金鑰）
+Svc --> Api : 拒絕 ALREADY_IN_GROUP\n（hash(金鑰) 已在 devices；同時加入的落敗者亦同）
+Api --> B : 「這個瀏覽器已是第 3 組成員，請先離開本組。」\n（第 5 組未建立、未發憑證）
 
 == 離開本組（US2-AS2） ==
 B -> Api : 離開本組
-Api -> Svc : leave_group（瀏覽器身分）
+Api -> Svc : leave_group（瀏覽器金鑰）
 alt 搶答中
   Svc --> Api : 拒絕（001 US7-AS3）
   Api --> B : 不能換組
 else 其他允許的階段
   Svc --> Api : 已解除
-  Api -> Store : 解除瀏覽器身分
-  Svc -> Sync : 通知該瀏覽器的所有連線
-  Sync --> A : 身分已解除
+  Svc -> Sync : disconnect_device(同一雜湊)
+  Sync --> A : unauthorized LEFT_GROUP
+  Sync --> B : unauthorized LEFT_GROUP
   A -> A : 回到加入畫面
-  Api --> B : 回到加入畫面
+  B -> B : 回到加入畫面
 end
 
 == 舊身分（US1-AS4、US2-AS6） ==
-A -> Api : 帶被竄改／過期／後端重啟前的身分
-Api -> Svc : 解析身分失敗
-Api --> A : 請重新加入（或活動已失效），不含憑證
+A -> Sync : auth（cookie 被竄改，或後端已重啟）
+alt 活動不存在
+  Sync --> A : gone →「活動已失效」
+else 查無此雜湊
+  Sync --> A : unauthorized INVALID_TOKEN → 加入畫面
+end
 @enduml

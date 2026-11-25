@@ -1,49 +1,64 @@
 @startuml 007-browser-identity-sync-class
 !pragma layout smetana
 skinparam defaultFontName "Microsoft JhengHei"
-title 007 同一瀏覽器共用學生身分 — 類別圖（概念模型）
+title 007 同一瀏覽器共用學生身分 — 類別圖
 
 class Activity <<001>> {
   code: 活動代碼
-  maxGroups: 組數上限
+  max_groups: 組數上限
   stage: 階段
+  devices: token_hash → DeviceIdentity
 }
 
 class Group <<001>> {
   number: 組號
-  joinCredential: 加入憑證
+  join_credential: 加入憑證
   hasSubmissions: 是否有提交紀錄
 }
 
-class BrowserIdentity <<007：取代 001 學生端的 DeviceIdentity>> {
-  activityCode: 所屬活動
-  groupNumber: 所屬組別
-  valid: 是否有效
+class BrowserKey <<007：cookie lq_browser>> {
+  value: 43 字元亂數（頁面讀不到）
+  maxAge: 1 天
+}
+
+class DeviceIdentity <<001，007 起代表「瀏覽器在某活動的身分」>> {
+  token_hash: hash(BrowserKey)
+  group_number: 所屬組號
   --
   同一瀏覽器所有分頁共用
-  離開本組／組別被刪除／後端重啟時失效
+  離開本組／組別被刪除／後端重啟時消失
 }
 
 class TeacherIdentity <<001>> {
-  activityCode: 所屬活動
+  token_hash
   --
-  與 BrowserIdentity 分開保存、各自解除
+  與 BrowserKey 分開保存（Bearer 優先）
 }
 
-class StudentTab {
+class ActivityStateMachine <<core 純函式>> {
+  _join_group(activity, JoinGroup, now, issued) : Transition
+  --
+  INV-1：issued.device_token_hash 已在 devices → ALREADY_IN_GROUP
+}
+
+class ActivityService <<app>> {
+  join(code, number_raw, credential_raw, requester, key, browser_key)
+  resolve_requester(code, token) : Requester
+}
+
+class StudentTab <<前端 student.js>> {
   畫面狀態: 加入畫面／組別畫面／活動已失效
   --
-  收到「身分已變更」時重新取得身分與快照
-}
-
-class JoinRule <<core 純函式>> {
-  canJoin(browserHasGroup, stage, number, credential) : 允許或拒絕原因
-  releaseOnLeave(remainingBrowsers, hasSubmissions) : 是否釋放組號
+  載入時 POST /api/browser-session
+  收到 BroadcastChannel joined → 開始同步
 }
 
 Activity "1" *-- "0..N" Group
-Group "1" o-- "0..*" BrowserIdentity : 成員
+Activity "1" *-- "0..*" DeviceIdentity
+Group "1" o-- "0..*" DeviceIdentity : 成員
 Activity "1" -- "1" TeacherIdentity
-BrowserIdentity "1" -- "1..*" StudentTab : 共用（同一瀏覽器）
-JoinRule ..> BrowserIdentity : 判定
+BrowserKey "1" -- "0..*" DeviceIdentity : 每個活動最多一筆
+BrowserKey "1" -- "1..*" StudentTab : 同一瀏覽器共用
+ActivityService ..> ActivityStateMachine
+ActivityStateMachine ..> DeviceIdentity : 判定
 @enduml
