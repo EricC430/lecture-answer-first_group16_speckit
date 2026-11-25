@@ -29,7 +29,8 @@ function questionBlock(snapshot, round, question, own) {
     const entry = byGroup.get(group);
     if (!entry || shown.has(group)) return;
     shown.add(group);
-    list.append(line(snapshot, round, question, entry, prefix));
+    // 本組剛好是搶答成功者或被判錯者時，標出「（本組）」，學生才知道哪一行是自己
+    list.append(line(snapshot, round, question, entry, group === own ? `${prefix}（本組）` : prefix));
   };
   if (question.replacedGroup !== null) show(question.replacedGroup, "");
   if (question.successGroup !== null) show(question.successGroup, "目前搶答成功者：");
@@ -51,11 +52,10 @@ function render(snapshot) {
   for (const round of [...rounds].reverse()) {
     const wrapper = el("div", "", "ranking-round");
     wrapper.append(el("h3", `第 ${round.roundNumber} 輪${round.final ? "（結果已定案）" : "（結果未定案）"}`));
+    // 每一題都要畫出來：沒有搶答成功者的題（沒人提交、或唯一的提交被判錯）顯示「未成功」，
+    // 沒有提交的組也要看到（spec US7-AS9）。他組的資料由後端的學生版 JSON 限縮，這裡不過濾。
     for (const question of round.questions) {
-      const hasOwn = question.entries.some((e) => e.groupNumber === own);
-      if (hasOwn || question.successGroup !== null) {
-        wrapper.append(questionBlock(snapshot, round, question, own));
-      }
+      wrapper.append(questionBlock(snapshot, round, question, own));
     }
     container.append(wrapper);
   }

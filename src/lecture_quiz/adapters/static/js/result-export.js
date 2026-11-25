@@ -3,7 +3,7 @@
 // （憲章原則 V、FR-032）；token 只在記憶體，不輸出到畫面或 console。
 
 import { apiRequest, showError } from "./api.js";
-import { onTeacherSnapshot } from "./teacher.js";
+import { onTeacherReset, onTeacherSnapshot } from "./teacher.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -301,4 +301,26 @@ onTeacherSnapshot((snapshot, state) => {
     ui.autoPreviewDone = true; // 授權完成後自動回到預覽，不需要重新匯入
     guarded(runPreview);
   }
+});
+
+// 換活動時清掉上一個活動的預覽、寫回狀態與核對表（不能把舊活動的答案留在新活動畫面）
+onTeacherReset(() => {
+  restored = false;
+  ui.code = null;
+  ui.token = null;
+  ui.preview = null;
+  ui.attempt = null;
+  ui.summaryKey = null;
+  ui.busy = false;
+  showError($("export-error"), null);
+  for (const id of ["export-structure", "export-status", "export-checks", "export-preview", "export-reauth-button"]) {
+    $(id).hidden = true;
+  }
+  for (const id of ["export-structure-list", "export-checks-body", "export-preview-body"]) {
+    $(id).replaceChildren();
+  }
+  for (const id of ["export-preview-summary", "export-unwritten", "export-status-text", "export-status-counts", "export-status-reason"]) {
+    $(id).textContent = "";
+  }
+  updateControls();
 });

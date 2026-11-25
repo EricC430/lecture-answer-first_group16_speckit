@@ -56,7 +56,7 @@
 
 ## 人工驗證（T094）
 
-（尚未執行；需要 002 合併後才能真實匯入題目）
+（尚未執行；需要 002 合併後才能真實匯入題目。**T094 的前端專屬檢查另加第⑤項**：學生頁關輪後每一題都出現，包含沒人提交的題與唯一提交被判錯的題都顯示「未成功」，沒有提交的組也看得到（issue #22 第 1 點）。**也請確認關輪後老師頁有「順位與判錯」區塊與判錯、撤銷、確認定案按鈕，學生頁有結果區塊**（issue #23）。）
 
 ## N/A 說明（T090）
 
@@ -81,3 +81,14 @@
 | P-11 | Phase 8 | 我寫的 US6 測試有三處預期算錯（沒判錯時乙只成功題二，次數應為 1 而不是 2）；第 2 輪「全題成功後開輪」001 回 400 而非 409 | 修正測試預期，實作未改 |
 | P-12 | Phase 9 | T077 要求調整 003 學生頁；`grep -rn "renderPublished\|published-section\|published-list" tests` 沒有任何測試斷言學生頁文字，所以沒有測試需要調整；`submissions.published` 的資料層斷言完全未動 | 刪除學生頁「已公開的作答」區塊（`student.html`）與 `round-submission.js` 的 `renderHistory`；003 負責人需知會 |
 | P-13 | Phase 9 | T078：老師頁同一輪的答案會在 003 已公開列表與 004 區塊各出現一次 | `round-submission-teacher.js` 只列出 004 尚未涵蓋的輪次；判錯標記以 004 為準 |
+| P-14 | T092（2026-11-24 確認，2026-11-25 記入） | 003 負責人 jacky0407 於 2026-11-24 確認 T077 對 003 學生頁的調整（PR #20 留言 7133153366）：刪除 `student.html` 的「已公開的作答」區塊與 `round-submission.js` 的 `renderHistory`，`submissions.published` 的資料層與後端不變，沒有測試斷言需要修改（P-12），老師頁只列出 004 尚未涵蓋的輪次（P-13）。**有條件同意**：這項調整讓學生畫面不再列出全部組的「答錯／搶答失敗」，與 2026-11-23 OpenSpec 組同意的顯示方式不同，條件是在 `docs/alignment.md` 新增一列並取得 OpenSpec 組確認 | 結果：003 同意調整本身。條件：EricC430 於 2026-11-25 決定學生畫面範圍屬畫面顯示的實作細節，**不新增 alignment 列、不再與 OpenSpec 組討論**（參考憲章 v1.1.0 原則 I：實作細節與設計方式，含畫面排版，由子功能 spec 與 plan 決定，不需與對方組討論）；此決定是替提出條件的 jacky0407 做的，**尚待 jacky0407 在 PR 上確認**。T092 勾選 |
+| P-15 | issue #22 第 2、3 點 | PR #20 審查要求釐清 `docs/alignment.md` 的 Q-23～25 確認欄（寫「定案」但未註明 OpenSpec 組是否同意），並新增 FR-036／037 學生畫面範圍的決議列 | EricC430 於 2026-11-25 決定：兩項都屬細節，略過、不再討論；**不修改 `docs/alignment.md`**。Q-23～25 是 SpecKit 組對 OpenSpec 原文的解讀，不宣稱 OpenSpec 組已同意 |
+| P-16 | issue #22 第 1 點（PR #20 審查） | 學生頁 `ranking-review.js` 的 `render` 只在「本組有提交或有搶答成功者」時才畫出題目；某題沒人提交、或唯一的提交被判錯時，沒有提交的組在學生頁上看不到那一題（違反 spec US7-AS9：應顯示「未成功」）。後端資料與既有測試都正確，只有畫面少了，所以沒有測試發現 | 每一題都畫出來（他組資料由後端學生版 JSON 限縮，前端不過濾）。新增 `tests/unit/frontend/test_student_ranking_render.py`：用 node 載入**真正的** `ranking-review.js`、餵入後端產生的學生快照、檢查畫面實際內容；修正前 2 failed（第 3 題、被判錯的第 2 題沒有顯示）、1 passed（本組被判錯，回歸保護），修正後 3 passed |
+| P-17 | issue #23（人工測試發現） | `teacher.html`、`student.html` 沒有載入 `ranking-review-teacher.js`、`ranking-review.js`（T035、T036 要求加 `<script>`，實際漏掉），關輪後老師沒有判錯、撤銷、確認定案介面，學生看不到結果 | 兩個頁面補上 `<script>`；新增 `tests/architecture/test_feature_scripts_loaded.py`（修正前 3 failed、1 passed，修正後通過） |
+| P-18 | issue #26 第 2 點（人工測試發現） | 老師頁開輪面板的「本輪題目（預設全選未成功題）」用 `snapshot.questionNumbers`，已定案且有搶答成功者的題也被勾選；原註解還寫「老師快照目前沒有已成功題欄位」。001 的 `unsolvedQuestions` 只在已結束階段才附上（001 既有測試固定如此），不改契約 | `teacher.js` 由快照 `ranking.rounds` 的已定案輪次（`final` 且 `successGroup` 不為空）算出已成功題並排除；`tests/browser/test_pages.py::test_open_round_panel_defaults_to_unsolved_questions_only`：修正前列出 `[1, 2, 3, 4]`，修正後 `[1, 2, 4]` |
+| P-19 | issue #26 第 3 點（人工測試發現） | 按「建立新活動」只切換顯示：匯入預覽、作答看板、已公開作答、順位與判錯等區塊的內容與模組層級狀態（`ranking-common` 的 `seenVersions`、`import.js` 的 `started`、`teacher.js` 的 `lastQuestionKey`）都留著，新活動畫面出現舊資料，新活動同輪次的結果版本還可能被舊版本號擋下 | `teacher.js` 新增 `onTeacherReset`，`showCreateForm` 與換活動時先清空開輪面板並隱藏各子功能區塊，再通知各模組重設（`import.js`、`round-submission-teacher.js`、`ranking-review-teacher.js`、`resetRankingVersions`）；`test_creating_new_activity_clears_previous_activity_screen`：修正前建立畫面仍顯示 `import-section`，修正後通過 |
+| P-20 | issue #26 第 1 點（人工測試發現） | 學生頁在判錯階段看不到各題結果：主因是 P-16（未列出的題）；另外 `student.js` 的 `onStudentSnapshot` 不會對晚註冊的子功能補畫，子功能腳本載入前第一份快照已到時，該區塊要等下一次變更才出現（真實瀏覽器偶發 1 次，連跑 12 次沒有再現）；本組是搶答成功者時沒有標示哪一行是本組 | `onStudentSnapshot` 補畫最後一份快照（與老師頁一致）；本組行加「（本組）」；`test_student_sees_latest_winner_answer_and_own_status_while_teacher_judges` 在真實無頭瀏覽器走完關輪、判錯即時更新、換組檢查。**限制**：偶發的載入順序競爭沒有確定性重現的測試 |
+
+### 真實瀏覽器測試（issue #26）
+
+2026-11-25：`tests/browser/`（無頭 Chrome／Edge 經 CDP，真實 uvicorn，Google 用假替身；找不到瀏覽器會明確失敗）`pytest tests/browser -q` 3 passed；拿掉 `src` 的修正後 3 failed（負對照）。全套 `ruff check .` All checks passed、`ruff format --check .` 316 files already formatted、`mypy` no issues found in 68 source files、`pytest -m "not real_google and not perf" -q` 1099 passed。

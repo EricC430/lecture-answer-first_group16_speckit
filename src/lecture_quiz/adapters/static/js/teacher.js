@@ -26,6 +26,12 @@ const $ = (id) => document.getElementById(id);
 
 const state = { code: null, token: null, snapshot: null, sync: null };
 const renderers = [];
+const resetters = [];
+
+/** 註冊「換活動時清掉舊畫面」的函式（建立新活動、活動失效回到建立畫面時呼叫）。 */
+export function onTeacherReset(reset) {
+  resetters.push(reset);
+}
 
 /** 讓後續 Story 的畫面元件註冊快照渲染函式。 */
 export function onTeacherSnapshot(render) {
@@ -72,6 +78,7 @@ function render(snapshot) {
 }
 
 function start(code, token) {
+  if (state.code !== null && state.code !== code) resetPage();
   state.code = code;
   state.token = token;
   if (state.sync) state.sync.close();
@@ -115,11 +122,18 @@ function renderOpenRoundPanel(snapshot) {
   $("activity-questions").textContent = snapshot.questionNumbers.length
     ? snapshot.questionNumbers.map((q) => `第 ${q} 題`).join("、")
     : "尚未匯入";
-  // 老師快照目前沒有「已成功題」欄位（001 的定案不標記成功題，由 004 補上），
-  // 先列出全部題目；選到已成功題時由後端拒絕並說明。
-  const unsolved = snapshot.questionNumbers;
+  // 預設只列未成功題；已搶答正確的題目不可再開輪。
+  // 已定案輪次裡有搶答成功者的題就是已成功題（004 的 ranking；001 只在結束時才附 unsolvedQuestions）。
+  const solved = new Set();
+  for (const round of snapshot.ranking?.rounds ?? []) {
+    if (!round.final) continue;
+    for (const question of round.questions) {
+      if (question.successGroup !== null) solved.add(question.questionNumber);
+    }
+  }
+  const unsolved = snapshot.questionNumbers.filter((q) => !solved.has(q));
   // 題目清單或階段改變時才重畫，避免老師勾到一半被同步覆蓋
-  const key = `${snapshot.stage}|${snapshot.roundNumber}|${snapshot.questionNumbers.join(",")}`;
+  const key = `${snapshot.code}|${snapshot.stage}|${snapshot.roundNumber}|${unsolved.join(",")}`;
   if (!canOpen || key === lastQuestionKey) return;
   lastQuestionKey = key;
   const box = $("open-round-questions");
@@ -187,8 +201,23 @@ function renderClosing(snapshot) {
   $("new-activity").hidden = !["ENDED", "CANCELLED"].includes(snapshot.stage);
 }
 
+/**
+ * 清掉上一個活動留在畫面與模組裡的內容：開輪面板、各子功能區塊（先藏起來，
+ * 新活動的第一份快照到了再由各自的渲染函式決定是否顯示），並通知各模組重設自己的狀態。
+ */
+function resetPage() {
+  lastQuestionKey = "";
+  $("open-round-questions").replaceChildren();
+  $("open-round-panel").hidden = true;
+  for (const section of document.querySelectorAll("section[data-feature]")) {
+    if (section.id !== "activity-section") section.hidden = true;
+  }
+  for (const reset of resetters) reset();
+}
+
 /** 回到建立活動畫面（只在已結束或已取消後由老師按鈕觸發；與後端重啟後的 gone 畫面一致）。 */
 function showCreateForm() {
+  resetPage();
   if (state.sync) state.sync.close();
   state.sync = null;
   state.snapshot = null;
