@@ -53,7 +53,16 @@ export function setDeviceToken(code, token) {
   sessionStorage.setItem(deviceKey(code), token);
 }
 
-/** 清除該活動在本機的所有身分（活動失效、離開本組或被刪除時使用）。 */
+/**
+ * 只清除本分頁在該活動的裝置身分（離開本組、組別被刪除、加入其他活動時使用）。
+ * 老師 token 存在整個瀏覽器共用的 localStorage，學生分頁不得動它：老師與學生開在
+ * 同一個瀏覽器時，否則學生離開本組會讓老師失去身分（Issue #29）。
+ */
+export function clearDeviceToken(code) {
+  sessionStorage.removeItem(deviceKey(code));
+}
+
+/** 清除該活動在本機的所有身分（只在活動已失效時使用：老師與裝置身分都不再有效）。 */
 export function clearIdentity(code) {
   localStorage.removeItem(teacherKey(code));
   sessionStorage.removeItem(deviceKey(code));

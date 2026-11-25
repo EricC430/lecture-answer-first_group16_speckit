@@ -6,7 +6,7 @@
 
 import json
 
-from tests.browser.test_pages import assert_no_script_errors
+from tests.browser.test_pages import assert_no_script_errors, open_student
 
 
 def store_teacher(page, world) -> None:
@@ -76,6 +76,35 @@ def test_reload_after_new_activity_button_stays_on_create_form(page, world):
     page.click("#create-activity")
     page.wait_for("document.getElementById('activity-info').hidden === false")
     assert page.text("#activity-code") not in ("", world.code)
+    assert_no_script_errors(page)
+
+
+def test_student_leaving_in_same_browser_keeps_teacher_identity(page, browser, world):
+    """同一個瀏覽器的學生分頁離開本組，不得刪掉老師身分（老師重新整理仍在活動裡）。
+
+    人工驗證時實際遇到：老師與各組學生開在同一個瀏覽器的分頁，學生按「離開本組」後，
+    老師頁重新整理就回到建立畫面，而且能再建立第二個活動（C7 被繞過）。
+    """
+    world.create()
+    world.join(1)
+    store_teacher(page, world)
+    page.goto(f"{world.server.base}/teacher.html?code={world.code}")
+    page.wait_for("document.getElementById('activity-info').hidden === false")
+
+    student = browser.new_page()
+    try:
+        open_student(student, world, 1)
+        student.wait_for("document.getElementById('leave-group').disabled === false")
+        student.click("#leave-group")
+        student.wait_for("document.getElementById('student-join').hidden === false")
+    finally:
+        browser.call("Target.closeTarget", {"targetId": student.target_id})
+
+    assert page.eval(f"localStorage.getItem('teacher:{world.code}')") is not None
+    page.call("Page.reload")
+    page.wait_for("document.readyState === 'complete'")
+    page.wait_for("document.getElementById('activity-info').hidden === false")
+    assert page.text("#activity-code") == world.code
     assert_no_script_errors(page)
 
 
