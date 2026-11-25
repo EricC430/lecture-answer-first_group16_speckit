@@ -7,7 +7,7 @@
 // 截止判定以後端為準：前端時鐘有誤差時，送出仍會被後端以「本輪已結束」拒絕。
 
 import { apiRequest } from "./api.js";
-import { currentIdentity, onStudentSnapshot } from "./student.js";
+import { currentIdentity, onStudentReset, onStudentSnapshot } from "./student.js";
 import { describeSubmitError, el, renderAnswerForm } from "./submission.js";
 
 const $ = (id) => document.getElementById(id);
@@ -122,3 +122,12 @@ function markOwnSubmissions(snapshot) {
 }
 
 onStudentSnapshot(render);
+
+// 換活動時丟掉上一個活動留下的作答表單與已輸入的答案（否則新活動同輪次同題號會沿用舊答案）
+onStudentReset(() => {
+  forms.clear();
+  notices.clear();
+  $("answer-forms").replaceChildren();
+  currentRound = null;
+  scheduleDeadline(undefined);
+});

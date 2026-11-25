@@ -89,6 +89,9 @@
 | P-19 | issue #26 第 3 點（人工測試發現） | 按「建立新活動」只切換顯示：匯入預覽、作答看板、已公開作答、順位與判錯等區塊的內容與模組層級狀態（`ranking-common` 的 `seenVersions`、`import.js` 的 `started`、`teacher.js` 的 `lastQuestionKey`）都留著，新活動畫面出現舊資料，新活動同輪次的結果版本還可能被舊版本號擋下 | `teacher.js` 新增 `onTeacherReset`，`showCreateForm` 與換活動時先清空開輪面板並隱藏各子功能區塊，再通知各模組重設（`import.js`、`round-submission-teacher.js`、`ranking-review-teacher.js`、`resetRankingVersions`）；`test_creating_new_activity_clears_previous_activity_screen`：修正前建立畫面仍顯示 `import-section`，修正後通過 |
 | P-20 | issue #26 第 1 點（人工測試發現） | 學生頁在判錯階段看不到各題結果：主因是 P-16（未列出的題）；另外 `student.js` 的 `onStudentSnapshot` 不會對晚註冊的子功能補畫，子功能腳本載入前第一份快照已到時，該區塊要等下一次變更才出現（真實瀏覽器偶發 1 次，連跑 12 次沒有再現）；本組是搶答成功者時沒有標示哪一行是本組 | `onStudentSnapshot` 補畫最後一份快照（與老師頁一致）；本組行加「（本組）」；`test_student_sees_latest_winner_answer_and_own_status_while_teacher_judges` 在真實無頭瀏覽器走完關輪、判錯即時更新、換組檢查。**限制**：偶發的載入順序競爭沒有確定性重現的測試 |
 
+| P-21 | issue #26 追加（EricC430 再次人工驗證） | 換到新活動時，學生頁 `round-submission.js` 的 `forms`／`currentRound` 只在輪次號改變時才清，新活動同輪次同題號會沿用上一個活動輸入的答案，要強制重新整理才清掉；`ranking-common` 的 `seenVersions` 也會擋住新活動較小的結果版本。另外靜態檔沒有 `Cache-Control`，瀏覽器可能沿用快取的舊腳本 | `student.js` 新增 `onStudentReset`（回到加入畫面或換活動時清空各區塊與各模組狀態，與老師頁一致）；`main.py` 的靜態檔改為 `Cache-Control: no-cache`（每次以 ETag 驗證）。`test_student_joining_new_activity_does_not_keep_previous_answers`、`test_static_files_are_revalidated_not_cached_blindly`：拿掉修正後 2 failed，修正後通過 |
 ### 真實瀏覽器測試（issue #26）
 
 2026-11-25：`tests/browser/`（無頭 Chrome／Edge 經 CDP，真實 uvicorn，Google 用假替身；找不到瀏覽器會明確失敗）`pytest tests/browser -q` 3 passed；拿掉 `src` 的修正後 3 failed（負對照）。全套 `ruff check .` All checks passed、`ruff format --check .` 316 files already formatted、`mypy` no issues found in 68 source files、`pytest -m "not real_google and not perf" -q` 1099 passed。
+
+2026-11-25（追加後）：`pytest tests/browser -q` 5 passed（拿掉修正 2 failed）；`ruff check .` All checks passed、`mypy` no issues found in 68 source files、`pytest -m "not real_google and not perf" -q` 1101 passed。
