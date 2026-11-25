@@ -118,7 +118,9 @@ Sheets 存取套件）由各子功能的 plan 決定並說明理由。課程不�
 - Python 3.11 以上 + FastAPI。
 - Google Sheets 匯入與寫回使用 Google Sheets API，以 OAuth 由老師自行授權。
 - 在組員的 Windows 本機執行；後端只監聽本機位址（localhost），不對外開放。
-- 以多個瀏覽器分頁模擬老師與各組學生。
+- 以多個瀏覽器（或瀏覽器設定檔、無痕視窗）模擬老師與各組學生；同一個瀏覽器的所有分頁共用同一個
+  學生身分（`007-browser-identity-sync`，`docs/alignment.md` 2026-11-26），不能用同一瀏覽器的
+  多個分頁模擬不同組別。
 
 ### 2. 程式碼風格
 
@@ -148,8 +150,10 @@ Sheets 存取套件）由各子功能的 plan 決定並說明理由。課程不�
 
 ### 子功能拆分
 
-與 OpenSpec 組的能力一對一對應，依相依順序開發。核心功能與所有額外功能（題組、CSV 匯出、
-公平模式、判錯）都在範圍內。調整拆分必須走本憲章的修訂程序。
+001～005 與 OpenSpec 組的能力一對一對應，依相依順序開發。核心功能與所有額外功能（題組、CSV 匯出、
+公平模式、判錯）都在範圍內。006 起是在 001～005 之上的延伸子功能：不新增 OpenSpec 能力，
+各自在 spec 中標註它修改或呈現的 OpenSpec 行為，行為上的偏離或新增仍依原則 I 先記入
+`docs/alignment.md`。調整拆分必須走本憲章的修訂程序。
 
 | 子功能目錄 | 對應 OpenSpec 能力 | 相依 |
 |---|---|---|
@@ -158,6 +162,8 @@ Sheets 存取套件）由各子功能的 plan 決定並說明理由。課程不�
 | `specs/003-round-submission/` | round-submission | 001、002 |
 | `specs/004-ranking-review/` | ranking-review | 003 |
 | `specs/005-result-export/` | result-export | 002、004 |
+| `specs/006-ui-refresh/` | 無（只改前端呈現，不改變 001～005 的行為） | 001～005 |
+| `specs/007-browser-identity-sync/` | activity-session（001 的延伸：學生身分改為同一瀏覽器共用） | 001 |
 
 ## 開發流程與品質關卡
 
@@ -190,4 +196,8 @@ Sheets 存取套件）由各子功能的 plan 決定並說明理由。課程不�
 - **合規檢查**：每個 PR 的審查者都必須確認變更符合本憲章；`/speckit-plan` 的 Constitution Check 與
   `/speckit-analyze` 的結果必須由審查者讀過。
 
-**Version**: 1.1.0 | **Ratified**: 2026-11-21 | **Last Amended**: 2026-11-22
+**Version**: 1.2.0 | **Ratified**: 2026-11-21 | **Last Amended**: 2026-11-26
+
+修訂紀錄：v1.2.0（2026-11-26）子功能拆分表加入 006、007 並說明延伸子功能的規則（MINOR）；技術限制 1
+改為「以多個瀏覽器模擬各組學生，同一瀏覽器的分頁共用學生身分」。影響：001、003、004、006 的
+quickstart 中以多分頁模擬多組的步驟（由 007 tasks 同步修改）。
