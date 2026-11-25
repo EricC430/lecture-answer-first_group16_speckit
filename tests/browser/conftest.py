@@ -13,6 +13,7 @@ from lecture_quiz.main import create_app
 from tests.browser.cdp import Browser, Page
 from tests.fixtures.guided_notes_layouts import layout_a, layout_b
 from tests.unit.app.guided_notes_import.fakes import FakeAuthGateway, FakeSheetsReader
+from tests.unit.app.result_export.fakes import FakeSheetsWriter
 
 
 class LiveServer:
@@ -25,9 +26,11 @@ class LiveServer:
         self.reader.add(
             "sheet-1", "學習單", [(0, "版面A", snapshot_a), (7, "版面B", snapshot_b)]
         )
+        self.writer = FakeSheetsWriter(self.reader)
         self.app = create_app(
             import_auth_gateway=FakeAuthGateway(authorized=True),
             import_sheets_reader=self.reader,
+            export_sheets_writer=self.writer,
         )
         config = uvicorn.Config(
             self.app, host="127.0.0.1", port=0, log_level="warning", lifespan="on"

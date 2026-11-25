@@ -1,0 +1,92 @@
+@startuml 005-result-export-sequence
+skinparam defaultFontName "Microsoft JhengHei"
+skinparam sequenceMessageAlign center
+title 005 定案成果寫回與 CSV 匯出 — 時序圖（預覽、確認寫回、結構檢查、待確認核對、下載 CSV）
+
+actor "老師" as T
+participant "畫面" as UI
+participant "匯出 API" as API
+participant "匯出服務" as S
+participant "核心（純函式）" as C
+participant "Google Sheets 轉接" as G
+participant "001／002／003／004" as D
+
+== 預覽 ==
+T -> UI : 要求寫回預覽
+UI -> API : preview(活動代碼)
+API -> S : 驗證老師身分與輸入
+S -> D : 001 匯出檢視（非老師、已取消的活動拒絕）
+alt 非老師或活動已取消
+  D --> S : 拒絕
+  S --> UI : 拒絕＋說明（不送出外部請求）
+else 允許
+  S -> D : 004 已定案輪次、003 提交（只取已定案輪次）
+  alt 沒有已定案且有搶答成功者的題
+    S --> UI : 無可寫回的結果（不送出任何外部請求）
+  else 有成果
+    S -> D : 002 匯入映射與結構
+    S -> G : 重新讀取來源（結構與目標格目前內容）
+    alt 授權失效／權限不足／來源不可讀
+      G --> S : 無法讀取
+      S --> UI : 明確失敗＋指引（沒有任何格被改）
+    else 讀取成功
+      S -> C : buildSnapshot＋compareStructure
+      C --> S : 成果快照（含覆寫影響）、結構比對結果
+      alt 結構不符
+        S --> UI : 預覽標示不可確認，列出差異
+      else 結構相符
+        S --> UI : 預覽（題號、子空格、搶答成功者、答案、目標、覆寫影響、未寫入題）
+      end
+    end
+  end
+end
+
+== 確認寫回 ==
+T -> UI : 確認（綁定快照識別 s）
+UI -> API : confirmWrite(s)
+API -> S : 驗證身分、快照是否仍為最新
+alt 預覽之後有新輪次定案（成果集合改變）
+  S --> UI : 拒絕，要求重新預覽（不擴大範圍）
+else 已有寫入進行中
+  S --> UI : 回覆目前進度（不同時進行第二次寫入）
+else 可寫入
+  S -> G : 寫入前重新讀取來源並以匯入時相同規則重新辨識
+  S -> C : compareStructure（匯入時結構 vs 重新辨識的結構）
+  alt 結構不符、無法辨識或來源不可讀
+    C --> S : 不符（差異類別與位置）
+    S --> UI : 明確失敗：整次停止，零寫入，不猜新位置
+  else 結構相符
+    S -> G : 單一 batchUpdate 以文字值原子寫入快照內全部目標格
+    alt 外部確認成功
+      G --> S : 成功
+      S --> UI : 寫回成功
+    else 外部明確拒絕且確認未改動
+      G --> S : 明確失敗
+      S --> UI : 明確失敗＋原因
+    else 逾時／回應遺失
+      G --> S : 無法證實
+      S --> UI : 結果待確認（不回滾定案）
+    end
+  end
+end
+
+== 待確認：重新讀取核對或重試 ==
+T -> UI : 重新讀取核對
+UI -> API : recheck(嘗試)
+S -> G : 只讀取目標格
+S -> C : reconcile(預期答案, 讀回內容)\n（不做結構檢查，畫面逐格列出預期與目前內容）
+C --> S : 成功／明確失敗（未寫入）／仍待確認（列出未符合格）
+S --> UI : 更新後的狀態（2 秒內）
+T -> UI : 重試（同一快照）
+UI -> API : retry(嘗試)
+note over S, C : 重新檢查結構後再寫入相同內容\n結果冪等；不改變搶答成功者、定案、成功次數
+
+== 下載 CSV（不依賴 Google） ==
+T -> UI : 下載 CSV
+UI -> API : downloadCsv(活動代碼)
+API -> S : 驗證老師身分
+S -> D : 001 匯出檢視（已取消的活動拒絕）；004 已定案輪次；003 提交（只取已定案輪次）
+S -> C : buildRows＋renderCsv
+C --> S : UTF-8 文字（九欄、公式字元文字保護）
+S --> UI : 檔案（沒有資料時只含表頭）
+@enduml

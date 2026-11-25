@@ -1,0 +1,52 @@
+@startuml 005-result-export-component
+!pragma layout smetana
+skinparam defaultFontName "Microsoft JhengHei"
+skinparam componentStyle rectangle
+title 005 定案成果寫回 Google Sheets 與 CSV 匯出 — 組件圖（相依方向：外層 → 核心）
+
+actor "老師" as Teacher
+
+package "外層：畫面與 API（轉接層）" {
+  [老師匯出畫面\n（寫回預覽、確認、寫回狀態、\n重新核對／重試、下載 CSV、\n保護前綴說明；內容以純文字顯示）] as UI
+  [匯出 API\n（老師身分與階段檢查、輸入驗證、\n錯誤訊息轉換、不含內部細節）] as Api
+  [Google Sheets 寫入轉接（005）\n（憑證沿用 002 的授權；讀取目標格目前內容；\n單一 batchUpdate 原子寫入文字值；\n把外部結果分為成功／失敗／無法證實）] as Sheets
+}
+
+package "應用層" {
+  [匯出服務\n（保存預覽快照與寫回嘗試狀態；\n同一活動一次只允許一個寫入；\n串接核心與轉接層）] as Service
+}
+
+package "核心（純函式：不依賴網路、Web 框架、系統時鐘）" {
+  [成果快照與寫回計畫\n（定案成果 → 子空格清單、\n目標位置、覆寫影響、未寫入題）] as Plan
+  [結構比對\n（匯入時結構 vs 以相同規則\n重新辨識的來源：身分、表頭位置、\n題號、子空格、合併範圍、答案格映射）] as Check
+  [寫回核對判定\n（讀回目標格 vs 預期答案 →\n成功／明確失敗／待確認）] as Reconcile
+  [CSV 紀錄產生\n（004 定案結果＋003 提交 → 資料列；\n逗號、引號、換行；\n公式字元的文字保護）] as Csv
+}
+
+package "其他子功能與活動（相依，唯讀）" {
+  [001 活動服務\n（匯出檢視：只限老師、\n已取消一律拒絕；階段、題號、\n已成功與未成功題）] as Activity
+  [002 匯入服務與 Google 連接埠\n（唯讀 ImportRecord；SheetsReader 重新讀取；\nparse 重新辨識；AuthGateway 重新授權，\n不受匯入階段限制）] as Import
+  [003 提交服務\n（全部輪次的有效提交：輪次、題號、\n組號、各格答案、接收時間；\n含未定案輪次，須過濾）] as Submit
+  [004 順位服務\n（已定案輪次：各題全部候選的名次、\n答錯標記、搶答成功者）] as Ranking
+}
+
+cloud "老師的 Google 試算表" as Sheet
+
+Teacher --> UI
+UI --> Api
+Api --> Service
+Service --> Plan : 傳入定案成果、提交、\n匯入映射、目前目標格內容
+Service --> Check : 傳入匯入時結構、\n重新辨識的來源結構
+Service --> Reconcile : 傳入讀回內容、預期答案
+Service --> Csv : 傳入定案成果、提交
+Service --> Sheets : 讀取來源、寫入、讀回
+Sheets --> Sheet : 只動快照內的目標格
+Service --> Activity : 驗證老師身分；取消的活動拒絕
+Service --> Import : 讀取匯入記錄、重新讀取來源、\n重新授權（除已取消外任何階段）
+Service --> Submit : 讀取提交（只取已定案輪次）
+Service --> Ranking : 讀取定案結果
+note bottom of Service
+  005 對活動唯讀：
+  不改變搶答成功者、定案狀態、判錯或成功次數
+end note
+@enduml

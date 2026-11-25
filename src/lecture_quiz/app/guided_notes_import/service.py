@@ -84,6 +84,16 @@ class ImportService:
         self._store = store
         self._clock = clock
 
+    @property
+    def auth_gateway(self) -> AuthGateway:
+        """Google 授權連接埠（唯讀存取，供 005 的重新授權與寫入共用同一份授權）。"""
+        return self._auth
+
+    @property
+    def sheets_reader(self) -> SheetsReader:
+        """Sheets 讀取連接埠（唯讀存取，供 005 重新讀取來源）。"""
+        return self._reader
+
     # ── 閘門 ────────────────────────────────────────────────
 
     def _gate(

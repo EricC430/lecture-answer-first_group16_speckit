@@ -19,6 +19,7 @@ TEACHER_SCRIPTS = (
     "import.js",  # 002
     "round-submission-teacher.js",  # 003
     "ranking-review-teacher.js",  # 004：關輪後的順位、判錯、撤銷判錯、確認定案
+    "result-export.js",  # 005
 )
 STUDENT_SCRIPTS = (
     "student.js",  # 001
@@ -34,7 +35,7 @@ def _scripts(page: str) -> list[str]:
 
 
 def test_teacher_page_loads_every_feature_script():
-    """老師頁載入 001～004 各自的腳本。"""
+    """老師頁載入 001～005 各自的腳本。"""
     assert set(TEACHER_SCRIPTS) <= set(_scripts("teacher.html")), set(
         TEACHER_SCRIPTS
     ) - set(_scripts("teacher.html"))
@@ -54,6 +55,7 @@ def test_every_section_with_a_feature_has_its_script():
         "002-guided-notes-import": ("import.js",),
         "003-round-submission": ("round-submission-teacher.js", "round-submission.js"),
         "004-ranking-review": ("ranking-review-teacher.js", "ranking-review.js"),
+        "005-result-export": ("result-export.js",),
     }
     for page in ("teacher.html", "student.html"):
         html = (STATIC / page).read_text(encoding="utf-8")

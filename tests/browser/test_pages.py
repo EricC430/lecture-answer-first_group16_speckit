@@ -115,6 +115,9 @@ def test_creating_new_activity_clears_previous_activity_screen(page, world):
     page.wait_for("!document.getElementById('ranking-review-section').hidden")
     assert "舊活動的答案" in page.text("#ranking-review-list")
     assert page.text("#import-preview-body") != ""
+    page.click("#export-preview-button")  # 舊活動留下寫回預覽
+    page.wait_for("document.getElementById('export-preview').hidden === false")
+    assert "舊活動的答案" in page.text("#export-preview-body")
 
     page.click("#new-activity")
     for section in [
@@ -122,6 +125,7 @@ def test_creating_new_activity_clears_previous_activity_screen(page, world):
         "round-submission-section",
         "published-section",
         "ranking-review-section",
+        "export-section",
     ]:
         assert not page.visible(f"#{section}"), f"{section} 在建立畫面仍然顯示"
 
@@ -138,6 +142,8 @@ def test_creating_new_activity_clears_previous_activity_screen(page, world):
     assert not page.visible("#import-preview")
     assert page.text("#ranking-review-list") == ""
     assert not page.visible("#ranking-review-section")
+    assert page.text("#export-preview-body") == ""
+    assert not page.visible("#export-preview")
     assert page.text("#submission-board") == ""
     assert page.text("#published-list") == ""
     assert "舊活動" not in page.text()
