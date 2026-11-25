@@ -43,7 +43,9 @@ class Node {
     this.textContent = "";
     this.className = "";
     this.hidden = false;
+    this.dataset = {};
   }
+  setAttribute() {}
   append(...nodes) {
     this.children.push(...nodes);
   }
@@ -81,7 +83,7 @@ def render_student_page(tmp_path: Path, student_snapshot: dict) -> dict:
     node = shutil.which("node")
     assert node is not None, "找不到 node，無法執行前端行為測試"
     (tmp_path / "package.json").write_text('{"type": "module"}', encoding="utf-8")
-    for name in ("ranking-review.js", "ranking-common.js", "submission.js"):
+    for name in ("ranking-review.js", "ranking-common.js", "submission.js", "glyph.js"):
         shutil.copy(JS_DIR / name, tmp_path / name)
     (tmp_path / "student.js").write_text(STUDENT_STUB, encoding="utf-8")
     (tmp_path / "driver.mjs").write_text(DRIVER, encoding="utf-8")

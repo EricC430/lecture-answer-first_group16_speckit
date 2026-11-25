@@ -189,3 +189,42 @@ def test_static_files_are_revalidated_not_cached_blindly(world):
     response = world.http.get("/js/student.js")
     assert response.status_code == 200
     assert response.headers["cache-control"] == "no-cache"
+
+
+def test_teacher_overview_shows_stage_winners_and_solved_count(page, world):
+    """006：老師頁的本輪總覽依快照顯示階段、各題勝出組別與已定案的成功題數。"""
+    world.create()
+    world.join(1, 2)
+    world.open_round([3, 4])
+    world.submit(1, 3, 2, ["乙的答案"])
+    open_teacher(page, world)
+    page.wait_for("!document.getElementById('overview-section').hidden")
+    page.wait_for(
+        "document.querySelector('#stage-track li.now')?.dataset.stage === 'ROUND_OPEN'"
+    )
+    tiles = page.text("#overview-questions")
+    assert "Q3" in tiles and "作答中・1 組送出" in tiles, tiles
+
+    world.close_round()
+    page.wait_for(
+        "document.getElementById('overview-stage').textContent === '結果未定案'"
+    )
+    page.wait_for(
+        "document.getElementById('overview-questions')"
+        ".innerText.includes('第 2 組・待定案')"
+    )
+    assert page.text("#overview-score") == "0／4"
+
+    world.finalize()
+    page.wait_for(
+        "document.getElementById('overview-questions')"
+        ".innerText.includes('第 2 組・第 1 輪')"
+    )
+    assert page.text("#overview-score") == "1／4"
+    assert page.text("#overview-questions").count("第 1 輪未成功") == 1  # 題 4 沒人提交
+    # 記號只是裝飾：第 2 組的記號是方形（data-shape=2），且不帶文字
+    shape = page.eval(
+        "document.querySelector('#overview-questions .ov-solved .gl').dataset.shape"
+    )
+    assert shape == "2"
+    assert_no_script_errors(page)

@@ -20,11 +20,13 @@ TEACHER_SCRIPTS = (
     "round-submission-teacher.js",  # 003
     "ranking-review-teacher.js",  # 004：關輪後的順位、判錯、撤銷判錯、確認定案
     "result-export.js",  # 005
+    "overview.js",  # 006：本輪總覽構成與階段軌
 )
 STUDENT_SCRIPTS = (
     "student.js",  # 001
     "round-submission.js",  # 003
     "ranking-review.js",  # 004：關輪後的結果
+    "student-face.js",  # 006：本組記號、扇形倒數與階段軌
 )
 
 
@@ -56,6 +58,7 @@ def test_every_section_with_a_feature_has_its_script():
         "003-round-submission": ("round-submission-teacher.js", "round-submission.js"),
         "004-ranking-review": ("ranking-review-teacher.js", "ranking-review.js"),
         "005-result-export": ("result-export.js",),
+        "006-ui-refresh": ("overview.js",),
     }
     for page in ("teacher.html", "student.html"):
         html = (STATIC / page).read_text(encoding="utf-8")

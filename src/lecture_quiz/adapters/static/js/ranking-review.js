@@ -4,6 +4,7 @@
 
 import { onStudentReset, onStudentSnapshot } from "./student.js";
 import { el } from "./submission.js";
+import { glyph } from "./glyph.js";
 import { STATUS_LABELS, acceptRankingRounds, acceptRankingVersion, answerOf, resetRankingVersions } from "./ranking-common.js";
 
 export { acceptRankingVersion };
@@ -12,6 +13,7 @@ const $ = (id) => document.getElementById(id);
 
 function line(snapshot, round, question, entry, prefix) {
   const item = el("li", "", `ranking-line status-${entry.displayStatus.toLowerCase()}`);
+  item.append(glyph(entry.groupNumber)); // 006：組別記號（展示用）
   item.append(el("strong", `${prefix}第 ${entry.groupNumber} 組：${STATUS_LABELS[entry.displayStatus]}`));
   const answer = answerOf(snapshot, round.roundNumber, question.questionNumber, entry.groupNumber);
   if (answer) item.append(el("pre", answer, "ranking-answer"));

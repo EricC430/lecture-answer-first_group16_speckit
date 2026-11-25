@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>方向一 格紙</title>
+<style>
+:root{
+  --paper:#F6F7F5; --sheet:#FFFFFF; --grid:#D5DADF; --grid-strong:#A9B1B9;
+  --ink:#1B2024; --pencil:#5A636C; --hl:#FFE14D; --hl-soft:#FFF4B8;
+  --red:#C8322A; --ok:#1F6B45;
+  --mono:"Consolas","Cascadia Mono",ui-monospace,monospace;
+  --sans:"Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.6 var(--sans)}
+.demo-note{font-size:12px;color:var(--pencil);padding:10px 32px;border-bottom:1px solid var(--grid)}
+.demo-note b{color:var(--ink)}
+
+/* ── 老師主控台 ── */
+.console{display:grid;grid-template-columns:300px 1fr;min-height:900px}
+.rail{border-right:1px solid var(--grid-strong);padding:28px 24px;display:flex;flex-direction:column;gap:28px;background:var(--paper)}
+.code-label{font-size:12px;color:var(--pencil)}
+.code{font:700 40px/1 var(--mono);letter-spacing:.12em;margin-top:6px}
+.code-sub{font-size:13px;color:var(--pencil);margin-top:6px}
+.stages{list-style:none;margin:0;padding:0;border-left:2px solid var(--grid-strong)}
+.stages li{padding:5px 0 5px 16px;color:var(--pencil);position:relative;font-size:14px}
+.stages li.done{color:var(--ink)}
+.stages li.done::before{content:"";position:absolute;left:-6px;top:13px;width:10px;height:2px;background:var(--ink)}
+.stages li.now{color:var(--ink);font-weight:700;font-size:17px;background:linear-gradient(transparent 55%,var(--hl) 55%);margin-left:-2px;border-left:2px solid var(--ink)}
+.round-meta{font-size:14px;line-height:1.9}
+.round-meta strong{font-family:var(--mono)}
+.actions{display:flex;flex-direction:column;gap:10px;margin-top:auto}
+button{font:inherit;cursor:pointer;min-height:44px;border-radius:2px}
+.btn-primary{background:var(--ink);color:#fff;border:1px solid var(--ink);font-weight:700;font-size:16px}
+.btn-primary small{display:block;font-weight:400;font-size:12px;opacity:.75}
+.btn-line{background:transparent;border:1px solid var(--grid-strong);color:var(--ink)}
+.btn-danger{background:transparent;border:1px solid transparent;color:var(--red);text-decoration:underline;text-underline-offset:3px;min-height:36px}
+
+.sheet{background:var(--sheet);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:24px 24px;padding:28px 40px 60px}
+.sheet-head{display:flex;justify-content:space-between;align-items:flex-end;background:var(--sheet);padding:4px 0 14px;border-bottom:2px solid var(--ink)}
+.sheet-head h1{margin:0;font-size:26px;letter-spacing:.02em}
+.sheet-head p{margin:0;color:var(--pencil);font-size:14px}
+.tally{display:grid;grid-template-columns:repeat(6,1fr);gap:0;margin:18px 0 26px;background:var(--sheet);border:1px solid var(--grid-strong)}
+.tally div{padding:8px 12px;border-right:1px solid var(--grid)}
+.tally div:last-child{border-right:0}
+.tally .g{font-size:13px;color:var(--pencil)}
+.tally .n{font:700 28px/1.2 var(--mono)}
+.tally .n span{font:400 15px var(--sans);color:var(--pencil);margin-left:10px}
+
+.q{display:grid;grid-template-columns:96px 1fr;margin-bottom:28px;background:var(--sheet);border:1px solid var(--grid-strong)}
+.q.dim{opacity:.55}
+.qno{font:700 34px/1 var(--mono);padding:16px 14px;border-right:1px solid var(--grid-strong)}
+.qno small{display:block;font:400 12px var(--sans);color:var(--pencil);margin-top:8px}
+.qbody{padding:14px 18px}
+.cells{display:flex;gap:10px;flex-wrap:wrap}
+.cell{min-width:180px;min-height:52px;border:2px solid var(--ink);padding:10px 14px;font-size:20px;font-weight:700;position:relative;background:#fff}
+.cell.win{background:var(--hl)}
+.cell.empty{border-style:dashed;border-color:var(--grid-strong);color:var(--pencil);font-weight:400;font-size:14px;display:flex;align-items:center}
+.cell i{position:absolute;top:-9px;left:8px;font:400 11px var(--mono);background:#fff;padding:0 4px;color:var(--pencil);font-style:normal}
+.cell.win i{background:var(--hl)}
+.who{font-size:13px;color:var(--ink);margin-top:8px}
+.who b{background:var(--ink);color:#fff;padding:1px 6px;margin-right:6px;font-weight:700}
+.entries{list-style:none;margin:16px 0 0;padding:0;border-top:1px dashed var(--grid-strong)}
+.entries li{display:grid;grid-template-columns:36px 70px minmax(0,420px) 80px 1fr auto;align-items:center;gap:10px;padding:8px 0;border-bottom:1px dashed var(--grid);font-size:15px}
+.rank{font:700 18px var(--mono)}
+.gap{font:13px var(--mono);color:var(--pencil)}
+.ans{font-weight:700}
+.status{font-size:13px}
+.status.s-success{color:var(--ok);font-weight:700}
+.status.s-wrong{color:var(--red);font-weight:700}
+.status.s-failed{color:var(--pencil)}
+li.wrong .ans{text-decoration:line-through;text-decoration-color:var(--red);text-decoration-thickness:2px;color:var(--pencil)}
+.why{color:var(--pencil);font-size:12px;display:block}
+.mini{min-height:34px;padding:2px 12px;font-size:13px;background:#fff;border:1px solid var(--grid-strong);color:var(--ink)}
+.mini.red{border-color:var(--red);color:var(--red)}
+
+.sync{position:fixed;right:12px;bottom:12px;font:12px var(--mono);background:var(--ink);color:#fff;padding:4px 10px}
+
+/* ── 學生手機 ── */
+.student-wrap{border-top:1px solid var(--grid-strong);padding:48px 40px 80px;display:grid;grid-template-columns:375px 1fr;gap:56px;align-items:start}
+.phone{width:375px;min-height:812px;border:1px solid var(--grid-strong);background:var(--sheet);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:24px 24px}
+.p-top{background:var(--ink);color:#fff;padding:14px 18px;display:flex;justify-content:space-between;align-items:center}
+.p-top .grp{font-size:22px;font-weight:700}
+.p-top .grp small{display:block;font:400 12px var(--mono);opacity:.8}
+.p-clock{font:700 34px/1 var(--mono);background:var(--hl);color:var(--ink);padding:6px 10px}
+.p-stage{background:#fff;padding:10px 18px;border-bottom:1px solid var(--grid-strong);font-size:14px}
+.p-stage b{background:linear-gradient(transparent 55%,var(--hl) 55%)}
+.p-q{margin:16px 14px;background:#fff;border:1px solid var(--grid-strong);padding:14px}
+.p-q h3{margin:0 0 10px;font:700 22px var(--mono);display:flex;justify-content:space-between;align-items:baseline}
+.p-q h3 span{font:400 13px var(--sans);color:var(--pencil)}
+.p-q label{display:block;font-size:13px;color:var(--pencil);margin-top:8px}
+.p-q input{width:100%;font:700 18px var(--sans);border:2px solid var(--ink);padding:10px 12px;margin-top:4px;border-radius:0;background:#fff}
+.p-q input:focus{outline:3px solid var(--hl);outline-offset:0}
+.p-q .send{width:100%;margin-top:12px;background:var(--ink);color:#fff;border:0;font-weight:700;font-size:16px;min-height:48px}
+.p-q.sent{border-color:var(--ok)}
+.p-q.sent .stamp{font-size:15px;color:var(--ok);font-weight:700}
+.p-q.sent .stamp span{font:13px var(--mono);color:var(--pencil);font-weight:400;margin-left:8px}
+.note h2{margin:0 0 8px;font-size:20px}
+.note p{margin:0 0 10px;color:var(--pencil);max-width:520px}
+</style>
+</head>
+<body>
+<div class="demo-note"><b>方向一・格紙：空格即介面</b>　示範資料（手寫）：活動 K7Q2FM、第 2 輪、速度模式、結果未定案。</div>
+
+<section class="console">
+  <aside class="rail">
+    <div>
+      <div class="code-label">活動代碼</div>
+      <div class="code">K7Q2FM</div>
+      <div class="code-sub">組數上限 6・已加入 6 組</div>
+    </div>
+    <ol class="stages">
+      <li class="done">準備中</li>
+      <li class="done">開放加入</li>
+      <li class="done">搶答中</li>
+      <li class="now">結果未定案</li>
+      <li>結果已定案</li>
+      <li>已結束</li>
+    </ol>
+    <div class="round-meta">
+      第 <strong>2</strong> 輪・速度模式<br>
+      本輪題目 Q3、Q4、Q5<br>
+      結果版本 <strong>3</strong>
+    </div>
+    <div class="actions">
+      <button class="btn-primary">確認定案<small>定案後才能開下一輪</small></button>
+      <button class="btn-line">結束活動</button>
+      <button class="btn-danger">取消活動</button>
+    </div>
+  </aside>
+
+  <main class="sheet">
+    <div class="sheet-head">
+      <h1>第 2 輪 · 學習單</h1>
+      <p>黃色格子是會寫回學習單的答案</p>
+    </div>
+
+    <div class="tally" aria-label="各組暫算成功次數">
+      <div><div class="g">第 1 組</div><div class="n">1<span>一</span></div></div>
+      <div><div class="g">第 2 組</div><div class="n">2<span>丅</span></div></div>
+      <div><div class="g">第 3 組</div><div class="n">1<span>一</span></div></div>
+      <div><div class="g">第 4 組</div><div class="n">0<span></span></div></div>
+      <div><div class="g">第 5 組</div><div class="n">1<span>一</span></div></div>
+      <div><div class="g">第 6 組</div><div class="n">1<span>一</span></div></div>
+    </div>
+
+    <article class="q">
+      <div class="qno">Q3<small>1 格</small></div>
+      <div class="qbody">
+        <div class="cells"><div class="cell win"><i>3-1</i>單一職責原則</div></div>
+        <div class="who"><b>第 2 組</b>搶答成功・提交較早</div>
+        <ol class="entries">
+          <li><span class="rank">1</span><span>第 2 組</span><span class="ans">單一職責原則</span><span class="gap">+0.00s</span><span class="status s-success">搶答成功</span><button class="mini red">判第 2 組答錯</button></li>
+          <li><span class="rank">2</span><span>第 5 組</span><span class="ans">SRP</span><span class="gap">+0.84s</span><span class="status s-failed">搶答失敗</span><span></span></li>
+          <li><span class="rank">3</span><span>第 1 組</span><span class="ans">開放封閉原則</span><span class="gap">+2.31s</span><span class="status s-failed">搶答失敗</span><span></span></li>
+        </ol>
+      </div>
+    </article>
+
+    <article class="q">
+      <div class="qno">Q4<small>2 格</small></div>
+      <div class="qbody">
+        <div class="cells">
+          <div class="cell win"><i>4-1</i>需求規格</div>
+          <div class="cell win"><i>4-2</i>驗收測試</div>
+        </div>
+        <div class="who"><b>第 6 組</b>搶答成功・第 4 組被判錯後遞補</div>
+        <ol class="entries">
+          <li class="wrong"><span class="rank">—</span><span>第 4 組</span><span class="ans">需求訪談／單元測試</span><span class="gap">+0.00s</span><span class="status s-wrong">答錯</span><button class="mini">撤銷第 4 組判錯</button></li>
+          <li><span class="rank">1</span><span>第 6 組</span><span class="ans">需求規格／驗收測試</span><span class="gap">+1.12s</span><span class="status s-success">搶答成功<span class="why">提交較早</span></span><button class="mini red">判第 6 組答錯</button></li>
+          <li><span class="rank">2</span><span>第 1 組</span><span class="ans">需求規格／整合測試</span><span class="gap">+3.05s</span><span class="status s-failed">搶答失敗</span><span></span></li>
+        </ol>
+      </div>
+    </article>
+
+    <article class="q">
+      <div class="qno">Q5<small>3 格</small></div>
+      <div class="qbody">
+        <div class="cells">
+          <div class="cell win"><i>5-1</i>Model</div>
+          <div class="cell win"><i>5-2</i>View</div>
+          <div class="cell win"><i>5-3</i>Controller</div>
+        </div>
+        <div class="who"><b>第 3 組</b>搶答成功・唯一候選</div>
+        <ol class="entries">
+          <li><span class="rank">1</span><span>第 3 組</span><span class="ans">Model／View／Controller</span><span class="gap">+0.00s</span><span class="status s-success">搶答成功</span><button class="mini red">判第 3 組答錯</button></li>
+        </ol>
+      </div>
+    </article>
+
+    <article class="q dim">
+      <div class="qno">Q6<small>2 格</small></div>
+      <div class="qbody">
+        <div class="cells"><div class="cell empty">尚未出題</div><div class="cell empty">尚未出題</div></div>
+      </div>
+    </article>
+  </main>
+</section>
+
+<section class="student-wrap">
+  <div class="phone" aria-label="學生手機畫面">
+    <div class="p-top">
+      <div class="grp">第 4 組<small>K7Q2FM・憑證 B3X9</small></div>
+      <div class="p-clock">00:47</div>
+    </div>
+    <div class="p-stage">第 2 輪 · <b>搶答中</b>・同一題只算第一次送出</div>
+    <div class="p-q sent">
+      <h3>Q3 <span>1 格</span></h3>
+      <div class="stamp">已送出<span>14:02:31</span></div>
+    </div>
+    <div class="p-q">
+      <h3>Q4 <span>2 格・要填滿才能送出</span></h3>
+      <label for="a41">第 1 格</label><input id="a41" value="需求訪談">
+      <label for="a42">第 2 格</label><input id="a42" placeholder="">
+      <button class="send">送出 Q4</button>
+    </div>
+    <div class="p-q">
+      <h3>Q5 <span>3 格</span></h3>
+      <label>第 1 格</label><input>
+    </div>
+  </div>
+  <div class="note">
+    <h2>學生端也是同一張格紙</h2>
+    <p>每題的格子數量直接來自匯入的學習單，學生看到幾格就填幾格；倒數用螢光筆黃標在最上方。</p>
+    <p>已送出的題目收起來只留時間戳，避免重複作答的焦慮。</p>
+  </div>
+</section>
+
+<div class="sync">v42｜延遲 38 ms</div>
+</body>
+</html>
