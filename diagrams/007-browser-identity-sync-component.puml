@@ -1,0 +1,43 @@
+@startuml 007-browser-identity-sync-component
+!pragma layout smetana
+skinparam defaultFontName "Microsoft JhengHei"
+skinparam componentStyle rectangle
+title 007 同一瀏覽器共用學生身分 — 組件圖（相依方向：外層 → 核心）
+
+actor "學生" as Student
+
+package "同一個瀏覽器" {
+  [學生分頁 A] as TabA
+  [學生分頁 B] as TabB
+  [瀏覽器身分保存\n（瀏覽器 + 活動 → 學生身分；\n頁面程式碼讀不到，不放網址、畫面、日誌）] as Store
+  [分頁通知\n（同瀏覽器分頁間通知「身分已變更」）] as TabBus
+  [老師身分保存\n（沿用 001，與學生身分分開）] as TeacherStore
+}
+
+package "外層：API 與推送（轉接層）" {
+  [活動 API（HTTP）\n（從瀏覽器身分解析請求者；\n加入時發出、離開／刪除時解除瀏覽器身分）] as Api
+  [同步推送（只推送）\n（以瀏覽器身分驗證連線；\n身分解除時通知該瀏覽器所有連線）] as Sync
+}
+
+package "應用層" {
+  [活動服務\n（每活動一把鎖：同瀏覽器同時加入只成功一個）] as Service
+}
+
+package "核心（純函式）" {
+  [加入規則\n（已有組別身分 → 拒絕「請先離開本組」；\n最後一個瀏覽器身分離開才釋放組號）] as Rules
+}
+
+Student --> TabA
+Student --> TabB
+TabA --> Api
+TabB --> Api
+Api ..> Store : 發出／解除
+TabA ..> TabBus : 身分已變更
+TabBus ..> TabB : 重新取得身分與快照
+TabA <.. Sync : 推送
+TabB <.. Sync : 推送
+Api --> Service
+Sync --> Service : 驗證身分、取得快照
+Service --> Rules
+TeacherStore -[hidden]- Store
+@enduml
