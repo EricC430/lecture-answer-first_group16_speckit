@@ -7,7 +7,7 @@
 | Scenario | 測試 |
 |---|---|
 | US1-AS1 | `tests/integration/test_us1_teacher.py::test_second_activity_gets_distinct_valid_code`<br>`tests/unit/core/test_input_rules_max_groups.py::test_create_records_max_groups`<br>`tests/unit/core/test_state_machine_create_and_permissions.py::test_create_activity_starts_preparing` |
-| US1-AS2 | `tests/integration/test_us1_teacher.py::test_same_token_in_new_client_keeps_teacher_identity` |
+| US1-AS2 | `tests/integration/test_us1_teacher.py::test_same_token_in_new_client_keeps_teacher_identity`<br>`tests/browser/test_teacher_restore.py::test_teacher_page_without_code_returns_to_last_activity` |
 | US1-AS3 | `tests/integration/test_us1_teacher.py::test_client_without_token_is_rejected` |
 | US1-AS4 | `tests/integration/test_us1_teacher.py::test_student_device_token_is_rejected`<br>`tests/unit/core/test_state_machine_create_and_permissions.py::test_non_teacher_is_rejected_without_change` |
 | US1-AS5 | `tests/integration/test_us1_teacher.py::test_other_activity_teacher_is_rejected`<br>`tests/unit/core/test_state_machine_create_and_permissions.py::test_non_teacher_is_rejected_without_change` |

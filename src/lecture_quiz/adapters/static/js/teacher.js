@@ -3,6 +3,7 @@
 
 import { apiRequest, showError } from "./api.js";
 import {
+  clearLastTeacherCode,
   getLastTeacherCode,
   getTeacherToken,
   normalizeCode,
@@ -103,13 +104,27 @@ async function createActivity() {
     body: { maxGroups },
   });
   button.disabled = false;
+  if (!result.ok && result.error?.code === "TEACHER_HAS_ACTIVE_ACTIVITY" && previousToken) {
+    // C7：這個瀏覽器已有存續中的活動（例如另一個分頁還停在建立畫面），直接回到該活動（US1-AS2）；
+    // 訊息仍依 FR-037 告知代碼與「請先結束或取消它」
+    openActivity(lastCode, previousToken);
+    showError($("activity-error"), {
+      message: `你已有一個進行中的活動（代碼 ${lastCode}），已回到該活動；要建立新活動請先結束或取消它。`,
+    });
+    return;
+  }
   showError($("activity-error"), result.ok ? null : result.error);
   if (!result.ok) return;
   const { code, teacherToken } = result.data;
   setTeacherToken(code, teacherToken);
   setLastTeacherCode(code);
+  openActivity(code, teacherToken);
+}
+
+/** 把活動代碼放回網址（重新整理時用得到）並連線同步。 */
+function openActivity(code, token) {
   history.replaceState(null, "", `?code=${encodeURIComponent(code)}`);
-  start(code, teacherToken);
+  start(code, token);
 }
 
 // ── US3：開輪面板與開發用假題目 ──
@@ -217,6 +232,8 @@ function resetPage() {
 
 /** 回到建立活動畫面（只在已結束或已取消後由老師按鈕觸發；與後端重啟後的 gone 畫面一致）。 */
 function showCreateForm() {
+  // 舊活動已結束、已取消或已失效：重新整理時要停在建立畫面，不再自動回到它（Issue #29）
+  clearLastTeacherCode();
   resetPage();
   if (state.sync) state.sync.close();
   state.sync = null;
@@ -293,7 +310,14 @@ function init() {
   $("cancel-activity").addEventListener("click", () => teacherAction("POST", "/cancel", {}));
   $("new-activity").addEventListener("click", showCreateForm);
   const code = normalizeCode(new URLSearchParams(location.search).get("code"));
-  if (!code) return;
+  if (!code) {
+    // 網址沒有代碼（新分頁或重新輸入網址）：回到這個瀏覽器最後建立的活動（US1-AS2、FR-003）。
+    // 活動已失效（例如後端重啟）時，同步會回報 gone，畫面回到建立活動。
+    const lastCode = getLastTeacherCode();
+    const lastToken = lastCode ? getTeacherToken(lastCode) : null;
+    if (lastCode && lastToken) openActivity(lastCode, lastToken);
+    return;
+  }
   const token = getTeacherToken(code);
   if (!token) {
     showError($("activity-error"), { message: "需要該活動的老師身分。請在建立活動的瀏覽器開啟，或建立新的活動。" });

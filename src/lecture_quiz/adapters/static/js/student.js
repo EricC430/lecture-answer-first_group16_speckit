@@ -2,7 +2,7 @@
 // 所有不可信文字一律用 textContent（原則 V）。
 
 import { apiRequest, showError } from "./api.js";
-import { clearIdentity, getDeviceToken, normalizeCode, setDeviceToken } from "./identity.js";
+import { clearDeviceToken, getDeviceToken, normalizeCode, setDeviceToken } from "./identity.js";
 import { startCountdown } from "./countdown.js";
 import { connectSync } from "./sync.js";
 
@@ -96,11 +96,11 @@ export function startSync(code, token) {
   state.sync = connectSync(code, token, {
     onSnapshot: render,
     onGone: () => {
-      clearIdentity(code);
+      clearDeviceToken(code);
       showJoinForm();
     },
     onUnauthorized: (reason) => {
-      clearIdentity(code);
+      clearDeviceToken(code);
       showJoinForm();
       showError($("student-error"), {
         message: UNAUTHORIZED_MESSAGES[reason] ?? UNAUTHORIZED_MESSAGES.INVALID_TOKEN,
@@ -145,7 +145,7 @@ function joinAnother() {
   const { code } = currentIdentity();
   if (state.sync) state.sync.close();
   state.sync = null;
-  if (code) clearIdentity(code);
+  if (code) clearDeviceToken(code);
   state.code = null;
   showError($("student-error"), null);
   showJoinForm();
