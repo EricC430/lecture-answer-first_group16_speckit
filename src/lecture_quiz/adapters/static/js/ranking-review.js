@@ -2,9 +2,9 @@
 // ③ 剛被判錯的前一組（有遞補者時一起顯示）。不逐組列出其他候選，不顯示理由與他組次數。
 // 答案由 003 的 submissions.published 以（輪次、題號、組號）合併；所有文字用 textContent。
 
-import { onStudentSnapshot } from "./student.js";
+import { onStudentReset, onStudentSnapshot } from "./student.js";
 import { el } from "./submission.js";
-import { STATUS_LABELS, acceptRankingRounds, acceptRankingVersion, answerOf } from "./ranking-common.js";
+import { STATUS_LABELS, acceptRankingRounds, acceptRankingVersion, answerOf, resetRankingVersions } from "./ranking-common.js";
 
 export { acceptRankingVersion };
 
@@ -29,7 +29,8 @@ function questionBlock(snapshot, round, question, own) {
     const entry = byGroup.get(group);
     if (!entry || shown.has(group)) return;
     shown.add(group);
-    list.append(line(snapshot, round, question, entry, prefix));
+    // 本組剛好是搶答成功者或被判錯者時，標出「（本組）」，學生才知道哪一行是自己
+    list.append(line(snapshot, round, question, entry, group === own ? `${prefix}（本組）` : prefix));
   };
   if (question.replacedGroup !== null) show(question.replacedGroup, "");
   if (question.successGroup !== null) show(question.successGroup, "目前搶答成功者：");
@@ -61,3 +62,7 @@ function render(snapshot) {
 }
 
 onStudentSnapshot(render);
+onStudentReset(() => {
+  resetRankingVersions();
+  $("ranking-review-student-list").replaceChildren();
+});

@@ -4,7 +4,7 @@
 // 單一工作表是否自動選用由後端決定（inspect 回傳 autoSelectSheetId），前端不自己數工作表。
 
 import { apiRequest, showError } from "./api.js";
-import { onTeacherSnapshot } from "./teacher.js";
+import { onTeacherReset, onTeacherSnapshot } from "./teacher.js";
 
 const $ = (id) => document.getElementById(id);
 const PICKER_SCRIPT = "https://apis.google.com/js/api.js";
@@ -271,3 +271,22 @@ onTeacherSnapshot((snapshot, state) => {
 $("import-start").addEventListener("click", () => guarded(chooseSource));
 $("import-reauth").addEventListener("click", () => guarded(startAuthorization));
 $("import-run").addEventListener("click", () => guarded(runImport));
+
+// 換活動時清掉上一個活動的匯入預覽、錯誤、選定的來源與授權結果提示
+onTeacherReset(() => {
+  started = false;
+  ui.code = null;
+  ui.token = null;
+  ui.locked = false;
+  ui.busy = false;
+  ui.authResult = null;
+  setStatus("");
+  showError($("import-error"), null);
+  for (const id of ["import-sheet-choice", "import-source", "import-run", "import-preview", "import-issues", "import-reauth"]) {
+    $(id).hidden = true;
+  }
+  for (const id of ["import-sheet-list", "import-preview-body", "import-issues-body"]) $(id).replaceChildren();
+  $("import-summary").textContent = "";
+  $("import-source-name").textContent = "";
+  updateControls();
+});

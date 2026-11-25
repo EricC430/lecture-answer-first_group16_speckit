@@ -37,6 +37,11 @@ export function acceptRankingVersion(roundNumber, resultVersion) {
   return true;
 }
 
+/** 換活動時清掉已看過的版本，否則新活動的輪次會被舊活動的版本號擋下。 */
+export function resetRankingVersions() {
+  seenVersions.clear();
+}
+
 /** 快照的所有輪次是否都不比已看過的版本舊。 */
 export function acceptRankingRounds(rounds) {
   let ok = true;

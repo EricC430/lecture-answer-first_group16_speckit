@@ -24,13 +24,37 @@ const UNAUTHORIZED_MESSAGES = {
 const $ = (id) => document.getElementById(id);
 const countdown = startCountdown(() => $("student-countdown"));
 const renderers = [];
+let lastSnapshot = null;
 
-/** 讓後續 Story 的畫面元件註冊快照渲染函式。 */
+/**
+ * 讓後續 Story 的畫面元件註冊快照渲染函式。
+ * 各子功能的腳本是在 student.js 之後才載入；若第一份快照已經到了，要立刻補畫一次，
+ * 否則要等到下一次狀態變更才看得到（與老師頁 onTeacherSnapshot 一致）。
+ */
 export function onStudentSnapshot(render) {
   renderers.push(render);
+  if (lastSnapshot) render(lastSnapshot);
+}
+
+
+const resetters = [];
+
+/** 註冊「換活動或回到加入畫面時清掉舊畫面與狀態」的函式。 */
+export function onStudentReset(reset) {
+  resetters.push(reset);
+}
+
+/** 清掉上一個活動留在畫面與模組裡的內容（作答表單、結果區塊、舊快照）。 */
+function resetStudentPage() {
+  lastSnapshot = null;
+  for (const section of document.querySelectorAll("section[data-feature]")) {
+    if (section.id !== "activity-section") section.hidden = true;
+  }
+  for (const reset of resetters) reset();
 }
 
 function showJoinForm() {
+  resetStudentPage();
   $("student-info").hidden = true;
   $("student-join").hidden = false;
 }
@@ -53,6 +77,7 @@ function render(snapshot) {
     ? snapshot.unsolvedQuestions.map((q) => `第 ${q} 題`).join("、")
     : "無";
   $("student-cancelled").hidden = snapshot.stage !== "CANCELLED";
+  lastSnapshot = snapshot;
   for (const fn of renderers) fn(snapshot);
 }
 
@@ -65,6 +90,7 @@ export function currentIdentity() {
 
 /** 以本分頁的裝置身分開始同步；身分失效時回到加入畫面。 */
 export function startSync(code, token) {
+  if (state.code !== null && state.code !== code) resetStudentPage();
   state.code = code;
   if (state.sync) state.sync.close();
   state.sync = connectSync(code, token, {
