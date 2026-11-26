@@ -10,7 +10,7 @@
 | 身分 | 不需要 |
 | 請求本文 | 無 |
 | 回應 | 一律回 `204 No Content`，本文為空 |
-| Set-Cookie | 只有在請求**沒有**帶格式正確的 `lq_browser` 時才設定：`lq_browser=<金鑰>; HttpOnly; SameSite=Strict; Path=/; Max-Age=86400`。已經有金鑰時不送 `Set-Cookie`，也不延長期限 |
+| Set-Cookie | 一律設定 `lq_browser=<金鑰>; HttpOnly; SameSite=Strict; Path=/; Max-Age=86400`。請求已帶格式正確的金鑰時沿用同一把（只延長期限），沒有或格式不符時發新的（滑動期限，verification P-08） |
 | 冪等 | 是。帶著同一把 cookie 重複呼叫，結果都相同 |
 | 日誌 | 只記錄方法、路徑與狀態碼，不記錄 cookie |
 
@@ -28,10 +28,10 @@
 
 | 項目 | 001 | 007 |
 |---|---|---|
-| 需要的身分 | 無或裝置 | **必須有瀏覽器金鑰**（cookie 或 Bearer）。都沒有時回 `400 BROWSER_SESSION_REQUIRED`（不呼叫服務層，狀態不變） |
+| 需要的身分 | 無或裝置 | **必須有瀏覽器金鑰**：格式正確的 Bearer，否則 cookie。都沒有（含 Bearer 格式不符且沒有 cookie）時回 `400 BROWSER_SESSION_REQUIRED`；金鑰是該活動的老師 token 時回 `403 TEACHER_CANNOT_JOIN`（verification P-09）。兩者都不呼叫服務層，狀態不變 |
 | 成功回應 | `200 {"deviceToken", "groupNumber", "credential", "version"}` | `200 {"groupNumber", "credential", "version"}`，**移除 `deviceToken`**（FR-008） |
 | 已是成員 | `409 ALREADY_IN_GROUP`「這台裝置已經在第 n 組，請先離開本組」 | `409 ALREADY_IN_GROUP`「這個瀏覽器已是第 n 組成員，請先離開本組。」；同時加入時落敗的請求也回這個（核心 INV-1） |
-| 活動不存在 | 帶 token 時回 410，否則 404 | **只看 Bearer**：沒有 Bearer 時回 `404 ACTIVITY_NOT_FOUND`，即使請求帶著 cookie（research R4，打錯代碼不應顯示「活動已失效」） |
+| 活動不存在 | 帶 token 時回 410，否則 404 | **一律回 `404 ACTIVITY_NOT_FOUND`**，不論是否帶 Bearer 或 cookie（research R4，打錯代碼不應顯示「活動已失效」） |
 | Set-Cookie | — | 不送。金鑰只由 `browser-session` 發出 |
 
 其他端點（快照、離開本組、003 提交、004 學生結果等）的請求格式與回應都不變，差別只在身分改由 cookie 取得。
@@ -56,6 +56,8 @@
 | 代碼 | HTTP | 訊息 |
 |---|---|---|
 | `BROWSER_SESSION_REQUIRED` | 400 | 瀏覽器沒有保存身分，請允許本網站儲存資料後重新整理頁面。 |
+| `TEACHER_CANNOT_JOIN` | 403 | 老師身分不能加入組別，請用另一個瀏覽器開學生頁。 |
+| `ALREADY_IN_GROUP` | 409 | 這個瀏覽器已是第 n 組成員，請先離開本組。 |
 
 ## 7. 學生頁對回應的處理（前端，research R4、R7）
 
@@ -65,6 +67,6 @@
 | 第一次連線收到 `unauthorized INVALID_TOKEN` | 安靜地顯示加入畫面，不顯示錯誤 |
 | 第一次連線就收到 `gone`（從未同步成功） | 顯示加入畫面與「找不到這個活動代碼，請確認後再輸入。」 |
 | 同步成功過之後收到 `gone` | 顯示「活動已失效，請重新建立或加入活動」（001 行為） |
-| `ALREADY_IN_GROUP` | 409 | 這個瀏覽器已是第 n 組成員，請先離開本組。 |
+| 收到其他分頁的 `joined` 通知 | 尚未同步成功（加入畫面，或還在等第一份快照）的分頁以該代碼重新同步；已同步成功的分頁不處理（verification P-10） |
 
 所有錯誤訊息都不得包含金鑰、憑證、堆疊追蹤或檔案路徑（憲章原則 V）。

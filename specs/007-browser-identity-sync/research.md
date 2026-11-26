@@ -15,7 +15,7 @@
   - `HttpOnly`
   - `SameSite=Strict`
   - `Path=/`
-  - `Max-Age=86400`（1 天，spec FR-004）
+  - `Max-Age=86400`（1 天，spec FR-004）。每次 `browser-session` 都重新設定同一把金鑰的期限（滑動期限，verification P-08）
   - 不設 `Secure`：系統只在本機以 HTTP 執行，設了瀏覽器就不會保存。
   - 不設 `Domain`：只對發出 cookie 的主機有效。
 - **Rationale**：
@@ -72,6 +72,8 @@
   - 因此**加入端點**判斷 404／410 時只看 Bearer，打錯代碼仍回 404「找不到這個活動代碼」。
   - 其他端點與 WebSocket 維持原規則：帶 cookie 而活動不存在時回 410／`gone`。
   - 但網址帶錯誤的 `?code=`（例如貼錯連結）時，學生頁也會收到 `gone`。為了不把「打錯代碼」顯示成「活動已失效」，學生頁依「這個分頁是否曾經同步成功」區分：沒有同步成功過 → 顯示加入畫面與「找不到這個活動代碼，請確認後再輸入。」；同步成功過 → 顯示「活動已失效」（spec Edge Case、FR-011）。判斷只在前端畫面，後端回應不變。
+- **加入端點的 Bearer**：必須通過 `is_browser_key` 才當成金鑰；金鑰是老師 token 時拒絕（verification P-09）。
+- **CSRF**：學生的寫入操作（加入、提交、離開）靠 `SameSite=Strict` 擋其他網站帶 cookie。同一台電腦上 `127.0.0.1` 其他連接埠的網頁屬於 same-site，仍會帶上 cookie；系統只在本機執行，列為已知的低風險限制，不另外做 CSRF token。
 - **Alternatives considered**：cookie 優先於 Bearer。老師與學生在同一瀏覽器時，老師操作會被當成學生操作，違反 US3。
 
 ## R5：WebSocket 驗證

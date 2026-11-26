@@ -266,7 +266,7 @@ description: "007-browser-identity-sync 的任務清單"
   有差異時先改圖，再執行 `java -jar plantuml.jar "./diagrams/007-*.puml"`，並開啟 PNG 檢查。
 - [x] T048 執行 `ruff check .`、`ruff format --check .`、`mypy`，全部通過，記錄指令與結果（憲章技術限制 2）。
 - [x] T049 執行完整的 `.venv\Scripts\pytest`（預設排除 perf、real_google），記錄日期、指令與通過／失敗／略過數，與 T002 的基準比對後寫入 quickstart 驗證紀錄（憲章原則 VI）。
-- [ ] T050 獨立審查：交給另一個 agent 或 session 審查本分支的差異（例如 `harness:silent-failure-hunter`、`harness:pr-test-analyzer`），重點如下：
+- [x] T050 獨立審查：交給另一個 agent 或 session 審查本分支的差異（例如 `harness:silent-failure-hunter`、`harness:pr-test-analyzer`），重點如下：
   - 加入競爭（INV-1）。
   - cookie 路徑是否真的被測試走到（沒有任何 007 測試帶 Bearer 冒充學生）。
   - 金鑰外洩。

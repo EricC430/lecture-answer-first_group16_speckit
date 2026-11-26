@@ -15,7 +15,8 @@ A -> Api : POST /api/browser-session（沒有 cookie）
 Api -> Store : Set-Cookie 新金鑰（HttpOnly）
 Api --> A : 204（本文為空）
 B -> Api : POST /api/browser-session（已有 cookie）
-Api --> B : 204（不動 cookie）
+Api -> Store : Set-Cookie 同一把金鑰（延長 1 天）
+Api --> B : 204（本文為空）
 
 == 加入（US1-AS1、US2-AS1） ==
 A -> Api : 加入第 3 組（cookie 自動附上）

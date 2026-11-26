@@ -15,7 +15,7 @@ package "同一個瀏覽器" {
 }
 
 package "外層：API 與推送（轉接層）" {
-  [瀏覽器工作階段 API\nPOST /api/browser-session\n（沒有金鑰時才發）] as SessionApi
+  [瀏覽器工作階段 API\nPOST /api/browser-session\n（沒有才發新的，已有則延長 1 天）] as SessionApi
   [活動 API（HTTP）\n（request_token：Bearer 優先，否則 cookie；\n加入沒有金鑰 → BROWSER_SESSION_REQUIRED）] as Api
   [同步推送 WebSocketHub（只推送）\n（auth 無 token 時讀握手 cookie；\n離開／刪除時關閉同雜湊的所有連線）] as Sync
 }
@@ -31,7 +31,7 @@ package "核心（純函式）" {
 Student --> TabA
 Student --> TabB
 TabA --> SessionApi : 載入時
-SessionApi ..> Store : Set-Cookie（只在沒有時）
+SessionApi ..> Store : Set-Cookie（滑動期限）
 Store ..> Api : 自動附在請求上
 TabA --> Api
 TabB --> Api

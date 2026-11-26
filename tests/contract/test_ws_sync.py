@@ -157,7 +157,16 @@ def test_auth_without_token_uses_cookie(client, auth):
     assert snap["ownGroup"]["number"] == 3
 
 
-def test_auth_without_token_or_cookie_is_unauthorized(client):
+def test_auth_without_token_and_without_cookie_is_unauthorized(client):
+    teacher = create_joinable(client)
+    browser = TestClient(client.app)  # 完全沒有 cookie
+    with browser.websocket_connect(f"/ws/activities/{teacher.code}") as ws:
+        ws.send_json({"type": "auth"})
+        assert ws.receive_json() == {"type": "unauthorized", "reason": "INVALID_TOKEN"}
+        assert _close_code(ws) == 4401
+
+
+def test_auth_with_cookie_of_non_member_is_unauthorized(client):
     teacher = create_joinable(client)
     browser = new_browser_client(client)  # 有金鑰，但沒有加入任何組
     with browser.websocket_connect(f"/ws/activities/{teacher.code}") as ws:

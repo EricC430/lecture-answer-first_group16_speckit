@@ -28,20 +28,22 @@ def create_router() -> APIRouter:
 
     @router.post("/browser-session", status_code=204)
     async def ensure_browser_session(request: Request) -> Response:
-        """已有合法金鑰時不動 cookie；否則發一把新的（本文一律為空）。"""
+        """已有合法金鑰時沿用並延長期限；否則發一把新的（本文一律為空）。
+
+        每次開啟學生頁都重新設定 1 天期限（滑動期限，verification P-08），避免
+        「第一次開頁滿 1 天」剛好落在上課中途而失去身分。
+        """
         response = Response(status_code=204)
-        if browser_key_from(request.cookies) is not None:
-            annotate_request_log(request, result="OK")
-            return response
+        existing = browser_key_from(request.cookies)
         response.set_cookie(
             BROWSER_COOKIE_NAME,
-            new_browser_key(),
+            existing if existing is not None else new_browser_key(),
             max_age=BROWSER_COOKIE_MAX_AGE,
             path="/",
             httponly=True,
             samesite="strict",
         )
-        annotate_request_log(request, result="ISSUED")
+        annotate_request_log(request, result="OK" if existing else "ISSUED")
         return response
 
     return router

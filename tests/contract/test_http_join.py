@@ -55,6 +55,38 @@ def test_join_without_browser_key_is_rejected_without_change(client):
     assert snapshot["groups"] == []
 
 
+def test_malformed_bearer_is_not_a_browser_key(client):
+    """FR-008：Bearer 格式不符時不當成瀏覽器金鑰（審查第 3 點）。"""
+    teacher = create_joinable(client)
+    client.cookies.clear()
+    response = client.post(
+        f"/api/activities/{teacher.code}/groups/join",
+        json={"groupNumber": 2},
+        headers={"Authorization": "Bearer x"},
+    )
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "BROWSER_SESSION_REQUIRED"
+
+
+def test_teacher_token_cannot_join(client):
+    """老師 token 不能當瀏覽器金鑰加入組別，否則會留下無法離開的裝置（審查第 3 點）。"""
+    teacher = create_joinable(client)
+    response = client.post(
+        f"/api/activities/{teacher.code}/groups/join",
+        json={"groupNumber": 2},
+        headers=teacher.headers,
+    )
+    assert response.status_code == 403
+    assert response.json()["error"] == {
+        "code": "TEACHER_CANNOT_JOIN",
+        "message": "老師身分不能加入組別，請用另一個瀏覽器開學生頁。",
+    }
+    snapshot = client.get(
+        f"/api/activities/{teacher.code}/snapshot", headers=teacher.headers
+    ).json()
+    assert snapshot["groups"] == []
+
+
 def test_code_is_case_and_space_insensitive(client):
     teacher = create_joinable(client)
     response = _join(client, f" {teacher.code.lower()} ", {"groupNumber": "1"})

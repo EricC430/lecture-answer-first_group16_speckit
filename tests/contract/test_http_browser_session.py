@@ -30,12 +30,17 @@ def test_issues_httponly_strict_cookie_without_body(client: TestClient):
     assert is_browser_key(response.cookies["lq_browser"])
 
 
-def test_existing_valid_cookie_is_kept(client: TestClient):
+def test_existing_valid_cookie_is_kept_and_refreshed(client: TestClient):
+    """已有金鑰：沿用同一把，並重新設定 1 天期限（審查第 1 點：滑動期限，
+    避免第一次開頁滿 1 天後在上課中途失效）。"""
     client.cookies.clear()
     first = client.post(URL).cookies["lq_browser"]
     again = client.post(URL)
     assert again.status_code == 204
-    assert _set_cookie_headers(again) == []
+    headers = _set_cookie_headers(again)
+    assert len(headers) == 1
+    assert headers[0].startswith(f"lq_browser={first};")
+    assert "max-age=86400" in headers[0].lower()
     assert client.cookies.get("lq_browser") == first
 
 

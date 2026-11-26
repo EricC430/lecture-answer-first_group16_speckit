@@ -71,4 +71,5 @@
 | ruff／format／mypy（T048） | 2026-11-26 03:17 | Claude（實作者） | `ruff check .`、`ruff format --check .`、`mypy` | All checks passed；419 files already formatted；84 source files 無問題 |
 | pytest（預設，T049） | 2026-11-26 03:17 | Claude（實作者） | `.venv\Scripts\python -m pytest -q`（commit 前的工作目錄） | 1428 passed、0 failed、8 deselected（基準 T002：1371 passed；新增 57 項） |
 | perf（SC-006，T046） | 2026-11-26 03:14 | Claude（實作者） | `pytest -m perf tests/perf/test_sync_latency.py`（老師 1 + 6 組 × 2 個瀏覽器金鑰 = 13 條連線，各 10 次） | 最大延遲：開輪 12.0 ms、關輪 5.9 ms、定案 7.4 ms、結束 6.1 ms（皆 < 2000 ms）；`pytest -m perf tests/perf` 6 passed |
+| 審查修正後（T050） | 2026-11-26 11:45 | Claude（實作者） | `ruff`、`mypy`、`.venv\Scripts\python -m pytest -q` | lint 全過；1431 passed、0 failed（前一次 11:41 有 1 個老師頁瀏覽器測試偶發逾時，見 verification.md） |
 | 人工驗證 1～14 | | | | |

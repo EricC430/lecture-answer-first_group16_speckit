@@ -16,9 +16,9 @@
 | cookie 名稱 | `lq_browser` |
 | 值 | `secrets.token_urlsafe(32)`，43 個 URL 安全字元（`[A-Za-z0-9_-]`） |
 | 屬性 | `HttpOnly`、`SameSite=Strict`、`Path=/`、`Max-Age=86400`；不設 `Secure`、`Domain`（research R1、R9） |
-| 產生者 | `POST /api/browser-session`；只有請求沒有帶格式正確的金鑰時才產生 |
+| 產生者 | `POST /api/browser-session`；請求沒有帶格式正確的金鑰時產生新的，已有時沿用並延長期限 |
 | 驗證規則 | 格式不符（長度、字元集）一律視為沒有金鑰，不拋錯；格式正確但在活動中查不到，視為匿名（FR-008） |
-| 生命週期 | 瀏覽器保存 1 天；後端不保存金鑰本身，只保存它在各活動的雜湊 |
+| 生命週期 | 瀏覽器保存到最後一次開啟學生頁起 1 天（滑動期限）；後端不保存金鑰本身，只保存它在各活動的雜湊。老師 token 不能當金鑰加入（`TEACHER_CANNOT_JOIN`） |
 
 - 後端**不**保存「已發出的金鑰清單」。金鑰只有在加入組別後，才會以 `hash_token(金鑰)` 的形式成為某個活動的 `DeviceIdentity` 鍵。
 - 一把金鑰可以同時是多個活動的裝置（每個活動最多一筆）。

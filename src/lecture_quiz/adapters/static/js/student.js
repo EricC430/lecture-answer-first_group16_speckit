@@ -154,7 +154,9 @@ function followOtherTab(event) {
   if (!message || message.type !== "joined" || typeof message.code !== "string") return;
   const code = normalizeCode(message.code);
   if (code.length !== 6) return;
-  if (state.sync !== null) return; // 已經連著某個活動的分頁不受影響
+  // 已經同步成功（正在看某個活動）的分頁不受影響；還在連線、尚未收到快照的分頁
+  // 則改用通知的代碼重新同步，避免錯過通知（verification P-10）
+  if (state.synced) return;
   showError($("student-error"), null);
   history.replaceState(null, "", `?code=${encodeURIComponent(code)}`);
   startSync(code);
