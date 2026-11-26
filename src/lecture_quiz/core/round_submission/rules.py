@@ -155,7 +155,7 @@ class SubmissionRules:
 
 _MESSAGES = {
     SubmissionRejection.ACTIVITY_GONE: "活動已失效，請重新加入活動。",
-    SubmissionRejection.NOT_IN_GROUP: "這台裝置還沒有加入組別，請先加入組別。",
+    SubmissionRejection.NOT_IN_GROUP: "這個瀏覽器還沒有加入組別，請先加入組別。",
     SubmissionRejection.STALE_ROUND: "輪次已更新，請重新整理後再作答。",
     SubmissionRejection.ROUND_CLOSED: "本輪已結束（或尚未開始），不能再送出。",
     SubmissionRejection.INVALID_ANSWER: "答案格式不正確，請重新整理後再作答。",

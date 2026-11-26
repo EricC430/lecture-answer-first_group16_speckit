@@ -35,9 +35,9 @@
 - 第一次嘗試第二次負對照時，做法需要還原未 commit 的檔案，被工具權限擋下而沒有執行。
 - INV-1 commit 之後（2026-11-26，T050 審查後），以 Edit 暫時刪除 `state_machine.py` 的 INV-1 兩行，執行 `pytest tests/integration/test_007_browser_identity.py::test_concurrent_joins_one_wins`：1 failed（兩個加入都成功，`len(winners) == 2`）；再以 Edit 加回，`git diff` 確認檔案與 commit 相同，該測試 1 passed。
 
-### 未改動的措辭
+### 措辭統一（PR #37 審查建議 3，2026-11-26）
 
-- `NOT_IN_GROUP` 的訊息仍是「這台裝置目前沒有加入任何組別。」（001 與 003 各一處）。spec 沒有要求修改，且不影響行為；若要統一為「這個瀏覽器」，需另外同步相關測試。
+- `NOT_IN_GROUP` 的訊息原本仍是「這台裝置…」（001、003 各一處），已改為「這個瀏覽器目前沒有加入任何組別。」與「這個瀏覽器還沒有加入組別，請先加入組別。」，001、003 的 data-model、001 契約與 research 同步加註。沒有測試斷言這兩則訊息的原文。
 
 ### P-06：T041 另外修改了 005 的 quickstart（2026-11-26）
 
@@ -87,3 +87,18 @@
 - `ruff check .`、`ruff format --check .`、`mypy`：全部通過（84 source files）。
 - 第一次完整執行 `.venv\Scripts\python -m pytest -q`（11:41，耗時 129 秒）：1430 passed、1 failed。失敗的是 `tests/browser/test_pages.py::test_creating_new_activity_clears_previous_activity_screen`，只操作老師頁，不經過學生 cookie 路徑。
 - 該測試單獨重跑 1 passed；`tests/browser` 整個目錄連跑 3 次皆 24 passed；第二次完整執行（11:45，耗時 85 秒）1431 passed、0 failed。判斷為機器負載較高時的偶發逾時，與本次修改無關，但沒有找出確切原因，列入觀察。
+
+## PR #37 審查（jacky0407，2026-11-26）
+
+審查者以 worktree 重跑 lint、mypy 與 pytest（1431 passed），沒有找到會擋合併的錯誤，提出 3 項建議：
+
+1. **憲章修訂紀錄漏了 005**：本 PR 也改了 `specs/005-result-export/quickstart.md`（P-06）。已在憲章 v1.2.0 的修訂紀錄補上 005。
+2. **正式環境的加入端點接受 Bearer 當瀏覽器金鑰**：見下方 P-11。
+3. **`NOT_IN_GROUP` 用詞未同步**：已改，見上方「措辭統一」。
+
+### P-11：加入端點接受 Bearer 當瀏覽器金鑰的取捨（PR #37 審查建議 2）
+
+- **現況**：`http_api.join_group` 先用格式正確的 Bearer，沒有才用 cookie。這條路主要給既有測試使用（`tests/conftest.py` 的 `new_browser`／`post_join`），讓既有的多裝置測試只改輔助函式（research R8）。學生頁本身從不送 Bearer。
+- **是否形成繞過**：腳本可以每次換一個 Bearer 加入不同組。但即使拿掉 Bearer 路徑，腳本一樣可以「不保留 cookie、每次重新呼叫 `POST /api/browser-session` 拿一把新金鑰」，達到相同效果。所以 Bearer 路徑沒有讓繞過變得更容易。007 的目標是擋下「同一個瀏覽器開多個分頁」的一般操作，不防寫腳本或換瀏覽器（spec Assumptions 第 1 條），兩者都在已知限制內。
+- **決定**：保留。保留的理由是測試相容，而且它不擴大既有限制。若之後要求正式環境只接受 cookie，需要把既有測試全部改成每個瀏覽器一個 `TestClient`（cookie 路徑）。
+- **已有的防護**：Bearer 必須通過格式檢查，老師 token 一律拒絕（P-09）；同一把金鑰在同一活動只能是一個組的成員（INV-1）。

@@ -47,7 +47,7 @@
   - **新組號**：建立組別，回傳新的 `credential`。
   - **既有組號**：`credential` 去除首尾空白並轉大寫後，必須等於該組憑證（`hmac.compare_digest`），否則回 `403 BAD_CREDENTIAL`；成功時回傳該組 `credential`。
   - 學生輸入的活動代碼不分大小寫，也忽略首尾空白（FR-001）。
-  - 請求已帶有效裝置 token 時，表示這台裝置已經在某一組，回 `409 ALREADY_IN_GROUP`，訊息為「這台裝置已經在第 n 組，請先離開本組」。
+  - 請求已帶有效裝置 token 時，表示這台裝置已經在某一組，回 `409 ALREADY_IN_GROUP`，訊息為「這台裝置已經在第 n 組，請先離開本組」。（**由 007 修訂（2026-11-26）**：改為「這個瀏覽器已是第 n 組成員，請先離開本組。」；`NOT_IN_GROUP` 改為「這個瀏覽器目前沒有加入任何組別。」）
 - **#4 離開本組**：沒有帶有效裝置 token 時回 `403 NOT_IN_GROUP`；搶答中回 `409 NO_GROUP_SWITCH_DURING_ROUND`。成功後，該裝置的 WebSocket 收到 `unauthorized`（`reason: LEFT_GROUP`）並被關閉。
 - **#5 刪除組別**：`{number}` 原樣交給 `normalize_group_number`；組別不存在回 `404 GROUP_NOT_FOUND`，有提交紀錄回 `409 GROUP_HAS_SUBMISSIONS`。成功後，原組裝置的 WebSocket 收到 `unauthorized`（`reason: GROUP_DELETED`）並被關閉。
 - **#6 開輪**：

@@ -94,7 +94,7 @@ _MESSAGES = {
         "你已有一個進行中的活動，請先結束或取消它。"
     ),
     RejectionReason.ALREADY_IN_GROUP: "這個瀏覽器已經在某一組，請先離開本組。",
-    RejectionReason.NOT_IN_GROUP: "這台裝置目前沒有加入任何組別。",
+    RejectionReason.NOT_IN_GROUP: "這個瀏覽器目前沒有加入任何組別。",
     RejectionReason.GROUP_NOT_FOUND: "找不到這個組別。",
     RejectionReason.JOIN_NOT_OPEN: "老師還沒開放加入，請稍後再試。",
     RejectionReason.GROUP_DELETE_DURING_ROUND: (
