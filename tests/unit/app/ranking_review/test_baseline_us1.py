@@ -2,6 +2,7 @@
 
 import asyncio
 
+from lecture_quiz.app.activity.secrets_gen import new_browser_key
 from lecture_quiz.core.activity.commands import FinalizeOutcome
 from tests.unit.app.ranking_review.conftest import make_sub, ranking_world
 
@@ -79,7 +80,9 @@ def test_group_joining_after_round_opened_starts_at_zero():
 
     async def scenario():
         world = await ranking_world(groups=(1,))
-        assert (await world.activities.join(world.code, 2)).ok  # 搶答中途加入
+        assert (
+            await world.activities.join(world.code, 2, browser_key=new_browser_key())
+        ).ok  # 搶答中途加入
         await world.close()
         activity = world.activities.get(world.code)
         subs = (make_sub(world.code, 2, 1, 1, 1),)

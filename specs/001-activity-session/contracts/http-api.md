@@ -22,7 +22,7 @@
 |---|---|---|---|---|---|
 | 1 | `POST /activities` | 無，或同瀏覽器上一個活動的老師 token（C7） | `{"maxGroups": int}` | `201 {"code", "teacherToken", "maxGroups", "version"}` | FR-001～003、FR-036、FR-037 |
 | 2 | `GET /activities/{code}/snapshot` | 老師或裝置 | — | `200 ActivitySnapshot`（依角色裁切） | FR-028 |
-| 3 | `POST /activities/{code}/groups/join`（準備中回 `409 JOIN_NOT_OPEN`；既有組號一律要憑證；最後一台裝置離開且從未提交的組號已釋放，視為新組號） | 無或裝置 | `{"groupNumber": int \| str, "credential": str \| null}` | `200 {"deviceToken", "groupNumber", "credential", "version"}` | FR-006～012 |
+| 3 | `POST /activities/{code}/groups/join`（準備中回 `409 JOIN_NOT_OPEN`；既有組號一律要憑證；最後一台裝置離開且從未提交的組號已釋放，視為新組號） | 瀏覽器金鑰（cookie；007 修訂） | `{"groupNumber": int \| str, "credential": str \| null}` | `200 {"groupNumber", "credential", "version"}`（007 起不含 `deviceToken`，見下方「不記錄」的修訂註記） | FR-006～012 |
 | 4 | `POST /activities/{code}/groups/leave` | 裝置 | `{}` | `200 {"version"}` | FR-034 |
 | 5 | `DELETE /activities/{code}/groups/{number}`（搶答中回 `409 GROUP_DELETE_DURING_ROUND`） | 老師 | — | `200 {"version"}` | FR-035 |
 | 6 | `POST /activities/{code}/rounds` | 老師 | `{"questionNumbers": [int], "fairMode": bool, "countdownSeconds": int \| null}` | `201 {"roundNumber", "deadline" \| null, "version"}` | FR-013～018 |
@@ -47,7 +47,7 @@
   - **新組號**：建立組別，回傳新的 `credential`。
   - **既有組號**：`credential` 去除首尾空白並轉大寫後，必須等於該組憑證（`hmac.compare_digest`），否則回 `403 BAD_CREDENTIAL`；成功時回傳該組 `credential`。
   - 學生輸入的活動代碼不分大小寫，也忽略首尾空白（FR-001）。
-  - 請求已帶有效裝置 token 時，表示這台裝置已經在某一組，回 `409 ALREADY_IN_GROUP`，訊息為「這台裝置已經在第 n 組，請先離開本組」。
+  - 請求已帶有效裝置 token 時，表示這台裝置已經在某一組，回 `409 ALREADY_IN_GROUP`，訊息為「這台裝置已經在第 n 組，請先離開本組」。（**由 007 修訂（2026-11-26）**：改為「這個瀏覽器已是第 n 組成員，請先離開本組。」；`NOT_IN_GROUP` 改為「這個瀏覽器目前沒有加入任何組別。」）
 - **#4 離開本組**：沒有帶有效裝置 token 時回 `403 NOT_IN_GROUP`；搶答中回 `409 NO_GROUP_SWITCH_DURING_ROUND`。成功後，該裝置的 WebSocket 收到 `unauthorized`（`reason: LEFT_GROUP`）並被關閉。
 - **#5 刪除組別**：`{number}` 原樣交給 `normalize_group_number`；組別不存在回 `404 GROUP_NOT_FOUND`，有提交紀錄回 `409 GROUP_HAS_SUBMISSIONS`。成功後，原組裝置的 WebSocket 收到 `unauthorized`（`reason: GROUP_DELETED`）並被關閉。
 - **#6 開輪**：
@@ -61,3 +61,4 @@
 
 - **要記錄**：方法、路徑樣板（例如 `/activities/{code}/rounds`）、活動代碼、結果代碼、`version`、耗時。
 - **不記錄**：`Authorization` 標頭、請求本文中的 `credential`、回應中的 `teacherToken`、`deviceToken`、`credential`（技術限制 3）。
+  - **由 007 修訂（2026-11-26）**：#3 的回應移除 `deviceToken`，加入時必須有瀏覽器金鑰（cookie 或 Bearer），沒有時回 `400 BROWSER_SESSION_REQUIRED`；`ALREADY_IN_GROUP` 訊息改為「這個瀏覽器已是第 n 組成員，請先離開本組。」；學生請求的身分取自 `lq_browser` cookie（Bearer 優先）。日誌同樣不記錄 cookie。新增 `POST /api/browser-session`。詳見 `specs/007-browser-identity-sync/contracts/http-and-sync-changes.md`。

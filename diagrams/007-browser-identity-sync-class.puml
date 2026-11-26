@@ -1,0 +1,76 @@
+@startuml 007-browser-identity-sync-class
+!pragma layout smetana
+skinparam defaultFontName "Microsoft JhengHei"
+title 007 同一瀏覽器共用學生身分 — 類別圖
+
+class Activity <<001>> {
+  code: 活動代碼
+  max_groups: 組數上限
+  stage: 階段
+  devices: token_hash → DeviceIdentity
+}
+
+class Group <<001>> {
+  number: 組號
+  join_credential: 加入憑證
+  hasSubmissions: 是否有提交紀錄
+}
+
+class BrowserKey <<007：cookie lq_browser>> {
+  value: 43 字元亂數（頁面讀不到）
+  maxAge: 1 天
+}
+
+class DeviceIdentity <<001，007 起代表「瀏覽器在某活動的身分」>> {
+  token_hash: hash(BrowserKey)
+  group_number: 所屬組號
+  --
+  同一瀏覽器所有分頁共用
+  離開本組／組別被刪除／後端重啟時消失
+}
+
+class TeacherIdentity <<001>> {
+  token_hash
+  --
+  與 BrowserKey 分開保存（Bearer 優先）
+}
+
+class ActivityStateMachine <<core 純函式>> {
+  _join_group(activity, JoinGroup, now, issued) : Transition
+  --
+  INV-1：command.device_token_hash 已在 devices → ALREADY_IN_GROUP
+  （拒絕訊息也由它找出組號）
+}
+
+class JoinGroup <<core 指令，007 新增欄位>> {
+  actor: Requester
+  number_raw
+  credential_raw
+  device_token_hash: str | None = hash(BrowserKey)
+}
+
+class ActivityService <<app>> {
+  join(code, number_raw, credential_raw, requester, key, browser_key)
+  resolve_requester(code, token) : Requester
+  --
+  冪等範圍：JoinGroup 以瀏覽器雜湊（verification P-01）
+}
+
+class StudentTab <<前端 student.js>> {
+  畫面狀態: 加入畫面／組別畫面／活動已失效
+  --
+  載入時 POST /api/browser-session
+  收到 BroadcastChannel joined → 開始同步
+}
+
+Activity "1" *-- "0..N" Group
+Activity "1" *-- "0..*" DeviceIdentity
+Group "1" o-- "0..*" DeviceIdentity : 成員
+Activity "1" -- "1" TeacherIdentity
+BrowserKey "1" -- "0..*" DeviceIdentity : 每個活動最多一筆
+BrowserKey "1" -- "1..*" StudentTab : 同一瀏覽器共用
+ActivityService ..> JoinGroup : 建立（填入 hash(金鑰)）
+ActivityStateMachine ..> JoinGroup : 讀取
+ActivityService ..> ActivityStateMachine
+ActivityStateMachine ..> DeviceIdentity : 判定
+@enduml

@@ -13,6 +13,7 @@ from tests.conftest import (
     create_activity,
     finalize_current,
     make_app,
+    post_join,
     submit,
 )
 from tests.fixtures.guided_notes_layouts import layout_a, layout_b
@@ -43,11 +44,10 @@ class Stack:
     def join(self, *groups: int) -> None:
         """各組加入。"""
         for group in groups:
-            joined = self.client.post(
-                f"/api/activities/{self.code}/groups/join", json={"groupNumber": group}
-            )
+            # 每組一個新瀏覽器（007：Bearer 路徑，見 tests/conftest.py new_browser）
+            joined, key = post_join(self.client, self.code, {"groupNumber": group})
             assert joined.status_code == 200, joined.text
-            self.devices[group] = joined.json()["deviceToken"]
+            self.devices[group] = key
 
     def open_round(self, questions: list[int] | None = None) -> None:
         """開輪（預設全部未成功題）。"""

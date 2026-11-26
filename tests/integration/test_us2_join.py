@@ -1,14 +1,29 @@
 """T034：US2 學生以組號加入，多裝置同組並可恢復身分。"""
 
-from tests.conftest import create_joinable
+from tests.conftest import create_joinable, post_join
+
+
+class _Joined:
+    """加入回應；成功時 `json()` 另含 `browserKey`（這個瀏覽器的金鑰，Bearer 路徑）。"""
+
+    def __init__(self, response, key):
+        self._response = response
+        self.status_code = response.status_code
+        self.text = response.text
+        self._key = key
+
+    def json(self):
+        body = self._response.json()
+        if self.status_code == 200:
+            body = {**body, "browserKey": self._key}
+        return body
 
 
 def _join(client, code, number, credential=None, token=None):
-    headers = {"Authorization": f"Bearer {token}"} if token else {}
+    """`token` 為 None 時模擬新瀏覽器；否則以該瀏覽器金鑰再加入（007）。"""
     body = {"groupNumber": number, "credential": credential}
-    return client.post(
-        f"/api/activities/{code}/groups/join", json=body, headers=headers
-    )
+    response, key = post_join(client, code, body, token)
+    return _Joined(response, key)
 
 
 def _snapshot(client, code, token):
@@ -25,7 +40,7 @@ def test_join_with_fullwidth_number_creates_group(client):
     teacher = create_joinable(client)
     body = _join(client, teacher.code, " ０３ ").json()
     assert body["groupNumber"] == 3
-    snap = _snapshot(client, teacher.code, body["deviceToken"]).json()
+    snap = _snapshot(client, teacher.code, body["browserKey"]).json()
     assert snap["role"] == "student"
     assert snap["ownGroup"] == {
         "number": 3,
@@ -43,7 +58,7 @@ def test_second_device_with_credential_shares_group(client):
     first = _join(client, teacher.code, 3).json()
     second = _join(client, teacher.code, 3, first["credential"]).json()
     snaps = [
-        _snapshot(client, teacher.code, j["deviceToken"]).json()["ownGroup"]
+        _snapshot(client, teacher.code, j["browserKey"]).json()["ownGroup"]
         for j in (first, second)
     ]
     assert snaps[0] == snaps[1]
@@ -59,7 +74,7 @@ def test_credentials_visible_to_own_group_and_teacher_only(client):
     teacher = create_joinable(client)
     a = _join(client, teacher.code, 3).json()
     b = _join(client, teacher.code, 2).json()
-    b_snap = _snapshot(client, teacher.code, b["deviceToken"])
+    b_snap = _snapshot(client, teacher.code, b["browserKey"])
     assert a["credential"] not in b_snap.text
     groups = _snapshot(client, teacher.code, teacher.token).json()["groups"]
     assert {g["number"]: g["credential"] for g in groups} == {
@@ -131,7 +146,7 @@ def test_join_during_round_sees_current_stage(client):
         headers=teacher.headers,
     )
     body = _join(client, teacher.code, 4).json()
-    snap = _snapshot(client, teacher.code, body["deviceToken"]).json()
+    snap = _snapshot(client, teacher.code, body["browserKey"]).json()
     assert snap["stage"] == "ROUND_OPEN"
     assert snap["openQuestions"] == [1, 2]
     assert snap["ownGroup"]["successCount"] == 0
@@ -145,7 +160,7 @@ def test_identity_restored_over_websocket(client):
     teacher = create_joinable(client)
     body = _join(client, teacher.code, 3).json()
     with client.websocket_connect(f"/ws/activities/{teacher.code}") as ws:
-        ws.send_json({"type": "auth", "token": body["deviceToken"]})
+        ws.send_json({"type": "auth", "token": body["browserKey"]})
         snap = ws.receive_json()
     assert snap["ownGroup"]["number"] == 3
     assert snap["ownGroup"]["credential"] == body["credential"]
@@ -158,8 +173,10 @@ def test_member_device_cannot_join_again(client):
     """
     teacher = create_joinable(client)
     body = _join(client, teacher.code, 3).json()
-    again = _join(client, teacher.code, 2, token=body["deviceToken"])
+    again = _join(client, teacher.code, 2, token=body["browserKey"])
     assert again.status_code == 409
-    assert again.json()["error"]["message"] == "這台裝置已經在第 3 組，請先離開本組。"
-    snap = _snapshot(client, teacher.code, body["deviceToken"]).json()
+    assert (
+        again.json()["error"]["message"] == "這個瀏覽器已是第 3 組成員，請先離開本組。"
+    )
+    snap = _snapshot(client, teacher.code, body["browserKey"]).json()
     assert snap["ownGroup"]["number"] == 3

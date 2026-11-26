@@ -10,6 +10,7 @@ from datetime import timedelta
 
 from lecture_quiz.app.activity.ports import HandlerStep, SubmissionWindow
 from lecture_quiz.app.activity.registry import ActivityRegistry
+from lecture_quiz.app.activity.secrets_gen import new_browser_key
 from lecture_quiz.app.activity.service import ActivityService
 from lecture_quiz.core.activity.models import Stage
 from lecture_quiz.core.activity.results import RejectionReason
@@ -70,11 +71,12 @@ async def _setup(countdown=60):
     teacher = service.resolve_requester(code, created.teacher_token)
     assert (await service.replace_questions(code, teacher, (1, 2, 3))).ok
     assert (await service.open_joining(code, teacher)).ok
-    device = (await service.join(code, 2)).value
+    device = new_browser_key()
+    assert (await service.join(code, 2, browser_key=device)).ok
     assert (await service.open_round(code, teacher, None, False, countdown)).ok
     publisher.published.clear()
     publisher.locked_during_publish.clear()
-    return service, registry, clock, publisher, code, teacher, device.device_token
+    return service, registry, clock, publisher, code, teacher, device
 
 
 def test_gone_and_not_in_group_do_not_call_handler():

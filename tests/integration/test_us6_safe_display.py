@@ -6,7 +6,7 @@
 
 import pytest
 
-from tests.conftest import create_activity, seed_questions, submit
+from tests.conftest import create_activity, join_json, seed_questions, submit
 
 MARKUP = "<b>粗體</b><script>alert(1)</script>"
 
@@ -41,14 +41,11 @@ def joined(client):
     teacher = create_activity(client)
     seed_questions(client, teacher, 4, blanks=[2, 2, 1, 1])
     _post(client, teacher, "/open-joining")
-    a = client.post(
-        f"/api/activities/{teacher.code}/groups/join", json={"groupNumber": 1}
-    ).json()
-    b = client.post(
-        f"/api/activities/{teacher.code}/groups/join",
-        json={"groupNumber": 1, "credential": a["credential"]},
-    ).json()
-    return teacher, a["deviceToken"], b["deviceToken"]
+    a = join_json(client, teacher.code, {"groupNumber": 1})
+    b = join_json(
+        client, teacher.code, {"groupNumber": 1, "credential": a["credential"]}
+    )
+    return teacher, a["browserKey"], b["browserKey"]
 
 
 def test_markup_answer_is_kept_verbatim(client, joined):

@@ -49,10 +49,17 @@ def find_browser() -> str:
 class Page:
     """一個分頁。"""
 
-    def __init__(self, browser: "Browser", session_id: str, target_id: str) -> None:
+    def __init__(
+        self,
+        browser: "Browser",
+        session_id: str,
+        target_id: str,
+        context_id: str | None = None,
+    ) -> None:
         self.browser = browser
         self.session_id = session_id
         self.target_id = target_id
+        self.context_id = context_id  # None：預設瀏覽器（與其他預設分頁共用 cookie）
         self.errors: list[str] = []
 
     def call(self, method: str, **params: Any) -> dict[str, Any]:
@@ -201,13 +208,39 @@ class Browser:
         elif method == "Log.entryAdded" and params["entry"].get("level") == "error":
             page.errors.append(params["entry"].get("text", ""))
 
-    def new_page(self) -> Page:
-        """開一個新分頁。"""
-        target = self.call("Target.createTarget", {"url": "about:blank"})["targetId"]
+    def new_context(self) -> str:
+        """建立一個獨立的瀏覽器 context：等同另一個瀏覽器（cookie、儲存空間都分開）。"""
+        return self.call("Target.createBrowserContext")["browserContextId"]
+
+    def set_cookie(
+        self, context: str | None, url: str, name: str, value: str, httponly: bool
+    ) -> None:
+        """在指定 context（None 為預設瀏覽器）寫入 cookie。"""
+        params: dict[str, Any] = {
+            "cookies": [
+                {
+                    "name": name,
+                    "value": value,
+                    "url": url,
+                    "httpOnly": httponly,
+                    "sameSite": "Strict",
+                }
+            ]
+        }
+        if context is not None:
+            params["browserContextId"] = context
+        self.call("Storage.setCookies", params)
+
+    def new_page(self, context: str | None = None) -> Page:
+        """開一個新分頁；指定 `context` 時開在那個獨立的瀏覽器裡。"""
+        params: dict[str, Any] = {"url": "about:blank"}
+        if context is not None:
+            params["browserContextId"] = context
+        target = self.call("Target.createTarget", params)["targetId"]
         session = self.call(
             "Target.attachToTarget", {"targetId": target, "flatten": True}
         )["sessionId"]
-        page = Page(self, session, target)
+        page = Page(self, session, target, context)
         page.call("Page.enable")
         page.call("Runtime.enable")
         page.call("Log.enable")

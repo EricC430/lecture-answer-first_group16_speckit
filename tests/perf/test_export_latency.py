@@ -23,6 +23,7 @@ import uvicorn
 from websockets.asyncio.client import connect
 from websockets.exceptions import ConnectionClosed
 
+from lecture_quiz.app.activity.secrets_gen import new_browser_key
 from lecture_quiz.core.guided_notes_import.models import CellRef
 from lecture_quiz.core.result_export.csv_export import build_rows, render_csv
 from lecture_quiz.core.result_export.models import (
@@ -163,14 +164,16 @@ async def _run() -> tuple[list[float], int]:
             for group in range(1, 7):
                 credential = None
                 for _ in range(2):
+                    key = new_browser_key()  # 每台裝置各一個瀏覽器
                     joined = (
                         await http.post(
                             f"{base}/groups/join",
                             json={"groupNumber": group, "credential": credential},
+                            headers={"Authorization": f"Bearer {key}"},
                         )
                     ).json()
                     credential = joined["credential"]
-                    devices.setdefault(group, []).append(joined["deviceToken"])
+                    devices.setdefault(group, []).append(key)
             tokens = [token] + [t for g in devices.values() for t in g]
             for t in tokens:
                 ws = await connect(f"ws://127.0.0.1:{port}/ws/activities/{code}")

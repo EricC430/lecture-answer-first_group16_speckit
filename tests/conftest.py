@@ -208,16 +208,80 @@ def open_joining(
     assert response.status_code == 200, response.text
 
 
+BROWSER_COOKIE = "lq_browser"
+
+
+def new_browser(client: Any) -> str:
+    """模擬一個新瀏覽器，回傳它的瀏覽器金鑰（007 research R8）。
+
+    清空 cookie jar → `POST /api/browser-session` → 從 `Set-Cookie` 讀出金鑰 → 再清空
+    cookie jar，讓之後不帶身分的請求仍是匿名。呼叫端之後以 Bearer 帶入這把金鑰。
+
+    **這是 Bearer 路徑**：學生頁實際走的是 cookie 路徑，由 007 的測試另外涵蓋
+    （`new_browser_client`、`tests/integration/test_007_browser_identity.py`）。
+    `client` 可以是 `TestClient` 或 `httpx.Client`。
+    """
+    client.cookies.clear()
+    response = client.post("/api/browser-session")
+    assert response.status_code == 204, response.text
+    key = response.cookies[BROWSER_COOKIE]
+    client.cookies.clear()
+    return key
+
+
+def post_join(client: Any, code: str, body: dict[str, Any], key: str | None = None):
+    """以瀏覽器金鑰（Bearer 路徑）送出加入請求；`key` 為 None 時先模擬新瀏覽器。
+
+    Returns:
+        `(response, key)`；`key` 即這個瀏覽器在活動中的裝置 token。
+    """
+    if key is None:
+        key = new_browser(client)
+    response = client.post(
+        f"/api/activities/{code}/groups/join",
+        json=body,
+        headers={"Authorization": f"Bearer {key}"},
+    )
+    return response, key
+
+
+def join_json(
+    client: Any, code: str, body: dict[str, Any], key: str | None = None
+) -> dict[str, Any]:
+    """加入成功時的回應本文，另加 `browserKey`（這個瀏覽器的金鑰，Bearer 路徑）。
+
+    取代 007 之前測試讀取的 `deviceToken`（加入回應已不含金鑰）。
+    """
+    response, key = post_join(client, code, body, key)
+    assert response.status_code == 200, response.text
+    return {**response.json(), "browserKey": key}
+
+
+def new_browser_client(client: TestClient) -> TestClient:
+    """建立一個「真的瀏覽器」：獨立 cookie jar，並已取得瀏覽器金鑰（cookie 路徑）。
+
+    與 `client` 共用同一個 app；學生請求一律不帶 Bearer，身分完全靠 cookie（007）。
+    """
+    browser = TestClient(client.app)
+    response = browser.post("/api/browser-session")
+    assert response.status_code == 204, response.text
+    assert BROWSER_COOKIE in browser.cookies
+    return browser
+
+
 def join_group(
     client: TestClient, code: str, number: int, credential: str | None = None
 ) -> str:
-    """以 HTTP 加入組別並回傳裝置 token（US2）。"""
-    response = client.post(
-        f"/api/activities/{code}/groups/join",
-        json={"groupNumber": number, "credential": credential},
+    """以 HTTP 加入組別並回傳裝置 token（US2）。
+
+    007 起裝置 token 就是瀏覽器金鑰：每次呼叫都模擬一個新瀏覽器（Bearer 路徑，見
+    `new_browser`）。
+    """
+    response, key = post_join(
+        client, code, {"groupNumber": number, "credential": credential}
     )
     assert response.status_code == 200, response.text
-    return response.json()["deviceToken"]
+    return key
 
 
 # ── 002-guided-notes-import：只追加，不改 001 既有 fixture 的預設行為 ──

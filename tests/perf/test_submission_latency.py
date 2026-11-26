@@ -21,6 +21,7 @@ import uvicorn
 from websockets.asyncio.client import connect
 from websockets.exceptions import ConnectionClosed
 
+from lecture_quiz.app.activity.secrets_gen import new_browser_key
 from lecture_quiz.main import create_app
 from tests.conftest import FakeQuestionShapeSource
 
@@ -111,10 +112,11 @@ async def _run() -> dict[str, list[float]]:
             for g in range(1, GROUPS + 1):
                 credential = None
                 for _ in range(DEVICES_PER_GROUP):
-                    joined = await service.join(code, g, credential)
+                    key = new_browser_key()
+                    joined = await service.join(code, g, credential, browser_key=key)
                     assert joined.ok, joined
                     credential = joined.value.credential
-                    devices.setdefault(g, []).append(joined.value.device_token)
+                    devices.setdefault(g, []).append(key)
             opened = await http.post(
                 f"/api/activities/{code}/rounds", json={}, headers=headers
             )

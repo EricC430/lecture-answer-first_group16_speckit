@@ -7,7 +7,13 @@
 import re
 
 from lecture_quiz.core.activity.results import RejectionReason
-from tests.conftest import create_activity, create_joinable, join_group, open_joining
+from tests.conftest import (
+    create_activity,
+    create_joinable,
+    join_group,
+    new_browser,
+    open_joining,
+)
 
 LEAKS = ("Traceback", 'File "', ".py")
 CJK = re.compile(r"[一-鿿]")
@@ -34,7 +40,14 @@ def test_every_rejection_reason_is_safe(client):
     base = f"/api/activities/{teacher.code}"
     seen = set()
     # 準備中：老師還沒開放加入，學生加入被拒（JOIN_NOT_OPEN）；沒有題目不能開放加入
-    seen.add(_check(_post(client, f"{base}/groups/join", {"groupNumber": 1}), ()))
+    seen.add(
+        _check(
+            _post(
+                client, f"{base}/groups/join", {"groupNumber": 1}, new_browser(client)
+            ),
+            (),
+        )
+    )
     seen.add(_check(_post(client, f"{base}/open-joining", token=teacher.token), ()))
     open_joining(client, teacher)
     device = join_group(client, teacher.code, 1)
@@ -57,8 +70,22 @@ def test_every_rejection_reason_is_safe(client):
             secrets,
         )
     )
-    seen.add(_check(_post(client, f"{base}/groups/join", {"groupNumber": 99}), secrets))
-    seen.add(_check(_post(client, f"{base}/groups/join", {"groupNumber": 1}), secrets))
+    seen.add(
+        _check(
+            _post(
+                client, f"{base}/groups/join", {"groupNumber": 99}, new_browser(client)
+            ),
+            secrets,
+        )
+    )
+    seen.add(
+        _check(
+            _post(
+                client, f"{base}/groups/join", {"groupNumber": 1}, new_browser(client)
+            ),
+            secrets,
+        )
+    )
     seen.add(_check(_post(client, "/api/activities", {"maxGroups": 0}), secrets))
     seen.add(
         _check(
@@ -115,6 +142,7 @@ def test_overlong_group_number_is_rejected_on_join_and_delete(client):
         join = client.post(
             f"/api/activities/{teacher.code}/groups/join",
             json={"groupNumber": "9" * digits},
+            headers={"Authorization": f"Bearer {new_browser(client)}"},
         )
         assert join.status_code == 400, join.text
         assert join.json()["error"]["code"] == "INVALID_GROUP_NUMBER"

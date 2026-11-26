@@ -10,6 +10,7 @@ token 或憑證（憲章原則 V）。請求日誌只記錄白名單欄位，不
 import logging
 import re
 import time
+from collections.abc import Mapping
 from typing import Annotated
 
 from fastapi import FastAPI, Header, Request
@@ -17,6 +18,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
+
+from lecture_quiz.app.activity.secrets_gen import is_browser_key
 
 logger = logging.getLogger("lecture_quiz.request")
 _error_logger = logging.getLogger("lecture_quiz.error")
@@ -296,6 +299,23 @@ class RequestLogMiddleware:
         )
 
 
+BROWSER_COOKIE_NAME = "lq_browser"
+BROWSER_COOKIE_MAX_AGE = 86400
+
+
+def browser_key_from(cookies: Mapping[str, str]) -> str | None:
+    """從 cookie 取出格式正確的瀏覽器金鑰（007 research R1）。
+
+    Args:
+        cookies: 請求或 WebSocket 握手的 cookie。
+
+    Returns:
+        瀏覽器金鑰；沒有或格式不符時為 `None`（視為沒有身分，不拋錯）。
+    """
+    value = cookies.get(BROWSER_COOKIE_NAME)
+    return value if is_browser_key(value) else None
+
+
 def bearer_token(
     authorization: Annotated[str | None, Header()] = None,
 ) -> str | None:
@@ -316,6 +336,28 @@ def bearer_token(
     if scheme.lower() != "bearer" or not token:
         return None
     return token
+
+
+def request_token(
+    request: Request,
+    authorization: Annotated[str | None, Header()] = None,
+) -> str | None:
+    """FastAPI dependency：請求者的 token，Bearer 優先，否則用瀏覽器金鑰 cookie。
+
+    老師頁一律帶老師 token（Bearer），所以老師與學生在同一個瀏覽器時，老師操作不會
+    被當成學生；學生頁不帶 Bearer，身分完全來自 HttpOnly cookie（007 research R4）。
+
+    Args:
+        request: 目前的請求（讀取 cookie）。
+        authorization: `Authorization` 標頭值。
+
+    Returns:
+        token 或瀏覽器金鑰；兩者都沒有時為 `None`（匿名）。
+    """
+    token = bearer_token(authorization)
+    if token is not None:
+        return token
+    return browser_key_from(request.cookies)
 
 
 def idempotency_key(

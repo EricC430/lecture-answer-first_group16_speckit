@@ -264,12 +264,24 @@ def _open_joining(
 def _join_group(
     activity: Activity, command: Command, now: datetime, issued: IssuedSecrets | None
 ) -> Transition:
-    """以組號加入（FR-006～FR-012）：新組號建立組別；既有組號比對憑證。"""
+    """以組號加入（FR-006～FR-012）：新組號建立組別；既有組號比對憑證。
+
+    007 INV-1：瀏覽器雜湊已在本活動時一律拒絕。服務層在取得鎖之前就解析了請求者，
+    同一瀏覽器同時送出的兩個加入請求都會是 Anonymous；這條鎖內檢查補足這個競爭
+    （007 research R3）。
+    """
     assert isinstance(command, JoinGroup)
     if issued is None or not issued.device_token_hash:
         raise ValueError("加入組別需要服務層傳入裝置 token 雜湊")
+    if (
+        command.device_token_hash is not None
+        and command.device_token_hash != issued.device_token_hash
+    ):
+        raise ValueError("JoinGroup 的瀏覽器雜湊與服務層發出的裝置雜湊不一致")
     actor = command.actor
     if isinstance(actor, Device) and actor.token_hash in activity.devices:
+        return _reject(activity, RejectionReason.ALREADY_IN_GROUP)
+    if issued.device_token_hash in activity.devices:
         return _reject(activity, RejectionReason.ALREADY_IN_GROUP)
     try:
         number = InputRules.normalize_group_number(

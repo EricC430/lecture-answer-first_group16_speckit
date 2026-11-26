@@ -4,6 +4,7 @@
 """
 
 import hashlib
+import re
 import secrets
 from collections.abc import Collection
 
@@ -46,6 +47,32 @@ def new_token() -> str:
         新的 token。
     """
     return secrets.token_urlsafe(32)
+
+
+BROWSER_KEY_PATTERN = re.compile(r"[A-Za-z0-9_-]{43}")
+
+
+def new_browser_key() -> str:
+    """產生瀏覽器金鑰（007 research R1：256 位元、43 個 URL 安全字元）。
+
+    同一瀏覽器的所有分頁共用這把金鑰；它的雜湊就是該瀏覽器在各活動的裝置雜湊。
+
+    Returns:
+        新的瀏覽器金鑰。
+    """
+    return secrets.token_urlsafe(32)
+
+
+def is_browser_key(value: object) -> bool:
+    """檢查是否為格式正確的瀏覽器金鑰；格式不符一律視為沒有金鑰（007 FR-008）。
+
+    Args:
+        value: 任意值（通常是 cookie 或 Bearer 的原始內容）。
+
+    Returns:
+        長度 43、字元集 `[A-Za-z0-9_-]` 時為 True。
+    """
+    return isinstance(value, str) and BROWSER_KEY_PATTERN.fullmatch(value) is not None
 
 
 def hash_token(token: str) -> str:

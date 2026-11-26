@@ -1,6 +1,6 @@
 """T078：重送去重（SC-004、FR-033）。"""
 
-from tests.conftest import TeacherSession, open_joining, service_of
+from tests.conftest import TeacherSession, new_browser, open_joining, service_of
 
 
 def test_create_join_and_open_round_replayed_20_times(client):
@@ -15,11 +15,15 @@ def test_create_join_and_open_round_replayed_20_times(client):
     code = created[0]["code"]
     open_joining(client, TeacherSession(code, created[0]["teacherToken"]))
 
+    browser_key = new_browser(client)  # 同一個瀏覽器重送 20 次（007：金鑰須先存在）
     joins = [
         client.post(
             f"/api/activities/{code}/groups/join",
             json={"groupNumber": 1},
-            headers={"Idempotency-Key": "join-k"},
+            headers={
+                "Idempotency-Key": "join-k",
+                "Authorization": f"Bearer {browser_key}",
+            },
         ).json()
         for _ in range(20)
     ]

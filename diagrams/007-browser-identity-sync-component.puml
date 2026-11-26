@@ -1,0 +1,46 @@
+@startuml 007-browser-identity-sync-component
+!pragma layout smetana
+skinparam defaultFontName "Microsoft JhengHei"
+skinparam componentStyle rectangle
+title 007 同一瀏覽器共用學生身分 — 組件圖（相依方向：外層 → 核心）
+
+actor "學生" as Student
+
+package "同一個瀏覽器" {
+  [學生分頁 A\n（student.js：載入先確保金鑰）] as TabA
+  [學生分頁 B] as TabB
+  [瀏覽器金鑰 cookie lq_browser\n（HttpOnly、SameSite=Strict、1 天；\n頁面程式碼讀不到，不放網址、畫面、日誌）] as Store
+  [分頁通知 BroadcastChannel lq-identity\n（只傳 joined + 活動代碼）] as TabBus
+  [老師身分 localStorage\n（沿用 001，與學生身分分開）] as TeacherStore
+}
+
+package "外層：API 與推送（轉接層）" {
+  [瀏覽器工作階段 API\nPOST /api/browser-session\n（沒有才發新的，已有則延長 1 天）] as SessionApi
+  [活動 API（HTTP）\n（request_token：Bearer 優先，否則 cookie；\n加入沒有金鑰 → BROWSER_SESSION_REQUIRED）] as Api
+  [同步推送 WebSocketHub（只推送）\n（auth 無 token 時讀握手 cookie；\n離開／刪除時關閉同雜湊的所有連線）] as Sync
+}
+
+package "應用層" {
+  [活動服務 ActivityService\n（join 改用呼叫端傳入的瀏覽器金鑰；\nhash(金鑰) = 裝置雜湊）] as Service
+}
+
+package "核心（純函式）" {
+  [ActivityStateMachine._join_group\n（鎖內檢查：裝置雜湊已存在 → ALREADY_IN_GROUP；\n最後一個瀏覽器離開才釋放組號）] as Rules
+}
+
+Student --> TabA
+Student --> TabB
+TabA --> SessionApi : 載入時
+SessionApi ..> Store : Set-Cookie（滑動期限）
+Store ..> Api : 自動附在請求上
+TabA --> Api
+TabB --> Api
+TabA ..> TabBus : joined
+TabBus ..> TabB : 以該代碼開始同步
+TabA <.. Sync : 推送
+TabB <.. Sync : 推送
+Api --> Service
+Sync --> Service : 驗證身分、取得快照
+Service --> Rules
+TeacherStore -[hidden]- Store
+@enduml

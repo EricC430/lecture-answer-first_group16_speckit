@@ -6,6 +6,7 @@
 
 1. 前端連線到 `ws://127.0.0.1:<port>/ws/activities/{code}`。
 2. 連線後 5 秒內，前端送出第一則訊息 `{"type": "auth", "token": "<老師或裝置 token>"}`。token 不放在 URL。
+   - **由 007 修訂（2026-11-26）**：學生頁送 `{"type": "auth"}`（token 省略或 null），後端改讀握手請求的 `lq_browser` cookie；同一瀏覽器的所有分頁共用同一個裝置雜湊，離開本組或組別被刪除時會一起收到 `unauthorized`。見 007 contracts §4。
 3. 伺服端驗證 token：
    - **成功**：立即送出一則 `snapshot`。
    - **活動不存在**（例如後端已重啟）：送出 `{"type": "gone"}` 後，以 close code `4410` 關閉連線。

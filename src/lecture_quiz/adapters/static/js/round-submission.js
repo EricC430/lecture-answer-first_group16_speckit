@@ -18,11 +18,11 @@ let deadlineTimer = null;
 let scheduledDeadline;
 
 async function submitAnswer(roundNumber, questionNumber, answers, form) {
-  const { code, token } = currentIdentity();
-  if (!code || !token) return;
+  // 007：身分在 HttpOnly cookie，由瀏覽器自動帶上；這裡不附任何 token
+  const { code, connected } = currentIdentity();
+  if (!code || !connected) return;
   form.setBusy(true);
   const result = await apiRequest("POST", `/api/activities/${encodeURIComponent(code)}/submissions`, {
-    token,
     body: { roundNumber, questionNumber, answers },
   });
   form.setBusy(false);

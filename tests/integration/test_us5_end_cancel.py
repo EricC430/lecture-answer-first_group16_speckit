@@ -2,6 +2,7 @@
 
 from types import MappingProxyType
 
+from lecture_quiz.app.activity.secrets_gen import new_browser_key
 from lecture_quiz.core.activity.commands import FinalizeOutcome
 from tests.conftest import call, join_group, open_joining, service_of
 
@@ -128,7 +129,7 @@ def test_ended_rejects_submission_and_join(client, teacher, fake_clock):
     _post(client, teacher, "/end")
     service = service_of(client)
     assert service.accepts_submission(teacher.code, fake_clock.now()) is False
-    joined = call(client, service.join, teacher.code, 2)
+    joined = call(client, service.join, teacher.code, 2, browser_key=new_browser_key())
     assert not joined.ok
     assert joined.message == "活動已結束，無法加入。"
 

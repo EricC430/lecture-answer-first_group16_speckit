@@ -5,13 +5,16 @@ import asyncio
 from tests.conftest import (
     call,
     create_joinable,
+    join_json,
+    post_join,
     service_of,
 )
 
 
 def _join(client, code, number, credential=None):
+    """模擬新瀏覽器加入；回傳本文另含 `browserKey`（007）。"""
     body = {"groupNumber": number, "credential": credential}
-    return client.post(f"/api/activities/{code}/groups/join", json=body).json()
+    return join_json(client, code, body)
 
 
 def _auth(token):
@@ -42,12 +45,12 @@ def test_leave_notifies_device_and_keeps_group(client):
     x = _join(client, teacher.code, 1)
     _join(client, teacher.code, 1, x["credential"])
     with client.websocket_connect(f"/ws/activities/{teacher.code}") as ws:
-        ws.send_json({"type": "auth", "token": x["deviceToken"]})
+        ws.send_json({"type": "auth", "token": x["browserKey"]})
         ws.receive_json()
         response = client.post(
             f"/api/activities/{teacher.code}/groups/leave",
             json={},
-            headers=_auth(x["deviceToken"]),
+            headers=_auth(x["browserKey"]),
         )
         assert response.status_code == 200
         assert ws.receive_json() == {"type": "unauthorized", "reason": "LEFT_GROUP"}
@@ -67,11 +70,11 @@ def test_after_leave_device_joins_correct_group(client):
     client.post(
         f"/api/activities/{teacher.code}/groups/leave",
         json={},
-        headers=_auth(x["deviceToken"]),
+        headers=_auth(x["browserKey"]),
     )
     moved = _join(client, teacher.code, 2, y["credential"])
     snap = client.get(
-        f"/api/activities/{teacher.code}/snapshot", headers=_auth(moved["deviceToken"])
+        f"/api/activities/{teacher.code}/snapshot", headers=_auth(moved["browserKey"])
     ).json()
     assert snap["ownGroup"]["number"] == 2
 
@@ -87,7 +90,7 @@ def test_leave_rejected_during_round(client):
     response = client.post(
         f"/api/activities/{teacher.code}/groups/leave",
         json={},
-        headers=_auth(x["deviceToken"]),
+        headers=_auth(x["browserKey"]),
     )
     assert response.status_code == 409
     assert response.json()["error"]["code"] == "NO_GROUP_SWITCH_DURING_ROUND"
@@ -114,7 +117,7 @@ def test_submissions_remain_with_original_group(client):
     client.post(
         f"/api/activities/{teacher.code}/groups/leave",
         json={},
-        headers=_auth(x["deviceToken"]),
+        headers=_auth(x["browserKey"]),
     )
     _join(client, teacher.code, 2, y["credential"])
     groups = _groups(client, teacher)
@@ -131,7 +134,7 @@ def test_delete_group_with_devices_notifies_devices(client):
     teacher = create_joinable(client)
     wrong = _join(client, teacher.code, 5)
     with client.websocket_connect(f"/ws/activities/{teacher.code}") as ws:
-        ws.send_json({"type": "auth", "token": wrong["deviceToken"]})
+        ws.send_json({"type": "auth", "token": wrong["browserKey"]})
         ws.receive_json()
         response = client.delete(
             f"/api/activities/{teacher.code}/groups/5", headers=teacher.headers
@@ -141,8 +144,10 @@ def test_delete_group_with_devices_notifies_devices(client):
     assert 5 not in _groups(client, teacher)
     again = _join(client, teacher.code, 5)
     assert again["credential"] != wrong["credential"]
-    stale = _join(client, teacher.code, 5, wrong["credential"])
-    assert stale["error"]["code"] == "BAD_CREDENTIAL"
+    stale, _ = post_join(
+        client, teacher.code, {"groupNumber": 5, "credential": wrong["credential"]}
+    )
+    assert stale.json()["error"]["code"] == "BAD_CREDENTIAL"
 
 
 def test_delete_group_with_submissions_rejected(client):
@@ -222,16 +227,15 @@ def test_last_leave_releases_unsubmitted_group_number(client):
     response = client.post(
         f"/api/activities/{teacher.code}/groups/leave",
         json={},
-        headers=_auth(x["deviceToken"]),
+        headers=_auth(x["browserKey"]),
     )
     assert response.status_code == 200
     assert 1 not in _groups(client, teacher)
     fresh = _join(client, teacher.code, 1)
     assert fresh["credential"] != x["credential"]
-    late = client.post(
-        f"/api/activities/{teacher.code}/groups/join",
-        json={"groupNumber": 1, "credential": x["credential"]},
-    )
+    late = post_join(
+        client, teacher.code, {"groupNumber": 1, "credential": x["credential"]}
+    )[0]
     assert late.status_code == 403
     assert late.json()["error"]["code"] == "BAD_CREDENTIAL"
 
@@ -253,14 +257,12 @@ def test_group_with_submissions_requires_credential_after_everyone_leaves(client
     client.post(
         f"/api/activities/{teacher.code}/groups/leave",
         json={},
-        headers=_auth(x["deviceToken"]),
+        headers=_auth(x["browserKey"]),
     )
     group = _groups(client, teacher)[1]
     assert group["deviceCount"] == 0 and group["hasSubmissions"] is True
     assert group["credential"] == x["credential"]
-    denied = client.post(
-        f"/api/activities/{teacher.code}/groups/join", json={"groupNumber": 1}
-    )
+    denied = post_join(client, teacher.code, {"groupNumber": 1})[0]
     assert denied.status_code == 403
     assert "老師" in denied.json()["error"]["message"]
     back = _join(client, teacher.code, 1, x["credential"])
@@ -275,16 +277,14 @@ def test_closing_the_page_is_not_leaving(client):
     teacher = create_joinable(client)
     x = _join(client, teacher.code, 1)
     with client.websocket_connect(f"/ws/activities/{teacher.code}") as ws:
-        ws.send_json({"type": "auth", "token": x["deviceToken"]})
+        ws.send_json({"type": "auth", "token": x["browserKey"]})
         ws.receive_json()
     group = _groups(client, teacher)[1]
     assert group["deviceCount"] == 1
     assert group["credential"] == x["credential"]
-    denied = client.post(
-        f"/api/activities/{teacher.code}/groups/join", json={"groupNumber": 1}
-    )
+    denied = post_join(client, teacher.code, {"groupNumber": 1})[0]
     assert denied.status_code == 403
     snapshot = client.get(
-        f"/api/activities/{teacher.code}/snapshot", headers=_auth(x["deviceToken"])
+        f"/api/activities/{teacher.code}/snapshot", headers=_auth(x["browserKey"])
     ).json()
     assert snapshot["ownGroup"]["number"] == 1

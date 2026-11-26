@@ -9,8 +9,8 @@ actor "學生（各組）" as Student
 
 package "外層：畫面與 API（轉接層）" {
   [老師畫面\n（指定組數上限建立活動、開輪、關輪、結束／取消、\n查看各組憑證、刪除空組）] as TeacherUI
-  [學生畫面\n（以組號加入、身分恢復、階段顯示、\n查看本組憑證、離開本組）] as StudentUI
-  [活動 API（HTTP）\n（解析 token 與 Idempotency-Key、錯誤訊息轉換；\n共用錯誤格式與請求日誌在 common.py）] as Api
+  [學生畫面\n（以組號加入、身分恢復、階段顯示、\n查看本組憑證、離開本組；\n007：身分為同一瀏覽器共用的 HttpOnly cookie）] as StudentUI
+  [活動 API（HTTP）\n（解析 token 與 Idempotency-Key、錯誤訊息轉換；\n共用錯誤格式與請求日誌在 common.py；\n007：Bearer 優先，否則 cookie lq_browser）] as Api
   [同步推送 WebSocketHub（只推送）\n（實作 SyncPublisher：依角色裁切完整快照、狀態版本、ping）] as Sync
   [倒數排程 AsyncioCountdownScheduler\n（實作 CountdownScheduler）] as TimerImpl
   [系統時鐘 SystemClock\n（實作 Clock）] as ClockImpl

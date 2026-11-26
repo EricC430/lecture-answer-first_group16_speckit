@@ -93,8 +93,8 @@ _MESSAGES = {
     RejectionReason.TEACHER_HAS_ACTIVE_ACTIVITY: (
         "你已有一個進行中的活動，請先結束或取消它。"
     ),
-    RejectionReason.ALREADY_IN_GROUP: "這台裝置已經在某一組，請先離開本組。",
-    RejectionReason.NOT_IN_GROUP: "這台裝置目前沒有加入任何組別。",
+    RejectionReason.ALREADY_IN_GROUP: "這個瀏覽器已經在某一組，請先離開本組。",
+    RejectionReason.NOT_IN_GROUP: "這個瀏覽器目前沒有加入任何組別。",
     RejectionReason.GROUP_NOT_FOUND: "找不到這個組別。",
     RejectionReason.JOIN_NOT_OPEN: "老師還沒開放加入，請稍後再試。",
     RejectionReason.GROUP_DELETE_DURING_ROUND: (
@@ -213,10 +213,13 @@ def _describe_group_rejection(
         if number is not None:
             return f"找不到第 {number} 組。"
     if reason is RejectionReason.ALREADY_IN_GROUP and isinstance(command, JoinGroup):
-        token_hash = getattr(command.actor, "token_hash", None)
+        # 007：先用指令帶的瀏覽器雜湊（同時加入落敗者的請求者仍是 Anonymous）
+        token_hash = command.device_token_hash or getattr(
+            command.actor, "token_hash", None
+        )
         device = activity.devices.get(token_hash) if token_hash else None
         if device is not None:
-            return f"這台裝置已經在第 {device.group_number} 組，請先離開本組。"
+            return f"這個瀏覽器已是第 {device.group_number} 組成員，請先離開本組。"
     return None
 
 

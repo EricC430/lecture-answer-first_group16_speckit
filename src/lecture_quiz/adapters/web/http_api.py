@@ -10,19 +10,37 @@ from fastapi import APIRouter, Depends, FastAPI, Request
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, StrictBool, StrictInt
 
 from lecture_quiz.app.activity.ports import Outcome, Requester
-from lecture_quiz.app.activity.secrets_gen import normalize_code_input
+from lecture_quiz.app.activity.secrets_gen import is_browser_key, normalize_code_input
 from lecture_quiz.app.activity.service import ActivityService
+from lecture_quiz.core.activity.commands import Teacher
 from lecture_quiz.core.activity.results import RejectionReason
 from lecture_quiz.core.activity.snapshot_view import JsonDict
 
-from .common import ApiError, annotate_request_log, bearer_token, idempotency_key
+from .common import (
+    ApiError,
+    annotate_request_log,
+    bearer_token,
+    browser_key_from,
+    idempotency_key,
+    request_token,
+)
 
 T = TypeVar("T")
 
 ACTIVITY_NOT_FOUND = "ACTIVITY_NOT_FOUND"
 ACTIVITY_NOT_FOUND_MESSAGE = "找不到這個活動代碼，請確認後再輸入。"
 
-Token = Annotated[str | None, Depends(bearer_token)]
+# 007：Bearer 優先，否則用瀏覽器金鑰 cookie（research R4）。
+# 002～005 import 同一個 Token，學生身分一併改由 cookie 取得。
+Token = Annotated[str | None, Depends(request_token)]
+BearerOnly = Annotated[str | None, Depends(bearer_token)]
+
+TEACHER_CANNOT_JOIN = "TEACHER_CANNOT_JOIN"
+TEACHER_CANNOT_JOIN_MESSAGE = "老師身分不能加入組別，請用另一個瀏覽器開學生頁。"
+BROWSER_SESSION_REQUIRED = "BROWSER_SESSION_REQUIRED"
+BROWSER_SESSION_REQUIRED_MESSAGE = (
+    "瀏覽器沒有保存身分，請允許本網站儲存資料後重新整理頁面。"
+)
 IdempotencyKey = Annotated[str | None, Depends(idempotency_key)]
 
 
@@ -159,27 +177,45 @@ def create_router(app: FastAPI) -> APIRouter:
     async def join_group(
         request: Request,
         code: str,
-        token: Token,
+        bearer: BearerOnly,
         key: IdempotencyKey,
         body: JoinGroupBody | None = None,
     ) -> JsonDict:
-        """以組號加入組別（#3）；已是某組成員的裝置回 409 ALREADY_IN_GROUP。"""
+        """以組號加入組別（#3）；已是某組成員的瀏覽器回 409 ALREADY_IN_GROUP。
+
+        007：瀏覽器金鑰取格式正確的 Bearer（測試），否則取 cookie；兩者都沒有時回
+        400 `BROWSER_SESSION_REQUIRED`，不呼叫服務層。老師 token 不能當金鑰（403
+        `TEACHER_CANNOT_JOIN`，verification P-09）。回應不含金鑰，也不設定 cookie。
+        活動不存在時一律回 404，打錯代碼不會顯示「活動已失效」（research R4）。
+        """
         code = normalize_code_input(code)
         body = body or JoinGroupBody()
+        browser_key = (bearer if is_browser_key(bearer) else None) or (
+            browser_key_from(request.cookies)
+        )
+        if browser_key is None:
+            annotate_request_log(request, activity_code=code)
+            raise ApiError(
+                400, BROWSER_SESSION_REQUIRED, BROWSER_SESSION_REQUIRED_MESSAGE
+            )
+        requester = requester_for(code, browser_key)
+        if isinstance(requester, Teacher):
+            annotate_request_log(request, activity_code=code)
+            raise ApiError(403, TEACHER_CANNOT_JOIN, TEACHER_CANNOT_JOIN_MESSAGE)
         outcome = await service().join(
             code,
             body.group_number,
             body.credential,
-            requester_for(code, token),
+            requester,
             key,
+            browser_key=browser_key,
         )
-        joined = unwrap(request, code, token, outcome)
+        joined = unwrap(request, code, None, outcome)
         return ok(
             request,
             code,
             joined.version,
             {
-                "deviceToken": joined.device_token,
                 "groupNumber": joined.group_number,
                 "credential": joined.credential,
                 "version": joined.version,

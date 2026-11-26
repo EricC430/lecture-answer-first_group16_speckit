@@ -1,11 +1,14 @@
 """WebSocket 同步（contracts/sync-websocket.md）；`WebSocketHub` 實作 `SyncPublisher`。
 
 WebSocket 只推送、不接收操作。連線後第一則訊息必須是
-`{"type": "auth", "token": ...}`（token 不放在網址），之後：
+`{"type": "auth", "token": ...}`（token 不放在網址）。007 起學生頁送 `{"type": "auth"}`
+（或 `token` 為 null），身分改讀握手請求的 `lq_browser` cookie；老師頁照舊帶老師
+token（contracts/http-and-sync-changes.md §4）。之後：
 - 立即送出依角色裁切的快照；之後每次狀態變更都推送新快照。
 - 每 `ping_interval` 秒送一次 `{"type": "ping"}`。
 - 活動不存在：送 `gone`，以 4410 關閉。token 無效：送 `unauthorized`，以 4401 關閉。
-- 第一則訊息不是 auth：以 4400 關閉；逾時沒送：以 4408 關閉。
+- 第一則訊息不是 auth，或 token 既不是字串也不是 null：以 4400 關閉。
+- 逾時沒送 auth：以 4408 關閉。
 單一連線送出失敗時只關閉那條連線，不影響其他連線與狀態。
 """
 
@@ -22,6 +25,8 @@ from lecture_quiz.app.activity.secrets_gen import normalize_code_input
 from lecture_quiz.app.activity.service import ActivityService
 from lecture_quiz.core.activity.commands import Anonymous, Device
 from lecture_quiz.core.activity.models import Activity
+
+from .common import browser_key_from
 
 logger = logging.getLogger(__name__)
 
@@ -171,9 +176,11 @@ class WebSocketHub:
         assert self._service is not None, "WebSocketHub 尚未綁定服務"
         await websocket.accept()
         code = normalize_code_input(raw_code)
-        token = await self._receive_auth(websocket)
-        if token is None:
+        received, token = await self._receive_auth(websocket)
+        if not received:
             return
+        if token is None:
+            token = browser_key_from(websocket.cookies)
         if self._service.get(code) is None:
             await websocket.send_json({"type": "gone"})
             await websocket.close(code=CLOSE_GONE)
@@ -209,15 +216,21 @@ class WebSocketHub:
             self._unregister(code, conn)
             logger.info("同步連線關閉 activity=%s role=%s", code, conn.role)
 
-    async def _receive_auth(self, websocket: WebSocket) -> str | None:
-        """等待第一則 auth 訊息；不合格時關閉連線並回傳 `None`。"""
+    async def _receive_auth(self, websocket: WebSocket) -> tuple[bool, str | None]:
+        """等待第一則 auth 訊息。
+
+        Returns:
+            `(是否收到合格的 auth, token)`；不合格時已關閉連線並回傳 `(False, None)`。
+            合格但沒有帶 token（省略或 null）時回傳 `(True, None)`，
+            由呼叫端改讀 cookie。
+        """
         try:
             raw = await asyncio.wait_for(websocket.receive_text(), self._auth_timeout)
         except TimeoutError:
             await websocket.close(code=CLOSE_AUTH_TIMEOUT)
-            return None
+            return False, None
         except WebSocketDisconnect:
-            return None
+            return False, None
         try:
             message = json.loads(raw)
         except ValueError:
@@ -226,11 +239,11 @@ class WebSocketHub:
         if (
             not isinstance(message, dict)
             or message.get("type") != "auth"
-            or not isinstance(token, str)
+            or not (token is None or isinstance(token, str))
         ):
             await websocket.close(code=CLOSE_BAD_FIRST_MESSAGE)
-            return None
-        return token
+            return False, None
+        return True, token
 
     async def _ping_loop(self, conn: _Connection) -> None:
         with contextlib.suppress(Exception):

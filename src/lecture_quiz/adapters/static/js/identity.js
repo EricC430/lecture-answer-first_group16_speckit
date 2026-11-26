@@ -2,15 +2,13 @@
 // - 老師 token：localStorage["teacher:{code}"]，同一瀏覽器的各分頁共用（alignment 2026-11-23 C6）。
 // - 最後建立的活動代碼：localStorage["teacher:last"]，建立新活動時用來判定「一位老師一個活動」（C7），
 //   也用來在網址沒有代碼時回到該活動（US1-AS2）；老師按「建立新活動」或活動失效時清除。
-// - 裝置 token：sessionStorage["device:{code}"]，每個分頁是一台獨立裝置。
+// - 學生身分（007）：由後端發的 HttpOnly cookie `lq_browser` 保存，同一個瀏覽器的所有分頁共用，
+//   頁面程式碼讀不到（spec FR-008）；學生頁的請求與同步連線由瀏覽器自動帶上 cookie，
+//   所以這裡沒有任何學生 token 的存取函式。
 // token 只存在瀏覽器，不放在網址，也不輸出到畫面或 console。
 
 function teacherKey(code) {
   return `teacher:${code}`;
-}
-
-function deviceKey(code) {
-  return `device:${code}`;
 }
 
 /** 取得該活動的老師 token；沒有時回傳 null。 */
@@ -43,29 +41,12 @@ export function clearLastTeacherCode() {
   localStorage.removeItem(LAST_TEACHER_KEY);
 }
 
-/** 取得該活動的裝置 token；沒有時回傳 null。 */
-export function getDeviceToken(code) {
-  return sessionStorage.getItem(deviceKey(code));
-}
-
-/** 保存該活動的裝置 token。 */
-export function setDeviceToken(code, token) {
-  sessionStorage.setItem(deviceKey(code), token);
-}
-
 /**
- * 只清除本分頁在該活動的裝置身分（離開本組、組別被刪除、加入其他活動時使用）。
- * 老師 token 存在整個瀏覽器共用的 localStorage，學生分頁不得動它：老師與學生開在
- * 同一個瀏覽器時，否則學生離開本組會讓老師失去身分（Issue #29）。
+ * 活動已失效時清除該活動的老師 token。學生身分在 HttpOnly cookie，頁面讀不到也不需要清：
+ * 後端重啟後它在任何活動都查不到，自然失效（007 research R7）。
  */
-export function clearDeviceToken(code) {
-  sessionStorage.removeItem(deviceKey(code));
-}
-
-/** 清除該活動在本機的所有身分（只在活動已失效時使用：老師與裝置身分都不再有效）。 */
 export function clearIdentity(code) {
   localStorage.removeItem(teacherKey(code));
-  sessionStorage.removeItem(deviceKey(code));
 }
 
 /** 把使用者輸入的活動代碼正規化：去除首尾空白並轉成大寫（FR-001）。 */

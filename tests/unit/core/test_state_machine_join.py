@@ -137,5 +137,47 @@ def test_device_already_in_group_cannot_join_again():
     assert t.activity == activity
     assert (
         describe_rejection(t.rejection, activity.stage, command, activity)
-        == "這台裝置已經在第 3 組，請先離開本組。"
+        == "這個瀏覽器已是第 3 組成員，請先離開本組。"
     )
+
+
+# ── 007：同一瀏覽器只能代表一個組別（data-model INV-1）──
+
+
+def test_same_browser_hash_rejected_even_when_actor_is_anonymous():
+    """Scenario: 007 US1-AS3（FR-007）
+
+    鎖外解析造成請求者仍是 Anonymous，但瀏覽器雜湊已在本活動：拒絕
+    ALREADY_IN_GROUP，不建組、不發憑證，版本不變；訊息帶出所屬組號。
+    """
+    activity = joined()  # 雜湊 "1"*64 已是第 3 組
+    command = JoinGroup(Anonymous(), 5, None, device_token_hash="1" * 64)
+    t = apply(activity, command, NOW, issued("1", "NEWCRD"))
+    assert not t.ok
+    assert t.rejection is RejectionReason.ALREADY_IN_GROUP
+    assert t.activity is activity
+    assert set(t.activity.groups) == {3}
+    assert all(g.join_credential != "NEWCRD" for g in t.activity.groups.values())
+    message = describe_rejection(t.rejection, activity.stage, command, activity)
+    assert message == "這個瀏覽器已是第 3 組成員，請先離開本組。"
+
+
+def test_member_device_message_uses_browser_wording():
+    """Scenario: 007 US1-AS3
+
+    請求者已解析為組員時，訊息同樣是「這個瀏覽器已是第 N 組成員」。
+    """
+    activity = joined()
+    command = JoinGroup(Device("1" * 64), 2, None, device_token_hash="1" * 64)
+    t = apply(activity, command, NOW, issued("1"))
+    assert t.rejection is RejectionReason.ALREADY_IN_GROUP
+    message = describe_rejection(t.rejection, activity.stage, command, activity)
+    assert message == "這個瀏覽器已是第 3 組成員，請先離開本組。"
+
+
+def test_command_hash_must_match_issued_hash():
+    """007 research R3：指令與 issued 的雜湊不一致屬服務層程式錯誤。"""
+    activity = joining_activity()
+    command = JoinGroup(Anonymous(), 1, None, device_token_hash="2" * 64)
+    with pytest.raises(ValueError):
+        apply(activity, command, NOW, issued("1"))
