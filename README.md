@@ -8,8 +8,6 @@
 
 老師匯入 Google Sheets 格式的 Guided Notes（學習單），各組學生用手機搶答，老師判錯與定案後，把搶答成功的答案寫回原學習單（也可匯出 CSV）。系統只在本機執行，活動狀態存在記憶體，不使用資料庫。
 
-使用者可見的行為以 OpenSpec 組的 spec 為唯一基準（[docs/openspec-reference/](docs/openspec-reference/)），兩組的差異與決議記在[跨組對齊紀錄](docs/alignment.md)。
-
 ## 使用流程
 
 1. **老師**開啟老師頁建立活動（指定組數上限 1～99），取得活動代碼。
