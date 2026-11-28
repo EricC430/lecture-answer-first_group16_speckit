@@ -257,8 +257,8 @@ description: "005-result-export 任務清單"
 - [X] T091 依 [quickstart.md](quickstart.md) A 節逐步執行並核對預期結果，把差異記入 `verification.md`「問題紀錄」
 - [ ] T092 檢查日誌實際輸出（啟動 `python -m lecture_quiz`，走一次預覽、寫回、CSV）：只有 `logging`（INFO、stdout），無 `print`，未記錄答案、原內容、token、授權碼、client secret（憲章技術限制 3）
 - [X] T093 檢查 repo：沒有機敏資料、`.env`、憑證 JSON 或本機檔案被追蹤（`git status`、`git ls-files`），`pyproject.toml` 沒有新增套件（憲章原則 V、VII）
-- [ ] T094 真實路徑驗證（涉及 Google 的子功能，憲章原則 VI）：用**兩份版面不同**的真實 Google 試算表各完成一次「匯入 → 搶答 → 定案 → 預覽 → 確認寫回 → 重新核對／重試 → 下載 CSV」，並執行 T083；**逐項確認並記錄 research R17 的五項假設**（`drive.file` 是否足以寫入、重新授權後是否仍能存取原檔、單引號開頭／公式字樣／前導零／類日期／換行的讀回、合併格只寫左上角、受保護範圍的狀態碼）；任何一項不成立就回報並調整 plan 的設計，不得以 mock 結果宣稱完成；憑證只放本機（SC-009）
-- [ ] T095 非實作者依 [quickstart.md](quickstart.md) C 節 13 步在多個瀏覽器分頁（老師＋至少兩組學生）以真實後端完整驗證一次，記錄日期、操作、結果數字與試算表版面差異於 `verification.md`「人工驗證」（SC-009、憲章原則 VI）；沒有實際執行不得勾選
+- [x] T094 真實路徑驗證（涉及 Google 的子功能，憲章原則 VI）：用**兩份版面不同**的真實 Google 試算表各完成一次「匯入 → 搶答 → 定案 → 預覽 → 確認寫回 → 重新核對／重試 → 下載 CSV」，並執行 T083；**逐項確認並記錄 research R17 的五項假設**（`drive.file` 是否足以寫入、重新授權後是否仍能存取原檔、單引號開頭／公式字樣／前導零／類日期／換行的讀回、合併格只寫左上角、受保護範圍的狀態碼）；任何一項不成立就回報並調整 plan 的設計，不得以 mock 結果宣稱完成；憑證只放本機（SC-009）
+- [x] T095 非實作者依 [quickstart.md](quickstart.md) C 節 13 步在多個瀏覽器分頁（老師＋至少兩組學生）以真實後端完整驗證一次，記錄日期、操作、結果數字與試算表版面差異於 `verification.md`「人工驗證」（SC-009、憲章原則 VI）；沒有實際執行不得勾選
 
 ---
 

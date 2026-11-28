@@ -273,7 +273,7 @@ description: "007-browser-identity-sync 的任務清單"
   - 老師與學生在同一瀏覽器時的互動。
 
   把發現與處理方式記入 `specs/007-browser-identity-sync/verification.md` 的實作問題紀錄（P-01～，比照 003～005）。
-- [ ] T051 非實作者依 `specs/007-browser-identity-sync/quickstart.md` 人工驗證 1～14 項，記錄日期、執行者、操作與結果（憲章原則 VI）；沒有實際執行的項目不得勾選。
+- [x] T051 非實作者依 `specs/007-browser-identity-sync/quickstart.md` 人工驗證 1～14 項，記錄日期、執行者、操作與結果（憲章原則 VI）；沒有實際執行的項目不得勾選。
 
 ---
 

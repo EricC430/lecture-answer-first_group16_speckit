@@ -211,8 +211,8 @@ description: "003-round-submission 任務清單"
 - [X] T061 同步文件：`specs/001-activity-session/contracts/service-interfaces.md` 的「給 003」段落補上 `record_submission`、`add_snapshot_extension`、`snapshot_for` 改為實例方法，並註明 003 以 `record_submission` 取代直接呼叫 `mark_group_submitted`；`docs/DEVELOPMENT.md` 子功能擴充約定補「快照擴充」用法；`CLAUDE.md` 003 段落改為「已實作」。**實作註記**：`docs/DEVELOPMENT.md` 新增「3.5 快照擴充」
 - [X] T062 執行 `ruff check .`、`ruff format --check .`、`mypy`、`pytest`、`pytest -m perf`，全部通過；把日期、Python 版本、指令與數字（passed／failed／deselected、perf 最大延遲）寫入 `specs/003-round-submission/verification.md`，與 T002 基準比較（憲章原則 VI、技術限制 2）。**實作註記**：結果見 `verification.md`「Polish」
 - [X] T063 檢查日誌與機敏資料：全文搜尋 `src/` 無 `print(`；日誌不記 token、答案；`git status` 與 `git diff --staged` 無 `.env`、憑證、`.venv`、課程說明或提案草稿（憲章技術限制 3、原則 V）。**實作註記**：`src/` 沒有 `print(`；追蹤檔案中沒有 `.env`、憑證、`.venv`、課程說明或提案草稿；日誌內容由 T057 驗證
-- [ ] T064 非實作者人工驗證：EricC430 依 `quickstart.md` 17 步操作，記錄日期、操作、實際結果與通過／失敗到 `verification.md`（憲章原則 VI）
-- [ ] T065 真實路徑驗證（**002 合併後**；接線已在 #21 完成：`ImportService` 實作 `QuestionShapeSource`，`main.py` 預設使用它，dev seed 已移除）：以兩份真實 Google 學習單（版面 A：課程範本；版面 B：起始列欄不同、含三格題組）各匯入一次，完成 quickstart「真實路徑驗證」3 步，記錄到 `verification.md`（不貼試算表網址與憑證）（憲章原則 III、VI）
+- [x] T064 非實作者人工驗證：EricC430 依 `quickstart.md` 17 步操作，記錄日期、操作、實際結果與通過／失敗到 `verification.md`（憲章原則 VI）
+- [x] T065 真實路徑驗證（**002 合併後**；接線已在 #21 完成：`ImportService` 實作 `QuestionShapeSource`，`main.py` 預設使用它，dev seed 已移除）：以兩份真實 Google 學習單（版面 A：課程範本；版面 B：起始列欄不同、含三格題組）各匯入一次，完成 quickstart「真實路徑驗證」3 步，記錄到 `verification.md`（不貼試算表網址與憑證）（憲章原則 III、VI）
 - [x] T066 OpenSpec 核對：OpenSpec 組 2026-11-23 全部同意 Q-20、Q-21、Q-22（修正版）、Q-26 與「答錯／搶答失敗」顯示方式；已更新 `docs/alignment.md`、spec、plan，常數不需修改
 
 ---

@@ -209,3 +209,7 @@
 | P-33 | US6 | 送出途中倒數歸零，`setBusy(false)` 會把已停用的按鈕重新啟用 | 表單記住 `locked`，已停用或已送出時不重新啟用 | 已處理 |
 | P-34 | US5 | `judgedWrong` 在 004 接上前一律為 `false`，契約沒有寫明是佔位值 | 寫進 `contracts/sync-websocket.md`；004 接上後提供真值 | 已處理 |
 | P-35 | Foundational | `blanks_per_question` 在 001 活動鎖內呼叫，實作若有 I/O 或其他鎖可能阻塞或死結；`None` 與空對應表沒有區分 | 研究 R6 與 service-interfaces 寫明必須非阻塞；兩者都回 `SHAPES_UNAVAILABLE` | 已處理 |
+
+## 人工驗證與真實路徑（T064、T065）
+
+**通過**：2026-11-27 在 `main`（02b47b4）完整測試並錄影，jacky0407 於 2026-11-28 回報全部通過；細節依使用者決定不逐步記錄，以錄影為證。T065 以兩份真實 Google 學習單匯入（不記錄試算表網址與憑證）。

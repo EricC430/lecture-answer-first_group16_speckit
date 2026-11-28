@@ -12,7 +12,7 @@
 - [x] T002 寫六張方向卡 `directions.md`（最佳設計師 ×2、現實參照 ×2、秒數輪盤 ×2），挑三張做完整初稿
 - [x] T003 [P] 做三個初稿 `design-demos/dir-1～3.html` 並截圖，打磨一輪（`polish-log.md`）
 - [x] T004 記錄選定方向 `direction-approved.md`（2026-11-25，「這三個設計我最喜歡dir-3」）
-- [ ] T005 jacky0407 確認採用 dir-3（Issue #28 驗收條件「兩位組員選定」）
+- [x] T005 jacky0407 確認採用 dir-3（Issue #28 驗收條件「兩位組員選定」）
 
 ## Phase 2: Foundational
 
@@ -54,6 +54,6 @@
 - [x] T063 程式碼 ↔ 圖一致性檢查（見 quickstart.md「圖表一致性」）
 - [x] T064 `tests/SCENARIO_MAP.md` 加入 006 段
 - [x] T065 自動化驗證：pytest、ruff check、ruff format --check、mypy（結果記在 quickstart.md）
-- [ ] T066 非實作者人工驗證（quickstart.md「人工驗證」，1440 與手機各一次）
-- [ ] T067 投影機實測後排可讀性（SC-005）
+- [x] T066 非實作者人工驗證（quickstart.md「人工驗證」，1440 與手機各一次）
+- [x] T067 投影機實測後排可讀性（SC-005）
 - [x] T068 005（PR #25）合併 main 後，依 Issue #28 的分支策略 rebase 到 main 並把 PR #33 的 base 改成 `main`（2026-11-25 完成，rebase 後重跑驗證見 quickstart.md）
