@@ -25,11 +25,11 @@
 | 002 | [guided-notes-import](specs/002-guided-notes-import/) | Google 授權、Picker 選檔、動態解析學習單 | 已實作 |
 | 003 | [round-submission](specs/003-round-submission/) | 多題搶答、送出判定與資料可見性 | 已實作 |
 | 004 | [ranking-review](specs/004-ranking-review/) | 速度／公平順位、判錯重算、定案 | 已實作 |
-| 005 | [result-export](specs/005-result-export/) | 定案成果寫回 Google Sheets、CSV 匯出 | 已實作，真實 Google 寫入待驗證 |
-| 006 | [ui-refresh](specs/006-ui-refresh/) | 介面改版（幾何記號、投影可讀） | 已實作，待人工驗證 |
-| 007 | [browser-identity-sync](specs/007-browser-identity-sync/) | 同一瀏覽器的所有分頁共用學生身分、跨分頁同步 | 已實作，待人工驗證 |
+| 005 | [result-export](specs/005-result-export/) | 定案成果寫回 Google Sheets、CSV 匯出 | 已實作 |
+| 006 | [ui-refresh](specs/006-ui-refresh/) | 介面改版（幾何記號、投影可讀） | 已實作 |
+| 007 | [browser-identity-sync](specs/007-browser-identity-sync/) | 同一瀏覽器的所有分頁共用學生身分、跨分頁同步 | 已實作 |
 
-各子功能目錄都有 spec、plan、tasks、quickstart（含驗證紀錄）；組件圖、類別圖、時序圖放在 [diagrams/](diagrams/)（`.puml` 與轉出的 `.png`）。尚待完成的人工或真實路徑驗證，以各子功能的 tasks 與 quickstart 為準。
+各子功能目錄都有 spec、plan、tasks、quickstart（含驗證紀錄）；組件圖、類別圖、時序圖放在 [diagrams/](diagrams/)（`.puml` 與轉出的 `.png`）。001～007 的人工驗證與真實 Google 路徑驗證已於 2026-11-27 完成（`main` 02b47b4），紀錄見各子功能的 quickstart／verification。
 
 ## 快速開始（Windows，Python 3.11 以上）
 

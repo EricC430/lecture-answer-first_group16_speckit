@@ -2,7 +2,7 @@
 
 **用途**：實作完成後，證明 002 端到端可用的執行與人工驗證腳本。本檔只記錄「怎麼驗證、預期結果」；**實際執行的日期、指令與結果數字要在執行當下填入下方的紀錄表，沒有跑過就保持空白，不得預填**（憲章原則 VI）。
 
-**目前狀態（2026-11-23）**：已實作；A 區自動化驗證已執行並記錄在紀錄表。**B 區真實路徑（含 SC-009）已由 EricC430 回報全數通過，細節依其決定不記錄**（紀錄表只留一列回報）；非實作者 jacky0407 的 T076 驗證尚未執行。
+**目前狀態（2026-11-23）**：已實作；A 區自動化驗證已執行並記錄在紀錄表。**B 區真實路徑（含 SC-009）已由 EricC430 回報全數通過，細節依其決定不記錄**（紀錄表只留一列回報）；非實作者 jacky0407 的 T076 驗證已於 2026-11-27 通過（見紀錄表）。
 
 ## 前置條件
 
@@ -107,6 +107,6 @@ pytest -m "not real_google and not perf"
 | 2026-11-23 | EricC430 的環境（Claude Code 執行） | T080～T082 後：`ruff check .`、`ruff format --check .`、`mypy`、`pytest -m "not real_google and not perf"` | 通過；188 個檔案格式正確；46 個檔案無型別問題；715 passed、2 deselected | 新增 `GOOGLE_APP_ID` 純數字驗證（紅燈 5 個測試後轉綠） |
 | 2026-11-24 | EricC430 的環境（Claude Code 執行） | 合併 #11 審查修改與最新 `main`、T083 後：`ruff check .`、`ruff format --check .`、`mypy`、`pytest -m "not real_google and not perf"` | 通過；189 個檔案格式正確；46 個檔案無型別問題；726 passed、2 deselected | 新增 `ImportService.blanks_per_question`（給 003），6 個測試先紅燈後轉綠 |
 | 2026-11-24 | EricC430 的環境（Claude Code 執行） | PR #17 審查修正後：Python 3.11.17 全新 venv（`uv pip install ".[dev]"`，以 `PYTHONPATH=src` 指向工作樹）執行 `pytest -m "not real_google and not perf"`；Python 3.14.7 另跑 `ruff check .`、`ruff format --check .`、`mypy` 與同一組 pytest | 3.11：735 passed、2 deselected（修正前 723 passed、3 failed）；3.14：735 passed、2 deselected；ruff 通過、190 個檔案格式正確、mypy 46 個檔案無問題 | 3.11 失敗原因：`int.is_integer()` 3.12 才有（T084） |
-| | jacky0407 | T076 非實作者人工驗證 | | 尚未執行 |
+| 2026-11-27 | jacky0407 | T076 非實作者人工驗證（B 區） | 通過（使用者回報） | 版本 `main` 02b47b4；細節不逐步記錄，以錄影為證 |
 
 - **實作者**：EricC430。**非實作者人工驗證**：jacky0407（執行 B 區並簽名，記錄日期與結果）。

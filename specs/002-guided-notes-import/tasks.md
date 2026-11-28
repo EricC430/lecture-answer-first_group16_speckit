@@ -302,7 +302,7 @@ description: "002-guided-notes-import 任務清單"
 - [X] T073 程式碼與圖表一致性驗證：逐一比對 `diagrams/002-guided-notes-import-{component,class,sequence}.puml` 與實作（`ImportService` 的方法、`AuthGateway`／`SheetsReader` 的方法、`ImportRecord` 的欄位、`SpreadsheetInfo.autoSelectSheetId`、時序圖的 inspect／`PUT source`／匯入步驟；`IssueKind` 的值。類別圖與時序圖已於 2026-11-22 依 plan 同步，這裡驗證實作沒有再偏離）。有差異時先更新圖表並重新轉出 PNG（原則 II）。
 - [X] T074 執行全部自動化測試 `pytest -m "not real_google and not perf"`，並以 `-v` 確認核心、應用層、轉接層（`HttpMockSequence`）、HTTP 契約、架構純度、日誌各自有項目、沒有任何一類是 0 筆；記錄日期、指令與通過／失敗／略過數字（原則 VI）。
 - [X] T075 執行 `ruff check .`、`ruff format --check .`、`mypy src`，全部通過並記錄結果（技術限制 2）。
-- [ ] T076 由非實作者（jacky0407）依 [quickstart.md](quickstart.md) B 區做人工驗證，記錄日期、每一步操作與結果於 quickstart 紀錄表並簽名（原則 VI）。
+- [x] T076 由非實作者（jacky0407）依 [quickstart.md](quickstart.md) B 區做人工驗證，記錄日期、每一步操作與結果於 quickstart 紀錄表並簽名（原則 VI）。
 - [X] T077 追蹤 001 的開發用 seed API（`adapters/web/dev_seed.py`、`LECTURE_QUIZ_DEV_SEED`、`tests/integration/test_dev_seed.py`、前端「放入假題目」按鈕）：依 001 plan 在 002 合併後的第一個 PR 移除；因檔案屬 001，先與 jacky0407 協調是在本 PR 一併移除還是另開 PR，並在 PR 描述記錄結論。
     - **完成（2026-11-23）**：依 EricC430 指示直接在本 PR 移除：刪除 `adapters/web/dev_seed.py`、`tests/integration/test_dev_seed.py`；`main.py` 的 `dev_seed` 參數與 `LECTURE_QUIZ_DEV_SEED`、`teacher.html`／`teacher.js` 的「放入假題目」按鈕、`tests/conftest.py` 與 `tests/perf` 的相關參數。驗證：`ruff check .` 通過、`mypy` 通過、`pytest -m "not real_google and not perf"` 706 passed。**jacky0407 尚未確認**（檔案屬 001），請在 PR 描述註明。
 - [ ] T078 更新 `CLAUDE.md`「專案現況」：補上 `pytest -m real_google` 的手動執行方式與 002 的三層路徑；再用全新 clone 在乾淨的 venv 重跑安裝與 `pytest`，確認不依賴任何本機未提交的檔案（規章第 9 節）。

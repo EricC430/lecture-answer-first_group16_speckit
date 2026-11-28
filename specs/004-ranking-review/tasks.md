@@ -260,7 +260,7 @@ description: "004-ranking-review 任務清單"
 - [X] T091 [P] 準備 PR 說明（草稿，不自動發布）：列出對既有程式的影響範圍——001 的 HTTP 定案路由改由 004 提供（`resultVersion`）、既有定案測試改用 helper（斷言未改）、003 學生頁「已公開的作答」呈現調整（資料不變）；列出新增檔案、驗證指令與結果數字、與 OpenSpec 無新偏離的說明；結尾加 `🤖 Generated with [Claude Code](https://claude.com/claude-code)`
 - [X] T092 [P] 與 003 負責人確認 T077 對學生頁的調整（`round-submission.js` 與其測試），把確認日期與結果記在 `verification.md`「問題紀錄」
 - [X] T093 執行 `quickstart.md` 的「一、自動化驗證」全部指令，確認每條指令與預期相符（含 `tests/SCENARIO_MAP.md` 對照）；結果寫入 `verification.md`
-- [ ] T094 **非實作者**（jacky0407）依 `quickstart.md`「二、手動驗證」13 個步驟在多個瀏覽器分頁（老師＋三組學生）以真實後端完整走一遍，另加四項前端專屬檢查：① 開兩個老師分頁，在較舊的分頁確認畫面不會被較舊的 `resultVersion` 覆蓋（`Scenario: US7-AS8`）；② 學生頁關輪後只顯示本組狀態、目前的搶答成功者與（判錯當下）剛被判錯的前一組，沒有列出全部組作答（FR-037）；③ 老師介面每題只有目前的搶答成功者有「判錯」按鈕、只有被替換的那一組有「撤銷判錯」（FR-034）；④ 定案後學生與老師畫面的「搶答成功」同時變成「搶答正確」、「剛被判錯的前一組」消失（`Scenario: US7-AS14`）。記錄日期、操作步驟、實際看到的畫面文字、各組成功次數與 `resultVersion`、畫面右下角延遲；沒有實際執行不得宣稱完成（憲章原則 VI；SC-009）。題目需經 002 真實匯入，002 尚未合併時在此註明阻塞原因，不得以假資料取代
+- [x] T094 **非實作者**（jacky0407）依 `quickstart.md`「二、手動驗證」13 個步驟在多個瀏覽器分頁（老師＋三組學生）以真實後端完整走一遍，另加四項前端專屬檢查：① 開兩個老師分頁，在較舊的分頁確認畫面不會被較舊的 `resultVersion` 覆蓋（`Scenario: US7-AS8`）；② 學生頁關輪後只顯示本組狀態、目前的搶答成功者與（判錯當下）剛被判錯的前一組，沒有列出全部組作答（FR-037）；③ 老師介面每題只有目前的搶答成功者有「判錯」按鈕、只有被替換的那一組有「撤銷判錯」（FR-034）；④ 定案後學生與老師畫面的「搶答成功」同時變成「搶答正確」、「剛被判錯的前一組」消失（`Scenario: US7-AS14`）。記錄日期、操作步驟、實際看到的畫面文字、各組成功次數與 `resultVersion`、畫面右下角延遲；沒有實際執行不得宣稱完成（憲章原則 VI；SC-009）。題目需經 002 真實匯入，002 尚未合併時在此註明阻塞原因，不得以假資料取代
 
 - [X] T095 確認沒有夾帶機敏資料或不追蹤的檔案（憲章合併前品質關卡第 7 項、原則 V）：`git diff --staged` 與 `git status` 檢查沒有 `.env`、憑證 JSON、`.venv`、`期末專題說明.md`／`.pdf`、`project_proposal_draft.md`；`grep -rn "client_secret\|access_token\|refresh_token" src/ tests/ specs/004-ranking-review/` 無結果；PR、Issue 說明不貼機敏內容；結果記入 `verification.md`
 
